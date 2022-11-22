@@ -1,0 +1,110 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일\cuh">
+      <UniqueIdentifier>{2f5b2f4b-f5b6-48db-b223-ba758f97ace0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\h">
+      <UniqueIdentifier>{e380641c-25e9-4026-93aa-f020f0719852}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\cu">
+      <UniqueIdentifier>{10fb1d2f-1935-45fd-bc9a-02be9f28e91e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\cpp">
+      <UniqueIdentifier>{9b105998-5aa1-4e52-9557-f07c8918dea3}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\ObjectID.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\Exception.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\Dimension.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\CudaCheck.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\cuda_common.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cpp_source\cuda_common.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\CudaCheck.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\Dimension.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\Exception.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\ObjectID.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\relu.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\maxpool.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\k_convolution.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\dens.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\d_convolution.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\convolution.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\add_bias.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="cuda_source\add_bias.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\convolution.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\d_convlolution.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\dens.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\k_convolution.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\maxpool.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\relu.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+  </ItemGroup>
+</Project>
