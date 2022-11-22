@@ -83,6 +83,9 @@
     <ClInclude Include="cuda_source\add_bias.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
+    <ClInclude Include="cuda_source\optimizer.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_source\add_bias.cu">
@@ -104,6 +107,9 @@
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_source\relu.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\optimizer.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
   </ItemGroup>

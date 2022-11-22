@@ -8,6 +8,8 @@ typedef const unsigned int cuint;
 #define BLOCK_SIZE		32
 #define CONST_SIZE		16384
 
+#define EPSILON			1e-8
+
 
 enum{CPU = 1, GPU = 2};
 
