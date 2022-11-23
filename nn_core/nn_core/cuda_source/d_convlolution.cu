@@ -30,7 +30,7 @@ __global__ void __transpose(
 	cuint row = k_count % n;
 	cuint col = k_count / n;
 
-	float* p_input = input + (col * (w * h) + row);
+	float* p_input = input + (row * (w * h * n) + col * (w * h));
 
 	if (tidx < (n * h * w * c)) {
 		output[tidx] = p_input[k_idx];
@@ -137,9 +137,12 @@ void correl_2d(
 	for (int n = 0; n < kn; ++n) {
 		for (int h = 0; h < kh; ++h) {
 			for (int w = 0; w < kw; ++w) {
-				k_index[n * (kh * kw) + h * kw + w] = n * (d_output->w * d_output->h) + (kh - h) * d_output->w + (kw - w);
+				k_index[n * (kh * kw) + h * kw + w] = n * (d_output->w * d_output->h) + (kh - h - 1) * d_output->w + (kw - w - 1);
+				printf("%d ", k_index[n * (kh * kw) + h * kw + w]);
 			}
+			printf("\n");
 		}
+		printf("\n");
 	}
 
 	checkCuda(cudaMemcpyToSymbol(__indices, k_index, sizeof(k_index)));
@@ -214,7 +217,7 @@ void dilation_2d(
 			input->h,
 			input->c,
 			output->w,
-			output->c,
+			output->h,
 			scale,
 			offset_x,
 			offset_y
