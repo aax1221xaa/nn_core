@@ -30,7 +30,7 @@ __global__ void __conv_2d(
 ) {
 	cuint cx = blockIdx.x * blockDim.x + threadIdx.x;
 	cuint cy = blockIdx.y * blockDim.y + threadIdx.y;
-	cuint tidx = blockIdx.y * BLOCK_SIZE + threadIdx.x;
+	cuint sidx = threadIdx.y * BLOCK_SIZE + threadIdx.x;
 
 	cuint x0 = (cx % out_w) * st_w;
 	cuint y0 = (cx / out_w) * st_h;
@@ -41,17 +41,20 @@ __global__ void __conv_2d(
 	__shared__ float share_in[BLOCK_SIZE * BLOCK_SIZE];
 	__shared__ float share_k[BLOCK_SIZE * BLOCK_SIZE];
 
-	float sum = 0.;
+	float* p_input = input + (y0 * in_w + x0);
+	float* p_kernel = kernel + (cy * k_w * k_h * k_c);
+
+	float sum = 0.f;
 
 	for (uint i = 0; i < n; i += BLOCK_SIZE) {
 		__syncthreads();
 
-		share_k[tidx] = (i + threadIdx.x) < n && cy < k_n ? kernel[cy * n + i + threadIdx.x] : 0.f;
-		share_in[tidx] = cx < k && (threadIdx.y + i) < n ? input[y0 * in_w + __indices[threadIdx.y + i] + x0] : 0.f;
+		share_k[sidx] = (i + threadIdx.x) < n && cy < k_n ? p_kernel[threadIdx.x + i] : 0.f;
+		share_in[sidx] = cx < k && (threadIdx.y + i) < n ? p_input[__indices[threadIdx.y + i]] : 0.f;
 
 		__syncthreads();
 
-	#pragma unroll
+		#pragma unroll
 		for (uint e = 0; e < BLOCK_SIZE; ++e) {
 			sum += share_in[e * BLOCK_SIZE + threadIdx.x] * share_k[threadIdx.y * BLOCK_SIZE + e];
 		}
@@ -138,7 +141,7 @@ void conv_2d(
 	for (int c = 0; c < d_kernel->c; ++c) {
 		for (int i = 0; i < d_kernel->h; ++i) {
 			for (int j = 0; j < d_kernel->w; ++j) {
-				m_indices[c * (d_kernel->h * d_kernel->w) + i * d_kernel->w + j] = c * (d_input->w * d_input->c) + i * d_input->w + j;
+				m_indices[c * (d_kernel->h * d_kernel->w) + i * d_kernel->w + j] = c * (d_input->w * d_input->h) + i * d_input->w + j;
 			}
 		}
 	}

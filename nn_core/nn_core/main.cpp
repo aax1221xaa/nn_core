@@ -33,48 +33,48 @@ void print(const Tensor* t) {
 }
 
 int main() {
-	const int n = 1;
-	const int ih = 16;
-	const int iw = 16;
-	const int ic = 3;
+	const int n = 64;
+	const int ih = 122;
+	const int iw = 122;
+	const int ic = 32;
 
 	const int k = 3;
-	const int stride = 2;
+	const int stride = 1;
 
 	const int oh = (ih - k) / stride + 1;
 	const int ow = (iw - k) / stride + 1;
-	const int oc = 3;
+	const int oc = 64;
 
-	const int doh = ih + k - 1;
-	const int dow = iw + k - 1;
-	const int offset = k - 1;
+	//const int doh = ih + k - 1;
+	//const int dow = iw + k - 1;
+	//const int offset = k - 1;
 
 	Tensor* hin = CreateHostTensor(n, ih, iw, ic);
 	Tensor* hout = CreateHostTensor(n, oh, ow, oc);
 	Tensor* hk = CreateHostTensor(oc, k, k, ic);
-	Tensor* htk = CreateHostTensor(oc, k, k, ic);
-	Tensor* hpad = CreateHostTensor(n, doh, dow, oc);
+	//Tensor* htk = CreateHostTensor(oc, k, k, ic);
+	//Tensor* hpad = CreateHostTensor(n, doh, dow, oc);
 
 	Tensor* din = CreateDeviceTensor(n, ih, iw, ic);
 	Tensor* dout = CreateDeviceTensor(n, oh, ow, oc);
 	Tensor* dk = CreateDeviceTensor(oc, k, k, ic);
-	Tensor* dtk = CreateDeviceTensor(oc, k, k, ic);
-	Tensor* dpad = CreateDeviceTensor(n, doh, dow, oc);
+	//Tensor* dtk = CreateDeviceTensor(oc, k, k, ic);
+	//Tensor* dpad = CreateDeviceTensor(n, doh, dow, oc);
 
 	Stream* st = CreateStreams(n);
 
 	random_device rd;
 	mt19937 gen(rd());
-	uniform_int_distribution<int> dis(1, 9);
+	uniform_real_distribution<float> dis(0, 1);
 
 	try {
 		
 		parallel_for(
-			blocked_range<uint>(0, n * oh * ow * oc),
+			blocked_range<uint>(0, n * ih * iw * ic),
 			[&](blocked_range<uint>& q) {
 			
 			for (uint i = q.begin(); i < q.end(); ++i) {
-				hout->data[i] = float(dis(gen));
+				hin->data[i] = dis(gen);
 			}
 		}
 		);
@@ -83,15 +83,15 @@ int main() {
 			[&](blocked_range<uint>& q) {
 
 			for (uint i = q.begin(); i < q.end(); ++i) {
-				hk->data[i] = float(dis(gen));
+				hk->data[i] = dis(gen);
 			}
 		}
 		);
 
-		MemCpy(hout, dout);
+		MemCpy(hin, din);
 		MemCpy(hk, dk);
-		checkCuda(cudaMemset(dpad->data, 0, GetTotalSize(dpad)));
-
+		//checkCuda(cudaMemset(dpad->data, 0, GetTotalSize(dpad)));
+		/*
 		dilation_2d(
 			st,
 			dout,
@@ -107,16 +107,33 @@ int main() {
 			din,
 			dtk
 		);
+		*/
+		//MemCpy(din, hin);
+		//MemCpy(dpad, hpad);
+		//MemCpy(dtk, htk);
 
-		MemCpy(din, hin);
-		MemCpy(dpad, hpad);
-		MemCpy(dtk, htk);
+		clock_t start, end;
 
-		print(hout);
-		print(hpad);
-		print(hk);
-		print(htk);
-		print(hin);
+		printf("start!!!!!!!!!!\n");
+
+		start = clock();
+		conv_2d(
+			st,
+			din,
+			dk,
+			dout,
+			1, 1
+		);
+		end = clock();
+
+		MemCpy(dout, hout);
+
+		printf("elapsed time = %dms\n", uint(end - start));
+		//print(hin);
+		//print(hpad);
+		//print(hk);
+		//print(htk);
+		//print(hout);
 	}
 	catch (Exception& e) {
 		e.Put();
@@ -126,14 +143,14 @@ int main() {
 	FreeTensor(&hin);
 	FreeTensor(&hout);
 	FreeTensor(&hk);
-	FreeTensor(&htk);
-	FreeTensor(&hpad);
+	//FreeTensor(&htk);
+	//FreeTensor(&hpad);
 
 	FreeTensor(&din);
 	FreeTensor(&dout);
 	FreeTensor(&dk);
-	FreeTensor(&dtk);
-	FreeTensor(&dpad);
+	//FreeTensor(&dtk);
+	//FreeTensor(&dpad);
 
 	return 0;
 }
