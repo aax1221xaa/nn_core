@@ -5,9 +5,9 @@
 
 
 void relu(
-	const Stream* stream,
-	const Tensor* input,
-	Tensor* output
+	const Stream& stream,
+	const Tensor& input,
+	Tensor& output
 );
 
 

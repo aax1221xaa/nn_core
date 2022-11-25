@@ -6,8 +6,8 @@
 #include "Exception.h"
 
 
-#define checkCuda(status) (__checkCUDA(status, __FILE__, __LINE__))
-#define checkCudnn(status) (__checkCUDNN(status, __FILE__, __LINE__))
+#define check_cuda(status) (__checkCUDA(status, __FILE__, __LINE__))
+#define check_cudnn(status) (__checkCUDNN(status, __FILE__, __LINE__))
 
 
 void __checkCUDA(cudaError_t status, const char *file, int line);

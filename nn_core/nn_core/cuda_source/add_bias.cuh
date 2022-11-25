@@ -5,10 +5,10 @@
 
 
 void add_bias(
-	const Stream* stream,
-	const Tensor* input,
-	const Tensor* bias,
-	Tensor* output
+	const Stream& stream,
+	const Tensor& input,
+	const Tensor& bias,
+	Tensor& output
 );
 
 #endif // !ADD_BIAS_CUH

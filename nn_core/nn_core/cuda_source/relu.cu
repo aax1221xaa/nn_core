@@ -35,31 +35,31 @@ __global__ void __relu(
 /**********************************************/
 
 void relu(
-	const Stream* stream,
-	const Tensor* input,
-	Tensor* output
+	const Stream& stream,
+	const Tensor& input,
+	Tensor& output
 ) {
-	size_t input_size = GetTotalSize(input);
-	size_t output_size = GetTotalSize(output);
+	uint input_size = get_elem_size(input);
+	uint output_size = get_elem_size(output);
 
 	if (input_size != output_size) {
-		ErrorExcept("[relu] input과 output 사이즈가 안맞습니다. %d != %d", input_size, output_size);
+		ErrorExcept("[relu] invalid input and output size. %d != %d", input_size, output_size);
 	}
 
-	int length = input->h * input->w * input->c;
-	dim3 threads(BLOCK_SIZE);
-	dim3 blocks(GetBlockSize(length));
+	uint length = input.h * input.w * input.c;
+	dim3 threads(BLOCK_SIZE_32);
+	dim3 blocks(get_grid_size(threads, length));
 
-	for (int i = 0; i < stream->st_size; ++i) {
-		float* d_in = input->data + (i * length);
-		float* d_out = output->data + (i * length);
+	for (int i = 0; i < stream.str_size; ++i) {
+		float* d_in = input.data + (i * length);
+		float* d_out = output.data + (i * length);
 
-		__relu<<<blocks, threads, 0, stream->st[i]>>>(
+		__relu<<<blocks, threads, 0, stream.str[i]>>>(
 			d_in,
 			d_out,
 			length
 		);
 	}
 
-	SyncStreams(stream);
+	sync_streams(stream);
 }

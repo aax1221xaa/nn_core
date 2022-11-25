@@ -9,8 +9,7 @@
 #include <device_functions.h>
 #include <device_launch_parameters.h>
 
-
-// __constant__ uint __indices[];
+#if false
 
 /**********************************************/
 /*											  */
@@ -18,68 +17,7 @@
 /*										      */
 /**********************************************/
 
-__declspec(deprecated("This function is too slow.")) __global__ void __kernel_conv_2d_1x1024_g_ind(
-	float* input,
-	float* d_output,
-	float* gradient,
-	uint* input_indices,
-	cuint input_h,
-	cuint input_w,
-	cuint input_c,
-	cuint d_output_h,
-	cuint d_output_w,
-	cuint d_output_c,
-	cuint gradient_h,
-	cuint gradient_w
-) {
-	cuint n = d_output_h * d_output_w;
-	cuint k = gradient_h * gradient_w * input_c;
-
-	cuint cx = blockIdx.x;
-	cuint cy = blockIdx.y;
-
-	cuint x0 = cx % gradient_w;
-	cuint y0 = (cx / gradient_w) % gradient_h;
-	cuint c0 = cx / (gradient_h * gradient_w);
-
-	__shared__ float sm_a[BLOCK_SIZE * BLOCK_SIZE];
-	__shared__ float sm_b[BLOCK_SIZE * BLOCK_SIZE];
-	
-	float sum = 0.f;
-	float* p_dout = d_output + (cy * d_output_h * d_output_w);
-	float* p_input = input + (c0 * (input_h * input_w) + y0 * input_w + x0);
-	
-	for (int i = 0; i < n; i += (BLOCK_SIZE * BLOCK_SIZE)) {
-		if (threadIdx.x + i < n) {
-			sm_a[threadIdx.x] = p_dout[threadIdx.x + i];
-			sm_b[threadIdx.x] = p_input[input_indices[threadIdx.x + i]];
-		}
-		else {
-			sm_a[threadIdx.x] = 0.f;
-			sm_b[threadIdx.x] = 0.f;
-		}
-		__syncthreads();
-
-		sum += sm_a[threadIdx.x] * sm_b[threadIdx.x];
-
-		__syncthreads();
-	}
-
-	sm_a[threadIdx.x] = sum;
-
-	__syncthreads();
-
-	#pragma unroll
-	for (int i = (BLOCK_SIZE * BLOCK_SIZE) / 2; i > 0; i /= 2) {
-		if (threadIdx.x < i) sm_a[threadIdx.x] += sm_a[threadIdx.x + i];
-
-		__syncthreads();
-	}
-
-	if (threadIdx.x == 0) {
-		gradient[cy * k + cx] += sm_a[0];
-	}
-}
+__constant__ uint __indices[CONST_ELEM_SIZE];
 
 __global__ void __kernel_conv_2d_32x32_c_ind(
 	float* input,
@@ -104,17 +42,17 @@ __global__ void __kernel_conv_2d_32x32_c_ind(
 	cuint y0 = (cx / gradient_w) % gradient_h;
 	cuint c0 = cx / (gradient_h * gradient_w);
 
-	cuint sidx = threadIdx.y * BLOCK_SIZE + threadIdx.x;
+	cuint sidx = threadIdx.y * BLOCK_SIZE_32 + threadIdx.x;
 
-	__shared__ float sm_in[BLOCK_SIZE * BLOCK_SIZE];
-	__shared__ float sm_dout[BLOCK_SIZE * BLOCK_SIZE];
+	__shared__ float sm_in[BLOCK_SIZE_32 * BLOCK_SIZE_32];
+	__shared__ float sm_dout[BLOCK_SIZE_32 * BLOCK_SIZE_32];
 
 	float* p_dout = d_output + (cy * d_output_h * d_output_w);
 	float* p_in = input + (c0 * (input_h * input_w) + y0 * input_w + x0);
 	
 	float sum = 0.f;
 
-	for (int i = 0; i < n; i += BLOCK_SIZE) {
+	for (int i = 0; i < n; i += BLOCK_SIZE_32) {
 		__syncthreads();
 
 		sm_dout[sidx] = (threadIdx.x + i) < n && cy < d_output_c ? p_dout[threadIdx.x + i] : 0.f;
@@ -123,8 +61,8 @@ __global__ void __kernel_conv_2d_32x32_c_ind(
 		__syncthreads();
 
 		#pragma unroll
-		for (int e = 0; e < BLOCK_SIZE; ++e) {
-			sum += sm_dout[threadIdx.y * BLOCK_SIZE + e] * sm_in[e * BLOCK_SIZE + threadIdx.x];
+		for (int e = 0; e < BLOCK_SIZE_32; ++e) {
+			sum += sm_dout[threadIdx.y * BLOCK_SIZE_32 + e] * sm_in[e * BLOCK_SIZE_32 + threadIdx.x];
 		}
 	}
 
@@ -157,17 +95,17 @@ __global__ void __kernel_conv_2d_32x32_g_ind(
 	cuint y0 = (cx / gradient_w) % gradient_h;
 	cuint c0 = cx / (gradient_h * gradient_w);
 
-	cuint sidx = threadIdx.y * BLOCK_SIZE + threadIdx.x;
+	cuint sidx = threadIdx.y * BLOCK_SIZE_32 + threadIdx.x;
 
-	__shared__ float sm_in[BLOCK_SIZE * BLOCK_SIZE];
-	__shared__ float sm_dout[BLOCK_SIZE * BLOCK_SIZE];
+	__shared__ float sm_in[BLOCK_SIZE_32 * BLOCK_SIZE_32];
+	__shared__ float sm_dout[BLOCK_SIZE_32 * BLOCK_SIZE_32];
 
 	float* p_dout = d_output + (cy * d_output_h * d_output_w);
 	float* p_in = input + (c0 * (input_h * input_w) + y0 * input_w + x0);
 
 	float sum = 0.f;
 
-	for (int i = 0; i < n; i += BLOCK_SIZE) {
+	for (int i = 0; i < n; i += BLOCK_SIZE_32) {
 		__syncthreads();
 
 		sm_dout[sidx] = (threadIdx.x + i) < n && cy < d_output_c ? p_dout[threadIdx.x + i] : 0.f;
@@ -176,8 +114,8 @@ __global__ void __kernel_conv_2d_32x32_g_ind(
 		__syncthreads();
 
 		#pragma unroll
-		for (int e = 0; e < BLOCK_SIZE; ++e) {
-			sum += sm_dout[threadIdx.y * BLOCK_SIZE + e] * sm_in[e * BLOCK_SIZE + threadIdx.x];
+		for (int e = 0; e < BLOCK_SIZE_32; ++e) {
+			sum += sm_dout[threadIdx.y * BLOCK_SIZE_32 + e] * sm_in[e * BLOCK_SIZE_32 + threadIdx.x];
 		}
 	}
 
@@ -195,368 +133,109 @@ __global__ void __kernel_conv_2d_32x32_g_ind(
 /**********************************************/
 
 void check_kernel_conv_2d(
-	const Tensor& in,
-	const Tensor& dout,
-	Tensor& g
+	const Tensor& d_input,
+	const Tensor& d_doutput,
+	Tensor& d_gradient
 ) {
-	int in_h = in.h - dout.h + 1;
-	int in_w = in.w - dout.w + 1;
+	int in_h = d_input.h - d_doutput.h + 1;
+	int in_w = d_input.w - d_doutput.w + 1;
 
-	if (g.h != in_h || g.w != in_w || g.n != dout.c || g.c != in.c || in.n != dout.n) {
+	if (d_gradient.h != in_h || d_gradient.w != in_w || d_gradient.n != d_doutput.c || d_gradient.c != d_input.c || d_input.n != d_doutput.n) {
 		ErrorExcept(
-			"[check_kernel_conv_2d] invalid gradient size \
-			 input: [%d, %d, %d, %d], \
-			 d_output: [%d, %d, %d, %d], \
-			 gradient: [%d, %d, %d, %d]",
-			in.n, in.h, in.w, in.c,
-			dout.n, dout.h, dout.w, dout.c,
-			g.n, g.h, g.w, g.c
+			"[check_kernel_conv_2d] invalid tensor arguments size. d_input: %s, d_doutput: %s, gradient: %s",
+			dim_to_str(d_input),
+			dim_to_str(d_doutput),
+			dim_to_str(d_gradient)
 		);
 	}
 }
 
-
-#if _DEBUG
-
 void kernel_conv_2d(
-	const Stream* stream,
-	const Tensor* input,
-	const Tensor* d_output,
-	Tensor* gradient
+	const Stream& stream,
+	const Tensor& d_input,
+	const Tensor& d_doutput,
+	Tensor& gradient
 ) {
 	check_kernel_conv_2d(
-		*input,
-		*d_output,
-		*gradient
+		d_input,
+		d_doutput,
+		gradient
 	);
 
-	uint* h_indices = new uint[d_output->h * d_output->w];
+	MemBlock<uint> indices;
 
-	for (int h = 0; h < d_output->h; ++h) {
-		for (int w = 0; w < d_output->w; ++w) {
-			h_indices[h * d_output->w + w] = h * input->w + w;
+	create_host_memblock(indices, d_doutput.h * d_doutput.w);
+
+	for (int h = 0; h < d_doutput.h; ++h) {
+		for (int w = 0; w < d_doutput.w; ++w) {
+			indices.data[h * d_doutput.w + w] = h * d_input.w + w;
 		}
 	}
 
-	checkCuda(cudaMemset(gradient->data, 0, GetTotalSize(gradient)));
+	check_cuda(cudaMemset(gradient.data, 0, get_mem_size(gradient)));
 
-	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks(
-		GetBlockSize(gradient->h * gradient->w * gradient->c),
-		GetBlockSize(gradient->n)
+	dim3 threads(BLOCK_SIZE_32, BLOCK_SIZE_32);
+	dim3 blocks = get_grid_size(
+		threads,
+		gradient.h * gradient.w * gradient.c,
+		gradient.n
 	);
 
-	if (d_output->h * d_output->w < CONST_SIZE) {
+	if (indices.len < CONST_ELEM_SIZE) {
 		
-		checkCuda(cudaMemcpyToSymbol(__indices, h_indices, sizeof(uint) * d_output->h * d_output->w));
+		check_cuda(cudaMemcpyToSymbol(__indices, indices.data, sizeof(uint) * indices.len));
 
-		for (uint i = 0; i < stream->st_size; ++i) {
-			float* d_in = input->data + (i * input->h * input->w * input->c);
-			float* d_dout = d_output->data + (i * d_output->h * d_output->w * d_output->c);
+		for (uint i = 0; i < stream.str_size; ++i) {
+			float* d_in = d_input.data + (i * d_input.h * d_input.w * d_input.c);
+			float* d_dout = d_doutput.data + (i * d_doutput.h * d_doutput.w * d_doutput.c);
 
-			__kernel_conv_2d_32x32_c_ind<<<blocks, threads, 0, stream->st[i]>>>(
+			__kernel_conv_2d_32x32_c_ind << <blocks, threads, 0, stream.str[i] >>>(
 				d_in,
 				d_dout,
-				gradient->data,
-				input->h,
-				input->w,
-				input->c,
-				d_output->h,
-				d_output->w,
-				d_output->c,
-				gradient->h,
-				gradient->w
+				gradient.data,
+				d_input.h,
+				d_input.w,
+				d_input.c,
+				d_doutput.h,
+				d_doutput.w,
+				d_doutput.c,
+				gradient.h,
+				gradient.w
 			);
-			checkCuda(cudaStreamSynchronize(stream->st[i]));
+			check_cuda(cudaStreamSynchronize(stream.str[i]));
 		}
 	}
 	else {
-		uint* d_indices = NULL;
+		MemBlock<uint> d_indices;
 
-		checkCuda(cudaMalloc(&d_indices, sizeof(uint) * d_output->h * d_output->w));
-		checkCuda(cudaMemcpy(d_indices, h_indices, sizeof(uint) * d_output->h * d_output->w, cudaMemcpyHostToDevice));
+		create_dev_memblock(d_indices, indices.len);
+		check_cuda(cudaMemcpy(d_indices.data, indices.data, sizeof(uint) * indices.len, cudaMemcpyHostToDevice));
 
-		for (uint i = 0; i < stream->st_size; ++i) {
-			float* d_in = input->data + (i * input->h * input->w * input->c);
-			float* d_dout = d_output->data + (i * d_output->h * d_output->w * d_output->c);
+		for (uint i = 0; i < stream.str_size; ++i) {
+			float* d_in = d_input.data + (i * d_input.h * d_input.w * d_input.c);
+			float* d_dout = d_doutput.data + (i * d_doutput.h * d_doutput.w * d_doutput.c);
 
-			__kernel_conv_2d_32x32_g_ind<<<blocks, threads, 0, stream->st[i]>>>(
+			__kernel_conv_2d_32x32_g_ind << <blocks, threads, 0, stream.str[i] >> > (
 				d_in,
 				d_dout,
-				gradient->data,
-				d_indices,
-				input->h,
-				input->w,
-				input->c,
-				d_output->h,
-				d_output->w,
-				d_output->c,
-				gradient->h,
-				gradient->w
+				gradient.data,
+				d_indices.data,
+				d_input.h,
+				d_input.w,
+				d_input.c,
+				d_doutput.h,
+				d_doutput.w,
+				d_doutput.c,
+				gradient.h,
+				gradient.w
 			);
-			checkCuda(cudaStreamSynchronize(stream->st[i]));
+			check_cuda(cudaStreamSynchronize(stream.str[i]));
 		}
 
-		checkCuda(cudaFree(d_indices));
+		free_memblock(d_indices);
 	}
 
-	delete[] h_indices;
-}
-
-__declspec(deprecated) void kernel_conv_2d_1x1024_g_ind(
-	const Stream* stream,
-	const Tensor* input,
-	const Tensor* d_output,
-	Tensor* gradient
-) {
-	check_kernel_conv_2d(
-		*input,
-		*d_output,
-		*gradient
-	);
-
-	uint* d_indices = NULL;
-	uint* h_indices = new uint[d_output->h * d_output->w];
-
-
-	for (int h = 0; h < d_output->h; ++h) {
-		uint* p_indices = h_indices + (h * d_output->w);
-		for (int w = 0; w < d_output->w; ++w) {
-			p_indices[w] = h * input->w + w;
-		}
-	}
-
-	checkCuda(cudaMalloc(&d_indices, sizeof(uint) * (d_output->h * d_output->w)));
-	checkCuda(cudaMemcpy(d_indices, h_indices, sizeof(uint) * (d_output->h * d_output->w), cudaMemcpyHostToDevice));
-
-	checkCuda(cudaMemset(gradient->data, 0, GetTotalSize(gradient)));
-
-	dim3 threads(BLOCK_SIZE * BLOCK_SIZE);
-	dim3 blocks(gradient->h * gradient->w * gradient->c, gradient->n);
-
-	for (int i = 0; i < stream->st_size; ++i) {
-		float* d_in = input->data + (i * input->h * input->w * input->c);
-		float* d_dout = d_output->data + (i * d_output->h * d_output->w * d_output->c);
-
-		__kernel_conv_2d_1x1024_g_ind<<<blocks, threads, 0, stream->st[i]>>>(
-			d_in,
-			d_dout,
-			gradient->data,
-			d_indices,
-			input->h,
-			input->w,
-			input->c,
-			d_output->h,
-			d_output->w,
-			d_output->c,
-			gradient->h,
-			gradient->w
-		);
-		checkCuda(cudaStreamSynchronize(stream->st[i]));
-	}
-
-	checkCuda(cudaFree(d_indices));
-	delete[] h_indices;
-}
-
-void kernel_conv_2d_32x32_c_ind(
-	const Stream* stream,
-	const Tensor* input,
-	const Tensor* d_output,
-	Tensor* gradient
-) {
-	check_kernel_conv_2d(
-		*input,
-		*d_output,
-		*gradient
-	);
-
-	uint h_indices[CONST_SIZE] = { 0, };
-
-	for (int h = 0; h < d_output->h; ++h) {
-		for (int w = 0; w < d_output->w; ++w) {
-			h_indices[h * d_output->w + w] = h * input->w + w;
-		}
-	}
-
-	checkCuda(cudaMemcpyToSymbol(__indices, h_indices, sizeof(h_indices)));
-
-	checkCuda(cudaMemset(gradient->data, 1, GetTotalSize(gradient)));
-
-	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks(GetBlockSize(gradient->h * gradient->w * gradient->c), GetBlockSize(gradient->n));
-
-	printf("threads = [%d, %d, %d]\n",
-		threads.x, threads.y, threads.z);
-	printf("threads = [%d, %d, %d]\n",
-		blocks.x, blocks.y, blocks.z);
-
-	for (int i = 0; i < stream->st_size; ++i) {
-		float* d_in = input->data + (i * input->h * input->w * input->c);
-		float* d_dout = d_output->data + (i * d_output->h * d_output->w * d_output->c);
-
-		__kernel_conv_2d_32x32_c_ind<<<blocks, threads, 0, stream->st[i]>>>(
-			d_in,
-			d_dout,
-			gradient->data,
-			input->h,
-			input->w,
-			input->c,
-			d_output->h,
-			d_output->w,
-			d_output->c,
-			gradient->h,
-			gradient->w
-			);
-		checkCuda(cudaStreamSynchronize(stream->st[i]));
-	}
-}
-
-void kernel_conv_2d_32x32_g_ind(
-	const Stream* stream,
-	const Tensor* input,
-	const Tensor* d_output,
-	Tensor* gradient
-) {
-	check_kernel_conv_2d(
-		*input,
-		*d_output,
-		*gradient
-	);
-
-	uint* d_indices = NULL;
-	uint* h_indices = new uint[d_output->h * d_output->w];
-
-	for (int c = 0; c < d_output->c; ++c) {
-		for (int h = 0; h < d_output->h; ++h) {
-			uint* p_indices = h_indices + (h * d_output->w);
-			for (int w = 0; w < d_output->w; ++w) {
-				p_indices[w] = h * input->w + w;
-			}
-		}
-	}
-
-	checkCuda(cudaMalloc(&d_indices, sizeof(uint) * (d_output->h * d_output->w)));
-	checkCuda(cudaMemcpy(d_indices, h_indices, sizeof(uint) * (d_output->h * d_output->w), cudaMemcpyHostToDevice));
-
-	checkCuda(cudaMemset(gradient->data, 0, GetTotalSize(gradient)));
-
-	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks(
-		GetBlockSize(gradient->h * gradient->w * gradient->c),
-		GetBlockSize(gradient->n)
-	);
-
-	for (int i = 0; i < stream->st_size; ++i) {
-		float* d_in = input->data + (i * input->h * input->w * input->c);
-		float* d_dout = d_output->data + (i * d_output->h * d_output->w * d_output->c);
-
-		__kernel_conv_2d_32x32_g_ind<<<blocks, threads, 0, stream->st[i]>>>(
-			d_in,
-			d_dout,
-			gradient->data,
-			d_indices,
-			input->h,
-			input->w,
-			input->c,
-			d_output->h,
-			d_output->w,
-			d_output->c,
-			gradient->h,
-			gradient->w
-			);
-		checkCuda(cudaStreamSynchronize(stream->st[i]));
-	}
-
-	checkCuda(cudaFree(d_indices));
-	delete[] h_indices;
-}
-
-#else
-
-void kernel_conv_2d(
-	const Stream* stream,
-	const Tensor* input,
-	const Tensor* d_output,
-	Tensor* gradient
-) {
-	check_kernel_conv_2d(
-		*input,
-		*d_output,
-		*gradient
-	);
-
-	uint* h_indices = new uint[d_output->h * d_output->w];
-
-	for (int h = 0; h < d_output->h; ++h) {
-		for (int w = 0; w < d_output->w; ++w) {
-			h_indices[h * d_output->w + w] = h * input->w + w;
-		}
-	}
-
-	checkCuda(cudaMemset(gradient->data, 0, GetTotalSize(gradient)));
-
-	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks(
-		GetBlockSize(gradient->h * gradient->w * gradient->c),
-		GetBlockSize(gradient->n)
-	);
-
-	if (d_output->h * d_output->w < CONST_SIZE) {
-
-		checkCuda(cudaMemcpyToSymbol(__indices, h_indices, sizeof(uint) * d_output->h * d_output->w));
-
-		for (uint i = 0; i < stream->st_size; ++i) {
-			float* d_in = input->data + (i * input->h * input->w * input->c);
-			float* d_dout = d_output->data + (i * d_output->h * d_output->w * d_output->c);
-
-			__kernel_conv_2d_32x32_c_ind << <blocks, threads, 0, stream->st[i] >> > (
-				d_in,
-				d_dout,
-				gradient->data,
-				input->h,
-				input->w,
-				input->c,
-				d_output->h,
-				d_output->w,
-				d_output->c,
-				gradient->h,
-				gradient->w
-				);
-			checkCuda(cudaStreamSynchronize(stream->st[i]));
-		}
-	}
-	else {
-		uint* d_indices = NULL;
-
-		checkCuda(cudaMalloc(&d_indices, sizeof(uint) * d_output->h * d_output->w));
-		checkCuda(cudaMemcpy(d_indices, h_indices, sizeof(uint) * d_output->h * d_output->w, cudaMemcpyHostToDevice));
-
-		for (uint i = 0; i < stream->st_size; ++i) {
-			float* d_in = input->data + (i * input->h * input->w * input->c);
-			float* d_dout = d_output->data + (i * d_output->h * d_output->w * d_output->c);
-
-			__kernel_conv_2d_32x32_g_ind << <blocks, threads, 0, stream->st[i] >> > (
-				d_in,
-				d_dout,
-				gradient->data,
-				d_indices,
-				input->h,
-				input->w,
-				input->c,
-				d_output->h,
-				d_output->w,
-				d_output->c,
-				gradient->h,
-				gradient->w
-				);
-			checkCuda(cudaStreamSynchronize(stream->st[i]));
-		}
-
-		checkCuda(cudaFree(d_indices));
-	}
-
-	delete[] h_indices;
+	free_memblock(indices);
 }
 
 #endif

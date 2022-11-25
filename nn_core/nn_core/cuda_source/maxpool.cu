@@ -85,7 +85,7 @@ int calc_shared_mem_size(
 	int kernel_size,
 	int strides
 ) {
-	return (BLOCK_SIZE - 1) * strides + kernel_size;
+	return (BLOCK_SIZE_32 - 1) * strides + kernel_size;
 }
 
 int calc_output_size(
@@ -97,21 +97,21 @@ int calc_output_size(
 }
 
 void maxpool_2d(
-	Stream* stream,
-	Tensor* input,
-	Tensor* output,
+	Stream& stream,
+	Tensor& input,
+	Tensor& output,
 	int kernel_w,
 	int kernel_h,
 	int stride_w,
 	int stride_h
 ) {
-	int out_w = calc_output_size(input->w, kernel_w, stride_w);
-	int out_h = calc_output_size(input->h, kernel_h, stride_h);
+	int out_w = calc_output_size(input.w, kernel_w, stride_w);
+	int out_h = calc_output_size(input.h, kernel_h, stride_h);
 
-	if (input->n != output->n || out_w != output->w || out_h != output->h || input->c != output->c) {
+	if (input.n != output.n || out_w != output.w || out_h != output.h || input.c != output.c) {
 		ErrorExcept(
-			"[maxpool_2d] invalid output size [%d, %d, %d, %d]",
-			output->n, output->h, output->w, output->c
+			"[maxpool_2d] invalid output size. %s",
+			dim_to_str(output)
 		);
 	}
 
@@ -120,24 +120,21 @@ void maxpool_2d(
 
 	size_t smem_size = sizeof(float) * share_w * share_h;
 
-	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks(
-		GetBlockSize(output->w),
-		GetBlockSize(output->h)
-	);
+	dim3 threads(BLOCK_SIZE_32, BLOCK_SIZE_32);
+	dim3 blocks = get_grid_size(threads, output.w, output.h);
 	
-	for (int i = 0; i < stream->st_size; ++i) {
-		float* d_in = input->data + (i * input->h * input->w * input->c);
-		float* d_out = output->data + (i * output->h * output->w * output->c);
+	for (int i = 0; i < stream.str_size; ++i) {
+		float* d_in = input.data + (i * input.h * input.w * input.c);
+		float* d_out = output.data + (i * output.h * output.w * output.c);
 
-		__maxpool_2d << <blocks, threads, smem_size, stream->st[i] >> > (
+		__maxpool_2d << <blocks, threads, smem_size, stream.str[i] >> > (
 			d_in,
 			d_out,
-			input->w,
-			input->h,
-			output->w,
-			output->h,
-			input->c,
+			input.w,
+			input.h,
+			output.w,
+			output.h,
+			input.c,
 			kernel_w,
 			kernel_h,
 			stride_w,
@@ -147,5 +144,5 @@ void maxpool_2d(
 			);
 	}
 
-	SyncStreams(stream);
+	sync_streams(stream);
 }

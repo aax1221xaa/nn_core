@@ -25,13 +25,13 @@ __global__ void __matmul(
 	uint cx = blockIdx.x * blockDim.x + threadIdx.x;
 	uint cy = blockIdx.y * blockDim.y + threadIdx.y;
 
-	__shared__ float sm_a[BLOCK_SIZE * BLOCK_SIZE];
-	__shared__ float sm_b[BLOCK_SIZE * BLOCK_SIZE];
+	__shared__ float sm_a[BLOCK_SIZE_32 * BLOCK_SIZE_32];
+	__shared__ float sm_b[BLOCK_SIZE_32 * BLOCK_SIZE_32];
 
-	uint tidx = threadIdx.y * BLOCK_SIZE + threadIdx.x;
+	uint tidx = threadIdx.y * BLOCK_SIZE_32 + threadIdx.x;
 	float val = 0.f;
 
-	for (int i = 0; i < n; i += BLOCK_SIZE) {
+	for (int i = 0; i < n; i += BLOCK_SIZE_32) {
 		__syncthreads();
 
 		sm_a[tidx] = (threadIdx.x + i) < n && cy < m ? a[cy * n + (threadIdx.x + i)] : 0.f;
@@ -39,8 +39,8 @@ __global__ void __matmul(
 
 		__syncthreads();
 
-		for (int e = 0; e < BLOCK_SIZE; ++e) {
-			val += sm_a[threadIdx.y * BLOCK_SIZE + e] * sm_b[e * BLOCK_SIZE + threadIdx.x];
+		for (int e = 0; e < BLOCK_SIZE_32; ++e) {
+			val += sm_a[threadIdx.y * BLOCK_SIZE_32 + e] * sm_b[e * BLOCK_SIZE_32 + threadIdx.x];
 		}
 	}
 
@@ -62,10 +62,12 @@ void check_dens(
 	const Tensor& weight,
 	const Tensor& output
 ) {
-	if (input.n != output.n || input.c != weight.h || output.c != weight.w) {
+	if (input.n != output.n || input.c != weight.c || output.c != weight.n) {
 		ErrorExcept(
-			"[matmul_check] invalid mat size input: [%d, %d], b: [%d %d], c: [%d, %d]",
-			input.n, input.c, weight.h, weight.w, output.n, output.c
+			"[matmul_check] invalid matrix size input: %s, weight: %s, output: %s",
+			dim_to_str(input),
+			dim_to_str(weight),
+			dim_to_str(output)
 		);
 	}
 }
@@ -78,11 +80,8 @@ void dens(
 ) {
 	check_dens(input, weight, output);
 
-	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks(
-		GetBlockSize(output.c),
-		GetBlockSize(output.n)
-	);
+	dim3 threads(BLOCK_SIZE_32, BLOCK_SIZE_32);
+	dim3 blocks = get_grid_size(threads, output.c, output.n);
 
 	__matmul<<<blocks, threads, 0, st>>>(
 		input.data,
@@ -93,5 +92,5 @@ void dens(
 		output.c
 	);
 
-	checkCuda(cudaStreamSynchronize(st));
+	check_cuda(cudaStreamSynchronize(st));
 }

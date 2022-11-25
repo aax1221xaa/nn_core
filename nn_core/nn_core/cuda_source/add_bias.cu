@@ -26,7 +26,7 @@ __global__ void __add_bias(
 
 	__syncthreads();
 
-	for (uint i = 0; i < ch; i += BLOCK_SIZE) {
+	for (uint i = 0; i < ch; i += BLOCK_SIZE_32) {
 		int tidx = threadIdx.x + i;
 
 		if (tidx < ch) {
@@ -55,47 +55,47 @@ __global__ void __add_bias(
 /**********************************************/
 
 void check_add_bias(
-	const Tensor* input,
-	const Tensor* bias,
-	const Tensor* output
+	const Tensor& input,
+	const Tensor& bias,
+	const Tensor& output
 ) {
-	int input_len = input->h * input->w;
-	int output_len = output->h * output->w;
+	int input_len = input.h * input.w;
+	int output_len = output.h * output.w;
 
-	if (input_len != output_len || input->c != output->c || bias->w != output->c) {
+	if (input_len != output_len || input.c != output.c || bias.w != output.c) {
 		ErrorExcept(
 			"[check_add_bias] invalid size. input: [%d, %d, %d], bias: [%d], output: [%d, %d, %d]",
-			input->h, input->w, input->c, bias->w, output->h, output->w, output->c
+			input.c, input.h, input.w, bias.w, output.c, output.h, output.w
 		);
 	}
 }
 
 void add_bias(
-	const Stream* stream,
-	const Tensor* input,
-	const Tensor* bias,
-	Tensor* output
+	const Stream& stream,
+	const Tensor& input,
+	const Tensor& bias,
+	Tensor& output
 ) {
 	check_add_bias(input, bias, output);
 
-	uint length = output->h * output->w;
-	size_t share_size = sizeof(float) * output->c;
+	uint length = output.h * output.w;
+	size_t share_size = sizeof(float) * output.c;
 
-	dim3 threads(BLOCK_SIZE * BLOCK_SIZE);
-	dim3 blocks((length + threads.x - 1) / threads.x);
+	dim3 threads(BLOCK_SIZE_1024);
+	dim3 blocks = get_grid_size(threads, length);
 
-	for (int i = 0; i < stream->st_size; ++i) {
-		float* p_input = input->data + (i * length * input->c);
-		float* p_output = output->data + (i * length * output->c);
+	for (int i = 0; i < stream.str_size; ++i) {
+		float* p_input = input.data + (i * length * input.c);
+		float* p_output = output.data + (i * length * output.c);
 
-		__add_bias<<<blocks, threads, share_size, stream->st[i]>>>(
+		__add_bias << <blocks, threads, share_size, stream.str[i] >> > (
 			p_input,
-			bias->data,
+			bias.data,
 			p_output,
 			length,
-			output->c
+			output.c
 		);
 	}
 
-	SyncStreams(stream);
+	sync_streams(stream);
 }

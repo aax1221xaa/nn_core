@@ -10,9 +10,9 @@ int calc_output_size(
 );
 
 void maxpool_2d(
-	Stream* stream,
-	Tensor* input,
-	Tensor* output,
+	Stream& stream,
+	Tensor& input,
+	Tensor& output,
 	int kernel_w,
 	int kernel_h,
 	int stride_w,

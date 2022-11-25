@@ -4,21 +4,6 @@
 #include "../cpp_source/cuda_common.h"
 
 
-/**********************************************/
-/*											  */
-/*				 kernel function			  */
-/*										      */
-/**********************************************/
-
-__global__ void __matmul(
-	float* a,
-	float* b,
-	float* c,
-	const uint m,
-	const uint n,
-	const uint k
-);
-
 
 /**********************************************/
 /*											  */
