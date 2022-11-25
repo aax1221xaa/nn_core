@@ -1,6 +1,7 @@
 #pragma once
 #include "CudaCheck.h"
 
+
 typedef const int cint;
 typedef unsigned int uint;
 typedef const unsigned int cuint;
@@ -39,6 +40,7 @@ struct MemBlock {
 	size_t len;
 	int type;
 };
+
 
 
 uint get_elem_size(const Tensor& tensor);

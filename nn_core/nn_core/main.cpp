@@ -12,7 +12,7 @@ using namespace tbb;
 
 
 void print(const Tensor& t) {
-	printf("\nTensor shape = [%d, %d, %d, %d]", t.n, t.c, t.h, t.w);
+	printf("\nTensor shape = %s", dim_to_str(t));
 	for (int n = 0; n < t.n; ++n) {
 		float* npt = t.data + (n * t.h * t.w * t.c);
 		printf("\nn = %d\n===================================================\n", n);
@@ -35,7 +35,7 @@ int main() {
 	const int n = 1;
 	const int ih = 17;
 	const int iw = 17;
-	const int ic = 3;
+	const int ic = 2;
 
 	const int k = 3;
 	const int stride = 2;

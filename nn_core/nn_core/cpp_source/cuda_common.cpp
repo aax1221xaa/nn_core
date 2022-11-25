@@ -2,6 +2,11 @@
 #include <string.h>
 
 
+#define STR_MAX			1024
+
+char str_buffer[STR_MAX] = { '\0', };
+int str_idx = 0;
+
 
 uint get_elem_size(const Tensor& tensor) {
 	return tensor.n * tensor.c * tensor.h * tensor.w;
@@ -114,9 +119,28 @@ void copy_tensor(const Tensor& src, Tensor& dst) {
 }
 
 const char* dim_to_str(const Tensor& tensor) {
-	char buffer[100];
+	char buff[256] = { '\0', };
 
-	sprintf_s(buffer, "[%d, %d, %d, %d]", tensor.n, tensor.c, tensor.h, tensor.w);
+	sprintf_s(
+		buff,
+		"[%d, %d, %d, %d]",
+		tensor.n,
+		tensor.c,
+		tensor.h,
+		tensor.w
+	);
 
-	return buffer;
+	int str_length = (int)strlen(buff) + 1;
+	char* p_str_buff = str_buffer + str_idx;
+
+	strcpy_s(p_str_buff, sizeof(char) * str_length, buff);
+
+	if ((STR_MAX - str_idx) > str_length) {
+		str_idx += str_length;
+	}
+	else {
+		str_idx = 0;
+	}
+
+	return p_str_buff;
 }
