@@ -68,13 +68,7 @@
     <ClInclude Include="cuda_source\maxpool.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_source\k_convolution.cuh">
-      <Filter>헤더 파일\cuh</Filter>
-    </ClInclude>
     <ClInclude Include="cuda_source\dens.cuh">
-      <Filter>헤더 파일\cuh</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_source\d_convolution.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
     <ClInclude Include="cuda_source\convolution.cuh">
@@ -94,13 +88,7 @@
     <CudaCompile Include="cuda_source\convolution.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
-    <CudaCompile Include="cuda_source\d_convlolution.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
     <CudaCompile Include="cuda_source\dens.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_source\k_convolution.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_source\maxpool.cu">

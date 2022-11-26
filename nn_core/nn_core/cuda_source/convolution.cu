@@ -33,7 +33,7 @@ __global__ void __conv_2d(
 ) {
 	cuint cx = blockIdx.x * blockDim.x + threadIdx.x;
 	cuint cy = blockIdx.y * blockDim.y + threadIdx.y;
-	cuint sidx = threadIdx.y * BLOCK_SIZE_32 + threadIdx.x;
+	cuint sidx = threadIdx.y * BLOCK_SIZE + threadIdx.x;
 
 	cuint x0 = (cx % out_w) * st_w;
 	cuint y0 = (cx / out_w) * st_h;
@@ -41,15 +41,15 @@ __global__ void __conv_2d(
 	cuint n = k_w * k_h * k_c;
 	cuint k = out_w * out_h;
 
-	__shared__ float share_in[BLOCK_SIZE_32 * BLOCK_SIZE_32];
-	__shared__ float share_k[BLOCK_SIZE_32 * BLOCK_SIZE_32];
+	__shared__ float share_in[BLOCK_SIZE * BLOCK_SIZE];
+	__shared__ float share_k[BLOCK_SIZE * BLOCK_SIZE];
 
 	float* p_input = input + (y0 * in_w + x0);
 	float* p_kernel = kernel + (cy * k_w * k_h * k_c);
 
 	float sum = 0.f;
 
-	for (uint i = 0; i < n; i += BLOCK_SIZE_32) {
+	for (uint i = 0; i < n; i += BLOCK_SIZE) {
 		__syncthreads();
 
 		share_k[sidx] = (i + threadIdx.x) < n && cy < k_n ? p_kernel[threadIdx.x + i] : 0.f;
@@ -58,8 +58,8 @@ __global__ void __conv_2d(
 		__syncthreads();
 
 #pragma unroll
-		for (uint e = 0; e < BLOCK_SIZE_32; ++e) {
-			sum += share_in[e * BLOCK_SIZE_32 + threadIdx.x] * share_k[threadIdx.y * BLOCK_SIZE_32 + e];
+		for (uint e = 0; e < BLOCK_SIZE; ++e) {
+			sum += share_in[e * BLOCK_SIZE + threadIdx.x] * share_k[threadIdx.y * BLOCK_SIZE + e];
 		}
 	}
 
@@ -91,17 +91,17 @@ __global__ void __kernel_conv_2d_32x32_c_ind(
 	cuint y0 = (cx / gradient_w) % gradient_h;
 	cuint c0 = cx / (gradient_h * gradient_w);
 
-	cuint sidx = threadIdx.y * BLOCK_SIZE_32 + threadIdx.x;
+	cuint sidx = threadIdx.y * BLOCK_SIZE + threadIdx.x;
 
-	__shared__ float sm_in[BLOCK_SIZE_32 * BLOCK_SIZE_32];
-	__shared__ float sm_dout[BLOCK_SIZE_32 * BLOCK_SIZE_32];
+	__shared__ float sm_in[BLOCK_SIZE * BLOCK_SIZE];
+	__shared__ float sm_dout[BLOCK_SIZE * BLOCK_SIZE];
 
 	float* p_dout = d_output + (cy * d_output_h * d_output_w);
 	float* p_in = input + (c0 * (input_h * input_w) + y0 * input_w + x0);
 
 	float sum = 0.f;
 
-	for (int i = 0; i < n; i += BLOCK_SIZE_32) {
+	for (int i = 0; i < n; i += BLOCK_SIZE) {
 		__syncthreads();
 
 		sm_dout[sidx] = (threadIdx.x + i) < n && cy < d_output_c ? p_dout[threadIdx.x + i] : 0.f;
@@ -110,8 +110,8 @@ __global__ void __kernel_conv_2d_32x32_c_ind(
 		__syncthreads();
 
 #pragma unroll
-		for (int e = 0; e < BLOCK_SIZE_32; ++e) {
-			sum += sm_dout[threadIdx.y * BLOCK_SIZE_32 + e] * sm_in[e * BLOCK_SIZE_32 + threadIdx.x];
+		for (int e = 0; e < BLOCK_SIZE; ++e) {
+			sum += sm_dout[threadIdx.y * BLOCK_SIZE + e] * sm_in[e * BLOCK_SIZE + threadIdx.x];
 		}
 	}
 
@@ -144,17 +144,17 @@ __global__ void __kernel_conv_2d_32x32_g_ind(
 	cuint y0 = (cx / gradient_w) % gradient_h;
 	cuint c0 = cx / (gradient_h * gradient_w);
 
-	cuint sidx = threadIdx.y * BLOCK_SIZE_32 + threadIdx.x;
+	cuint sidx = threadIdx.y * BLOCK_SIZE + threadIdx.x;
 
-	__shared__ float sm_in[BLOCK_SIZE_32 * BLOCK_SIZE_32];
-	__shared__ float sm_dout[BLOCK_SIZE_32 * BLOCK_SIZE_32];
+	__shared__ float sm_in[BLOCK_SIZE * BLOCK_SIZE];
+	__shared__ float sm_dout[BLOCK_SIZE * BLOCK_SIZE];
 
 	float* p_dout = d_output + (cy * d_output_h * d_output_w);
 	float* p_in = input + (c0 * (input_h * input_w) + y0 * input_w + x0);
 
 	float sum = 0.f;
 
-	for (int i = 0; i < n; i += BLOCK_SIZE_32) {
+	for (int i = 0; i < n; i += BLOCK_SIZE) {
 		__syncthreads();
 
 		sm_dout[sidx] = (threadIdx.x + i) < n && cy < d_output_c ? p_dout[threadIdx.x + i] : 0.f;
@@ -163,8 +163,8 @@ __global__ void __kernel_conv_2d_32x32_g_ind(
 		__syncthreads();
 
 #pragma unroll
-		for (int e = 0; e < BLOCK_SIZE_32; ++e) {
-			sum += sm_dout[threadIdx.y * BLOCK_SIZE_32 + e] * sm_in[e * BLOCK_SIZE_32 + threadIdx.x];
+		for (int e = 0; e < BLOCK_SIZE; ++e) {
+			sum += sm_dout[threadIdx.y * BLOCK_SIZE + e] * sm_in[e * BLOCK_SIZE + threadIdx.x];
 		}
 	}
 
@@ -228,7 +228,9 @@ __global__ void __dilation_2d(
 /*										      */
 /**********************************************/
 
-uint get_output_size(
+/*                convolution_2d              */
+
+int get_output_size(
 	int input_size,
 	int kernel_size,
 	int pad_size,
@@ -293,7 +295,7 @@ void conv_2d(
 	}
 	check_cuda(cudaMemcpyToSymbol(__indices, indices.data, sizeof(uint) * indices.len));
 
-	dim3 threads(BLOCK_SIZE_32, BLOCK_SIZE_32);
+	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, d_output.w * d_output.h, d_output.c);
 
 	for (int i = 0; i < stream.str_size; ++i) {
@@ -321,6 +323,7 @@ void conv_2d(
 }
 
 
+/*             correlation_2d            */
 
 void check_correl_2d(
 	const Tensor& d_doutput,
@@ -372,7 +375,7 @@ void correl_2d(
 	Tensor t_kernel;
 	create_dev_tensor(t_kernel, d_kernel.c, d_kernel.n, d_kernel.h, d_kernel.w);
 
-	dim3 threads(BLOCK_SIZE_1024);
+	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, get_elem_size(d_kernel));
 
 	__transpose<<<blocks, threads, 0, stream.str[0]>>>(
@@ -385,7 +388,7 @@ void correl_2d(
 	);
 	check_cuda(cudaStreamSynchronize(stream.str[0]));
 
-	threads = dim3(BLOCK_SIZE_32, BLOCK_SIZE_32);
+	threads = dim3(BLOCK_SIZE, BLOCK_SIZE);
 	blocks = get_grid_size(threads, d_dinput.w * d_dinput.h, d_dinput.c);
 
 	for (int i = 0; i < stream.str_size; ++i) {
@@ -412,31 +415,64 @@ void correl_2d(
 	free_tensor(t_kernel);
 }
 
-void dilation_2d(
-	const Stream& stream,
+
+/*            dilation_2d           */
+
+void check_dilation_2d(
 	const Tensor& input,
-	Tensor& output,
+	const Tensor& output,
 	uint scale,
 	int offset_x,
 	int offset_y
 ) {
-	check_cuda(cudaMemset(output.data, 0, get_mem_size(output)));
+	int out_w = input.w * scale + offset_x;
+	int out_h = input.h * scale + offset_y;
 
-	dim3 threads(BLOCK_SIZE_32, BLOCK_SIZE_32);
-	dim3 blocks = get_grid_size(threads, input.w, input.h);
+	if (out_w > output.w || out_h > output.h) {
+		ErrorExcept(
+			"[check_dilation_2d] output is too small. output: %s, expect output: [%d, %d, %d, %d]",
+			dim_to_str(output),
+			output.n,
+			output.c,
+			out_h,
+			out_w
+		);
+	}
+}
+
+void dilation_2d(
+	const Stream& stream,
+	const Tensor& d_input,
+	Tensor& d_output,
+	uint scale,
+	int offset_x,
+	int offset_y
+) {
+	check_dilation_2d(
+		d_input,
+		d_output,
+		scale,
+		offset_x,
+		offset_y
+	);
+
+	check_cuda(cudaMemset(d_output.data, 0, get_mem_size(d_output)));
+
+	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 blocks = get_grid_size(threads, d_input.w, d_input.h);
 
 	for (int i = 0; i < stream.str_size; ++i) {
-		float* d_in = input.data + (i * input.h * input.w * input.c);
-		float* d_out = output.data + (i * output.h * output.w * output.c);
+		float* d_in = d_input.data + (i * d_input.h * d_input.w * d_input.c);
+		float* d_out = d_output.data + (i * d_output.h * d_output.w * d_output.c);
 
 		__dilation_2d << <blocks, threads, 0, stream.str[i] >> > (
 			d_in,
 			d_out,
-			input.w,
-			input.h,
-			input.c,
-			output.w,
-			output.h,
+			d_input.w,
+			d_input.h,
+			d_input.c,
+			d_output.w,
+			d_output.h,
 			scale,
 			offset_x,
 			offset_y
@@ -446,6 +482,9 @@ void dilation_2d(
 	sync_streams(stream);
 }
 
+
+/*          kernel_convolution_2d          */
+
 void check_kernel_conv_2d(
 	const Tensor& d_input,
 	const Tensor& d_doutput,
@@ -454,7 +493,12 @@ void check_kernel_conv_2d(
 	int in_h = d_input.h - d_doutput.h + 1;
 	int in_w = d_input.w - d_doutput.w + 1;
 
-	if (d_gradient.h != in_h || d_gradient.w != in_w || d_gradient.n != d_doutput.c || d_gradient.c != d_input.c || d_input.n != d_doutput.n) {
+	if (d_gradient.h != in_h || 
+		d_gradient.w != in_w || 
+		d_gradient.n != d_doutput.c ||
+		d_gradient.c != d_input.c || 
+		d_input.n != d_doutput.n) {
+
 		ErrorExcept(
 			"[check_kernel_conv_2d] invalid tensor arguments size. d_input: %s, d_doutput: %s, gradient: %s",
 			dim_to_str(d_input),
@@ -468,12 +512,12 @@ void kernel_conv_2d(
 	const Stream& stream,
 	const Tensor& d_input,
 	const Tensor& d_doutput,
-	Tensor& gradient
+	Tensor& d_gradient
 ) {
 	check_kernel_conv_2d(
 		d_input,
 		d_doutput,
-		gradient
+		d_gradient
 	);
 
 	MemBlock<uint> indices;
@@ -486,13 +530,13 @@ void kernel_conv_2d(
 		}
 	}
 
-	check_cuda(cudaMemset(gradient.data, 0, get_mem_size(gradient)));
+	check_cuda(cudaMemset(d_gradient.data, 0, get_mem_size(d_gradient)));
 
-	dim3 threads(BLOCK_SIZE_32, BLOCK_SIZE_32);
+	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 blocks = get_grid_size(
 		threads,
-		gradient.h * gradient.w * gradient.c,
-		gradient.n
+		d_gradient.h * d_gradient.w * d_gradient.c,
+		d_gradient.n
 	);
 
 	if (indices.len < CONST_ELEM_SIZE) {

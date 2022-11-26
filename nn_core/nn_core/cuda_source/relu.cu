@@ -47,7 +47,7 @@ void relu(
 	}
 
 	uint length = input.h * input.w * input.c;
-	dim3 threads(BLOCK_SIZE_32);
+	dim3 threads(BLOCK_SIZE);
 	dim3 blocks(get_grid_size(threads, length));
 
 	for (int i = 0; i < stream.str_size; ++i) {

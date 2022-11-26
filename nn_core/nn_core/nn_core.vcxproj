@@ -91,8 +91,6 @@
     <ClInclude Include="cuda_source\add_bias.cuh" />
     <ClInclude Include="cuda_source\convolution.cuh" />
     <ClInclude Include="cuda_source\dens.cuh" />
-    <ClInclude Include="cuda_source\d_convolution.cuh" />
-    <ClInclude Include="cuda_source\k_convolution.cuh" />
     <ClInclude Include="cuda_source\maxpool.cuh" />
     <ClInclude Include="cuda_source\optimizer.cuh" />
     <ClInclude Include="cuda_source\relu.cuh" />
@@ -101,8 +99,6 @@
     <CudaCompile Include="cuda_source\add_bias.cu" />
     <CudaCompile Include="cuda_source\convolution.cu" />
     <CudaCompile Include="cuda_source\dens.cu" />
-    <CudaCompile Include="cuda_source\d_convlolution.cu" />
-    <CudaCompile Include="cuda_source\k_convolution.cu" />
     <CudaCompile Include="cuda_source\maxpool.cu" />
     <CudaCompile Include="cuda_source\optimizer.cu" />
     <CudaCompile Include="cuda_source\relu.cu" />

@@ -11,19 +11,11 @@
 /*										      */
 /**********************************************/
 
-uint get_output_size(
+int get_output_size(
 	int input_size,
 	int kernel_size,
 	int pad_size,
 	int stride
-);
-
-void check_conv_2d(
-	const Tensor& d_input,
-	const Tensor& d_kernel,
-	const Tensor& d_output,
-	int st_w,
-	int st_h
 );
 
 void conv_2d(
@@ -44,8 +36,8 @@ void correl_2d(
 
 void dilation_2d(
 	const Stream& stream,
-	const Tensor& input,
-	Tensor& output,
+	const Tensor& d_input,
+	Tensor& d_output,
 	uint scale,
 	int offset_x,
 	int offset_y
@@ -55,7 +47,7 @@ void kernel_conv_2d(
 	const Stream& stream,
 	const Tensor& d_input,
 	const Tensor& d_doutput,
-	Tensor& gradient
+	Tensor& d_gradient
 );
 
 #endif // !_CONVOLUTION_CUH_

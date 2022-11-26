@@ -154,7 +154,7 @@ void sgd(
 	check_sgd(gradient, momentum, weight);
 
 	uint length = get_elem_size(weight);
-	dim3 threads(BLOCK_SIZE_1024);
+	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, length);
 
 	__sgd << <blocks, threads, 0, stream.str[0] >> > (
@@ -179,7 +179,7 @@ void rms_prop(
 	check_rms_prop(gradient, square_g, weight);
 
 	uint length = get_elem_size(weight);
-	dim3 threads(BLOCK_SIZE_1024);
+	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, length);
 
 	__rms_prop<<<blocks, threads, 0, stream.str[0]>>>(
@@ -211,7 +211,7 @@ void adam(
 	);
 
 	uint length = get_elem_size(weight);
-	dim3 threads(BLOCK_SIZE_1024);
+	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, length);
 
 	__adam<<<blocks, threads, 0, stream.str[0]>>>(

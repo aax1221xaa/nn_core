@@ -26,7 +26,7 @@ __global__ void __add_bias(
 
 	__syncthreads();
 
-	for (uint i = 0; i < ch; i += BLOCK_SIZE_32) {
+	for (uint i = 0; i < ch; i += BLOCK_SIZE) {
 		int tidx = threadIdx.x + i;
 
 		if (tidx < ch) {
@@ -81,7 +81,7 @@ void add_bias(
 	uint length = output.h * output.w;
 	size_t share_size = sizeof(float) * output.c;
 
-	dim3 threads(BLOCK_SIZE_1024);
+	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, length);
 
 	for (int i = 0; i < stream.str_size; ++i) {

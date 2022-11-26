@@ -25,13 +25,13 @@ __global__ void __matmul(
 	uint cx = blockIdx.x * blockDim.x + threadIdx.x;
 	uint cy = blockIdx.y * blockDim.y + threadIdx.y;
 
-	__shared__ float sm_a[BLOCK_SIZE_32 * BLOCK_SIZE_32];
-	__shared__ float sm_b[BLOCK_SIZE_32 * BLOCK_SIZE_32];
+	__shared__ float sm_a[BLOCK_SIZE * BLOCK_SIZE];
+	__shared__ float sm_b[BLOCK_SIZE * BLOCK_SIZE];
 
-	uint tidx = threadIdx.y * BLOCK_SIZE_32 + threadIdx.x;
+	uint tidx = threadIdx.y * BLOCK_SIZE + threadIdx.x;
 	float val = 0.f;
 
-	for (int i = 0; i < n; i += BLOCK_SIZE_32) {
+	for (int i = 0; i < n; i += BLOCK_SIZE) {
 		__syncthreads();
 
 		sm_a[tidx] = (threadIdx.x + i) < n && cy < m ? a[cy * n + (threadIdx.x + i)] : 0.f;
@@ -39,8 +39,8 @@ __global__ void __matmul(
 
 		__syncthreads();
 
-		for (int e = 0; e < BLOCK_SIZE_32; ++e) {
-			val += sm_a[threadIdx.y * BLOCK_SIZE_32 + e] * sm_b[e * BLOCK_SIZE_32 + threadIdx.x];
+		for (int e = 0; e < BLOCK_SIZE; ++e) {
+			val += sm_a[threadIdx.y * BLOCK_SIZE + e] * sm_b[e * BLOCK_SIZE + threadIdx.x];
 		}
 	}
 
@@ -80,7 +80,7 @@ void dens(
 ) {
 	check_dens(input, weight, output);
 
-	dim3 threads(BLOCK_SIZE_32, BLOCK_SIZE_32);
+	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, output.c, output.n);
 
 	__matmul<<<blocks, threads, 0, st>>>(

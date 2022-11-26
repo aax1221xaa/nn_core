@@ -119,7 +119,7 @@ void copy_tensor(const Tensor& src, Tensor& dst) {
 }
 
 const char* dim_to_str(const Tensor& tensor) {
-	char buff[256] = { '\0', };
+	char buff[100] = { '\0', };
 
 	sprintf_s(
 		buff,
@@ -131,16 +131,41 @@ const char* dim_to_str(const Tensor& tensor) {
 	);
 
 	int str_length = (int)strlen(buff) + 1;
-	char* p_str_buff = str_buffer + str_idx;
+	int buff_clearance = STR_MAX - str_idx;
+	char* p_buffer = NULL;
 
-	strcpy_s(p_str_buff, sizeof(char) * str_length, buff);
+	if (buff_clearance >= str_length) {
+		p_buffer = &str_buffer[str_idx];
+		strcpy_s(p_buffer, str_length, buff);
 
-	if ((STR_MAX - str_idx) > str_length) {
 		str_idx += str_length;
 	}
 	else {
+		p_buffer = str_buffer;
+		strcpy_s(p_buffer, str_length, buff);
+
 		str_idx = 0;
 	}
 
-	return p_str_buff;
+	return p_buffer;
+}
+
+void print_tensor(const Tensor& t) {
+	printf("\nTensor shape = %s", dim_to_str(t));
+	for (int n = 0; n < t.n; ++n) {
+		float* npt = t.data + (n * t.h * t.w * t.c);
+		printf("\nn = %d\n===================================================\n", n);
+		for (int c = 0; c < t.c; ++c) {
+			float* cpt = npt + (c * t.h * t.w);
+			printf("\nc = %d, (%dx%d)\n", c, t.h, t.w);
+			for (int h = 0; h < t.h; ++h) {
+				float* hpt = cpt + (h * t.w);
+				for (int w = 0; w < t.w; ++w) {
+					printf("%.0f ", hpt[w]);
+				}
+				printf("\n");
+			}
+		}
+	}
+	printf("\n");
 }

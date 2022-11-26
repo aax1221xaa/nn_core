@@ -6,10 +6,10 @@ typedef const int cint;
 typedef unsigned int uint;
 typedef const unsigned int cuint;
 
-#define BLOCK_SIZE_32			32
-#define BLOCK_SIZE_1024			BLOCK_SIZE_32 * BLOCK_SIZE_32
+#define BLOCK_SIZE				32
+#define SQR_BLOCK_SIZE			BLOCK_SIZE * BLOCK_SIZE
 #define CONST_ELEM_SIZE			16384
-#define CONST_MEM_SIZE			sizeof(float) * CONST_ELEM_SIZE
+#define CONST_MEM_SIZE			65536
 
 #define EPSILON					1e-8
 
@@ -54,6 +54,7 @@ void create_dev_tensor(Tensor& tensor, int n, int c, int h, int w);
 void free_tensor(Tensor& tensor);
 void copy_tensor(const Tensor& src, Tensor& dst);
 const char* dim_to_str(const Tensor& tensor);
+void print_tensor(const Tensor& t);
 
 template<class _T>
 void create_host_memblock(MemBlock<_T>& mem, size_t length) {

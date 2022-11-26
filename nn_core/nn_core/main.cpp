@@ -11,25 +11,7 @@ using namespace std;
 using namespace tbb;
 
 
-void print(const Tensor& t) {
-	printf("\nTensor shape = %s", dim_to_str(t));
-	for (int n = 0; n < t.n; ++n) {
-		float* npt = t.data + (n * t.h * t.w * t.c);
-		printf("\nn = %d\n===================================================\n", n);
-		for (int c = 0; c < t.c; ++c) {
-			float* cpt = npt + (c * t.h * t.w);
-			printf("\nc = %d, (%dx%d)\n", c, t.h, t.w);
-			for (int h = 0; h < t.h; ++h) {
-				float* hpt = cpt + (h * t.w);
-				for (int w = 0; w < t.w; ++w) {
-					printf("%.0f ", hpt[w]);
-				}
-				printf("\n");
-			}
-		}
-	}
-	printf("\n");
-}
+
 
 int main() {
 	const int n = 1;
@@ -107,10 +89,10 @@ int main() {
 		copy_tensor(din, hin);
 		copy_tensor(dpad, hpad);
 
-		print(hout);
-		print(hk);
-		print(hpad);
-		print(hin);
+		print_tensor(hout);
+		print_tensor(hk);
+		print_tensor(hpad);
+		print_tensor(hin);
 	}
 	catch (Exception& e) {
 		e.Put();

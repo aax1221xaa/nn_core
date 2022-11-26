@@ -85,7 +85,7 @@ int calc_shared_mem_size(
 	int kernel_size,
 	int strides
 ) {
-	return (BLOCK_SIZE_32 - 1) * strides + kernel_size;
+	return (BLOCK_SIZE - 1) * strides + kernel_size;
 }
 
 int calc_output_size(
@@ -120,7 +120,7 @@ void maxpool_2d(
 
 	size_t smem_size = sizeof(float) * share_w * share_h;
 
-	dim3 threads(BLOCK_SIZE_32, BLOCK_SIZE_32);
+	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, output.w, output.h);
 	
 	for (int i = 0; i < stream.str_size; ++i) {
