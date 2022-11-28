@@ -34,6 +34,12 @@ void correl_2d(
 	Tensor& d_dinput
 );
 
+void transpose(
+	const Stream& stream,
+	const Tensor& d_input,
+	Tensor& d_output
+);
+
 void dilation_2d(
 	const Stream& stream,
 	const Tensor& d_input,
@@ -45,8 +51,8 @@ void dilation_2d(
 
 void kernel_conv_2d(
 	const Stream& stream,
-	const Tensor& d_input,
 	const Tensor& d_doutput,
+	const Tensor& d_input,
 	Tensor& d_gradient
 );
 

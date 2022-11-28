@@ -185,13 +185,13 @@ __global__ void __transpose(
 	cuint k_idx = tidx % (w * h);
 	cuint k_count = tidx / (w * h);
 
-	cuint row = k_count % n;
-	cuint col = k_count / n;
+	cuint row = k_count % c;
+	cuint col = k_count / c;
 
-	float* p_input = input + (row * (w * h * n) + col * (w * h));
+	float* p_out = output + (row * (w * h * n) + col * (w * h));
 
 	if (tidx < (n * h * w * c)) {
-		output[tidx] = p_input[k_idx];
+		p_out[k_idx] = input[tidx];
 	}
 }
 
@@ -373,7 +373,7 @@ void correl_2d(
 	check_cuda(cudaMemcpyToSymbol(__indices, indices.data, sizeof(uint) * indices.len));
 
 	Tensor t_kernel;
-	create_dev_tensor(t_kernel, d_kernel.c, d_kernel.n, d_kernel.h, d_kernel.w);
+	set_dev_tensor(t_kernel, d_kernel.c, d_kernel.n, d_kernel.h, d_kernel.w);
 
 	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, get_elem_size(d_kernel));
@@ -415,6 +415,34 @@ void correl_2d(
 	free_tensor(t_kernel);
 }
 
+/*            transpose             */	
+
+void transpose(
+	const Stream& stream,
+	const Tensor& d_input,
+	Tensor& d_output
+) {
+	if (get_elem_size(d_input) != get_elem_size(d_output)) {
+		ErrorExcept(
+			"[transpose] invalid input, output size. input: %d, output: %d",
+			get_elem_size(d_input),
+			get_elem_size(d_output)
+		);
+	}
+
+	dim3 threads(SQR_BLOCK_SIZE);
+	dim3 blocks = get_grid_size(threads, get_elem_size(d_input));
+
+	__transpose<<<blocks, threads, 0, stream.str[0]>>>(
+		d_input.data,
+		d_output.data,
+		d_input.n,
+		d_input.c,
+		d_input.h,
+		d_input.w
+	);
+	check_cuda(cudaStreamSynchronize(stream.str[0]));
+}
 
 /*            dilation_2d           */
 
@@ -486,8 +514,8 @@ void dilation_2d(
 /*          kernel_convolution_2d          */
 
 void check_kernel_conv_2d(
-	const Tensor& d_input,
 	const Tensor& d_doutput,
+	const Tensor& d_input,
 	Tensor& d_gradient
 ) {
 	int in_h = d_input.h - d_doutput.h + 1;
@@ -510,13 +538,13 @@ void check_kernel_conv_2d(
 
 void kernel_conv_2d(
 	const Stream& stream,
-	const Tensor& d_input,
 	const Tensor& d_doutput,
+	const Tensor& d_input,
 	Tensor& d_gradient
 ) {
 	check_kernel_conv_2d(
-		d_input,
 		d_doutput,
+		d_input,
 		d_gradient
 	);
 
@@ -550,15 +578,15 @@ void kernel_conv_2d(
 			__kernel_conv_2d_32x32_c_ind << <blocks, threads, 0, stream.str[i] >> > (
 				d_in,
 				d_dout,
-				gradient.data,
+				d_gradient.data,
 				d_input.h,
 				d_input.w,
 				d_input.c,
 				d_doutput.h,
 				d_doutput.w,
 				d_doutput.c,
-				gradient.h,
-				gradient.w
+				d_gradient.h,
+				d_gradient.w
 				);
 			check_cuda(cudaStreamSynchronize(stream.str[i]));
 		}
@@ -576,7 +604,7 @@ void kernel_conv_2d(
 			__kernel_conv_2d_32x32_g_ind << <blocks, threads, 0, stream.str[i] >> > (
 				d_in,
 				d_dout,
-				gradient.data,
+				d_gradient.data,
 				d_indices.data,
 				d_input.h,
 				d_input.w,
@@ -584,8 +612,8 @@ void kernel_conv_2d(
 				d_doutput.h,
 				d_doutput.w,
 				d_doutput.c,
-				gradient.h,
-				gradient.w
+				d_gradient.h,
+				d_gradient.w
 				);
 			check_cuda(cudaStreamSynchronize(stream.str[i]));
 		}

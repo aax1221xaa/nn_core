@@ -45,7 +45,7 @@
     <ClCompile Include="cpp_source\cuda_common.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\convolution_test.cpp">
+    <ClCompile Include="cpp_source\convolution_host.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
   </ItemGroup>
@@ -83,7 +83,7 @@
     <ClInclude Include="cuda_source\optimizer.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
-    <ClInclude Include="cpp_source\convolution_test.h">
+    <ClInclude Include="cpp_source\convolution_host.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
   </ItemGroup>

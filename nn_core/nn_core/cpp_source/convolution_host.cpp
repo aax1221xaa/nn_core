@@ -1,4 +1,4 @@
-#include "convolution_test.h"
+#include "convolution_host.h"
 #include <tbb/tbb.h>
 
 using namespace tbb;
@@ -25,13 +25,13 @@ void check_conv_2d_host(
 
 	if (d_output.h != out_h || d_output.w != out_w) {
 		ErrorExcept(
-			"[check_conv_2d] invalid output dimension %s",
+			"[check_conv_2d_host] invalid output dimension %s",
 			dim_to_str(d_output)
 		);
 	}
 	else if (d_kernel.c != d_input.c || d_kernel.n != d_output.c) {
 		ErrorExcept(
-			"[check_conv_2d] invalid channels input: %s, kernel: %s, output: %s",
+			"[check_conv_2d_host] invalid channels input: %s, kernel: %s, output: %s",
 			dim_to_str(d_input),
 			dim_to_str(d_kernel),
 			dim_to_str(d_output)
@@ -51,7 +51,7 @@ void check_dilation_2d_host(
 
 	if (out_w > output.w || out_h > output.h) {
 		ErrorExcept(
-			"[check_dilation_2d] output is too small. output: %s, expect output: [%d, %d, %d, %d]",
+			"[check_dilation_2d_host] output is too small. output: %s, expect output: [%d, %d, %d, %d]",
 			dim_to_str(output),
 			output.n,
 			output.c,
@@ -76,31 +76,31 @@ void check_correl_2d_host(
 		d_dinput.h != d_in_h
 		) {
 		ErrorExcept(
-			"[check_correl_2d] invalid (d_output, kernel, d_input) size. d_doutput: %s, d_tkernel: %s, d_dinput: %s",
+			"[check_correl_2d_host] invalid (d_output, kernel, d_input) size. d_doutput: %s, d_tkernel: %s, d_dinput: %s",
 			dim_to_str(d_doutput), dim_to_str(d_kernel), dim_to_str(d_dinput)
 		);
 	}
 }
 
 void check_kernel_conv_2d_host(
-	const Tensor& d_input,
-	const Tensor& d_doutput,
-	Tensor& d_gradient
+	const Tensor& doutput,
+	const Tensor& input,
+	Tensor& gradient
 ) {
-	int in_h = d_input.h - d_doutput.h + 1;
-	int in_w = d_input.w - d_doutput.w + 1;
+	int in_h = input.h - doutput.h + 1;
+	int in_w = input.w - doutput.w + 1;
 
-	if (d_gradient.h != in_h ||
-		d_gradient.w != in_w ||
-		d_gradient.n != d_doutput.c ||
-		d_gradient.c != d_input.c ||
-		d_input.n != d_doutput.n) {
+	if (gradient.h != in_h ||
+		gradient.w != in_w ||
+		gradient.n != doutput.c ||
+		gradient.c != input.c ||
+		input.n != doutput.n) {
 
 		ErrorExcept(
-			"[check_kernel_conv_2d] invalid tensor arguments size. d_input: %s, d_doutput: %s, gradient: %s",
-			dim_to_str(d_input),
-			dim_to_str(d_doutput),
-			dim_to_str(d_gradient)
+			"[check_kernel_conv_2d_host] invalid tensor arguments size. input: %s, doutput: %s, gradient: %s",
+			dim_to_str(input),
+			dim_to_str(doutput),
+			dim_to_str(gradient)
 		);
 	}
 }
@@ -144,8 +144,8 @@ void conv_2d_host(const Tensor & h_input, const Tensor & h_kernel, Tensor & h_ou
 				for (uint k = q.cols().begin(); k < q.cols().end(); ++k) {
 					float sum_ = 0.f;
 
-					cuint x0 = k % h_output.w;
-					cuint y0 = k / h_output.w;
+					cuint x0 = (k % h_output.w) * st_w;
+					cuint y0 = (k / h_output.w) * st_h;
 	
 					float* p_in = h_in + (y0 * h_input.w + x0);
 
@@ -153,7 +153,7 @@ void conv_2d_host(const Tensor & h_input, const Tensor & h_kernel, Tensor & h_ou
 						sum_ += p_in[indices[e]] * p_kernel[e];
 					}
 
-					p_out[m * h_output.w + k] = sum_;
+					p_out[k] = sum_;
 				}
 			}
 		}
@@ -183,7 +183,9 @@ void correl_2d_host(const Tensor & h_doutput, const Tensor & h_kernel, Tensor & 
 	}
 
 	Tensor t_kernel;
-	create_host_tensor(t_kernel, h_kernel.c, h_kernel.n, h_kernel.h, h_kernel.w);
+	set_host_tensor(t_kernel, h_kernel.c, h_kernel.n, h_kernel.h, h_kernel.w);
+
+	transpose_host(h_kernel, t_kernel);
 
 	parallel_for(
 		blocked_range2d<uint>(0, h_dinput.c, 0, h_dinput.h * h_dinput.w),
@@ -211,7 +213,7 @@ void correl_2d_host(const Tensor & h_doutput, const Tensor & h_kernel, Tensor & 
 						sum_ += p_dout[indices[e]] * p_kernel[e];
 					}
 
-					p_din[m * h_dinput.w + k] = sum_;
+					p_din[k] = sum_;
 				}
 			}
 		}
@@ -219,26 +221,35 @@ void correl_2d_host(const Tensor & h_doutput, const Tensor & h_kernel, Tensor & 
 	);
 
 	delete[] indices;
+	free_tensor(t_kernel);
 }
 
 void transpose_host(
 	const Tensor& h_input,
 	Tensor& h_output
 ) {
+	if (get_elem_size(h_input) != get_elem_size(h_output)) {
+		ErrorExcept(
+			"[transpose_host] invalid input, output size. input: %s, output: %s",
+			dim_to_str(h_input),
+			dim_to_str(h_output)
+		);
+	}
+
 	parallel_for(
 		blocked_range<uint>(0, get_elem_size(h_input)),
 		[&](blocked_range<uint>& q) {
 
 		for (uint i = q.begin(); i < q.end(); ++i) {
 			uint wh_idx = i % (h_input.w * h_input.h);
-			uint count = i / (h_input.w * h_input.h);
+			uint page = i / (h_input.w * h_input.h);
 
-			cuint row = count % h_input.n;
-			cuint col = count / h_input.n;
+			cuint c = page % h_input.c;
+			cuint n = page / h_input.c;
 
-			float* p_input = h_input.data + (row * (h_input.w * h_input.h * h_input.n) + col * (h_input.w * h_input.h));
+			float* p_output = h_output.data + (c * h_output.c * h_output.h * h_output.w) + n * (h_output.h * h_output.w);
 
-			h_output.data[i] = p_input[wh_idx];
+			p_output[wh_idx] = h_input.data[i];
 		}
 	}
 	);
@@ -246,8 +257,96 @@ void transpose_host(
 
 void dilation_2d_host(const Tensor & h_input, Tensor & h_output, uint scale, int offset_x, int offset_y)
 {
+	check_dilation_2d_host(
+		h_input,
+		h_output,
+		scale,
+		offset_x,
+		offset_y
+	);
+
+	memset(h_output.data, 0, get_mem_size(h_output));
+
+	parallel_for(
+		blocked_range3d<uint>(
+			0, h_input.n * h_output.c,
+			0, h_input.h,
+			0, h_input.w
+			),
+		[&](blocked_range3d<uint>& q) {
+
+		for (uint i = q.pages().begin(); i < q.pages().end(); ++i) {
+			float* p_in = h_input.data + (i * h_input.h * h_input.w);
+			float* p_out = h_output.data + (i * h_output.h * h_output.w);
+
+			for (uint h = q.rows().begin(); h < q.rows().end(); ++h) {
+				for (uint w = q.cols().begin(); w < q.cols().end(); ++w) {
+					p_out[(h * scale + offset_y) * h_output.w + (w * scale + offset_x)] = p_in[h * h_input.w + w];
+				}
+			}
+		}
+	}
+	);
 }
 
-void kernel_conv_2d_host(const Tensor & h_input, const Tensor & h_doutput, Tensor & h_gradient)
-{
+void kernel_conv_2d_host(
+	const Tensor& h_doutput,
+	const Tensor& h_input,
+	Tensor& h_gradient
+){
+	check_kernel_conv_2d_host(
+		h_doutput,
+		h_input,
+		h_gradient
+	);
+
+	memset(h_gradient.data, 0, get_mem_size(h_gradient));
+
+	MemBlock<uint> indices;
+	create_host_memblock(indices, h_doutput.h * h_doutput.w);
+
+	for (uint h = 0; h < h_doutput.h; ++h) {
+		for (uint w = 0; w < h_doutput.w; ++w) {
+			indices.data[h * h_doutput.w + w] = h * h_input.w + w;
+		}
+	}
+
+	parallel_for(
+		blocked_range3d<uint>(
+			0, h_input.n,
+			0, h_gradient.n,
+			0, h_gradient.c * h_gradient.h * h_gradient.w
+			),
+		[&](blocked_range3d<uint>& q) {
+
+		cuint h_dout_wh = h_doutput.h * h_doutput.w;
+
+		for (uint batch = q.pages().begin(); batch < q.pages().end(); ++batch) {
+			float* p_dout = h_doutput.data + (batch * h_doutput.c * h_doutput.h * h_doutput.w);
+			float* p_in = h_input.data + (batch * h_input.c * h_input.h * h_input.w);
+
+			for (uint m = q.rows().begin(); m < q.rows().end(); ++m) {
+				float* pdout = p_dout + (m * h_doutput.h * h_doutput.w);
+				float* pgrad = h_gradient.data + (m * h_gradient.c * h_gradient.h * h_gradient.w);
+
+				for (uint k = q.cols().begin(); k < q.cols().end(); ++k) {
+					cuint x0 = k % h_gradient.w;
+					cuint y0 = (k / h_gradient.w) % h_gradient.h;
+					cuint c0 = k / (h_gradient.w * h_gradient.h);
+
+					float* pin = p_in + (c0 * (h_input.h * h_input.w) + (y0 * h_input.w) + x0);
+					float _sum = 0.f;
+
+					for (uint e = 0; e < h_dout_wh; ++e) {
+						_sum += pdout[e] * pin[indices.data[e]];
+					}
+
+					pgrad[k] += _sum;
+				}
+			}
+		}
+	}
+	);
+
+	free_memblock(indices);
 }

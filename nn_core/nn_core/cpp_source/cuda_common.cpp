@@ -49,7 +49,7 @@ void sync_streams(const Stream& stream) {
 }
 
 
-void create_host_tensor(Tensor& tensor, int n, int c, int h, int w) {
+void set_host_tensor(Tensor& tensor, int n, int c, int h, int w) {
 	if (n < 1 || h < 1 || w < 1 || c < 1) {
 		ErrorExcept("[create_host_tensor] invalid dimensions: [%d, %d, %d, %d]", n, h, w, c);
 	}
@@ -64,7 +64,7 @@ void create_host_tensor(Tensor& tensor, int n, int c, int h, int w) {
 	tensor.type = CPU;
 }
 
-void create_dev_tensor(Tensor& tensor, int n, int c, int h, int w) {
+void set_dev_tensor(Tensor& tensor, int n, int c, int h, int w) {
 	if (n < 1 || h < 1 || w < 1 || c < 1) {
 		ErrorExcept("[create_dev_tensor] invalid dimensions: [%d, %d, %d, %d]", n, h, w, c);
 	}
@@ -77,6 +77,35 @@ void create_dev_tensor(Tensor& tensor, int n, int c, int h, int w) {
 	tensor.w = w;
 	tensor.c = c;
 	tensor.type = GPU;
+}
+
+void set_like_tensor(Tensor& dst, const Tensor& src, int mem_type, bool set_zero) {
+	int n = src.n;
+	int c = src.c;
+	int h = src.h;
+	int w = src.w;
+
+	if (mem_type == CPU) {
+		set_host_tensor(dst, n, c, h, w);
+
+		if (set_zero) {
+			memset(dst.data, 0, get_mem_size(dst));
+		}
+		else {
+			copy_tensor(src, dst);
+		}
+	}
+	else if (mem_type == GPU) {
+		set_dev_tensor(dst, n, c, h, w);
+
+		if (set_zero) {
+			check_cuda(cudaMemset(dst.data, 0, get_mem_size(dst)));
+		}
+		else {
+			copy_tensor(src, dst);
+		}
+	}
+	
 }
 
 void free_tensor(Tensor& tensor) {

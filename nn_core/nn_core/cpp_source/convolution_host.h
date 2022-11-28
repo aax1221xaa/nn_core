@@ -31,7 +31,7 @@ void dilation_2d_host(
 );
 
 void kernel_conv_2d_host(
-	const Tensor& h_input,
 	const Tensor& h_doutput,
+	const Tensor& h_input,
 	Tensor& h_gradient
 );
