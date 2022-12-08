@@ -1,8 +1,7 @@
 #include "ObjectID.h"
-#include <stdlib.h>
 
 
-Object_ID_List::Object_ID_List(){
+Object_Linker::Object_Linker(){
 	head = new Object_ID;
 
 	head->prev = head;
@@ -12,7 +11,7 @@ Object_ID_List::Object_ID_List(){
 }
 
 
-Object_ID* Object_ID_List::Create(){
+Object_ID* Object_Linker::Create(){
 	Object_ID *current = new Object_ID;
 
 	Object_ID *before = head;
@@ -28,7 +27,7 @@ Object_ID* Object_ID_List::Create(){
 	return current;
 }
 
-void Object_ID_List::Erase(Object_ID *currObj_ID){
+void Object_Linker::Erase(Object_ID *currObj_ID){
 	if(currObj_ID == head) return;
 
 	Object_ID *before = currObj_ID->prev;
@@ -41,7 +40,7 @@ void Object_ID_List::Erase(Object_ID *currObj_ID){
 }
 
 
-Object_ID_List::~Object_ID_List(){
+Object_Linker::~Object_Linker(){
 	Object_ID *current = head->next;
 	Object_ID *tmp = NULL;
 

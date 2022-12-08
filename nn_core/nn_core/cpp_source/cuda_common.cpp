@@ -2,7 +2,7 @@
 #include <string.h>
 
 
-#define STR_MAX			1024
+
 
 char str_buffer[STR_MAX] = { '\0', };
 int str_idx = 0;
@@ -26,7 +26,7 @@ dim3 get_grid_size(dim3 block_size, cuint x, cuint y, cuint z) {
 	return grids;
 }
 
-void create_streams(Stream& st, cuint amount) {
+void set_streams(Stream& st, cuint amount) {
 	st.str = new cudaStream_t[amount];
 	st.str_size = amount;
 
@@ -92,7 +92,7 @@ void set_like_tensor(Tensor& dst, const Tensor& src, int mem_type, bool set_zero
 			memset(dst.data, 0, get_mem_size(dst));
 		}
 		else {
-			copy_tensor(src, dst);
+			copy_tensor(dst, src);
 		}
 	}
 	else if (mem_type == GPU) {
@@ -102,7 +102,7 @@ void set_like_tensor(Tensor& dst, const Tensor& src, int mem_type, bool set_zero
 			check_cuda(cudaMemset(dst.data, 0, get_mem_size(dst)));
 		}
 		else {
-			copy_tensor(src, dst);
+			copy_tensor(dst, src);
 		}
 	}
 	
@@ -121,7 +121,7 @@ void free_tensor(Tensor& tensor) {
 	tensor.type = 0;
 }
 
-void copy_tensor(const Tensor& src, Tensor& dst) {
+void copy_tensor(Tensor& dst, const Tensor& src) {
 	size_t src_size = get_mem_size(src);
 	size_t dst_size = get_mem_size(dst);
 

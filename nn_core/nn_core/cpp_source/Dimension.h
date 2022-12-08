@@ -2,6 +2,8 @@
 #include <vector>
 
 
+using namespace std;
+
 /*********************************************/
 /*                                           */
 /*                     Dim                   */
@@ -10,15 +12,15 @@
 
 class Dim {
 public:
-	std::vector<int> dim;
+	vector<int> dim;
 
 	Dim();
-	Dim(const std::vector<int>& dim_);
+	Dim(const initializer_list<int>& arr);
 	
-	int& operator[](int axis);
-	bool operator==(Dim& pDim);
+	const int& operator[](int axis);
+	const bool operator==(const Dim& pDim);
 
-	void Set(const std::vector<int>& dim_);
-	std::vector<int>& Get();
-	const size_t GetSize();
+	void set(const initializer_list<int>& dim_);
+	const unsigned int size() const;
+	void clear();
 };

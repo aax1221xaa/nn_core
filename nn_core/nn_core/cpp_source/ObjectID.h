@@ -1,6 +1,10 @@
 #ifndef OBJECT_ID_H
 #define OBJECT_ID_H
 
+#include <stdlib.h>
+
+
+
 struct Object_ID{
 	int nCpy;
 
@@ -9,14 +13,14 @@ struct Object_ID{
 };
 
 
-class Object_ID_List{
+class Object_Linker{
 	Object_ID *head;
 
 public:
-	Object_ID_List();
+	Object_Linker();
 	Object_ID* Create();
 	void Erase(Object_ID *currObj_ID);
-	~Object_ID_List();
+	~Object_Linker();
 };
 
 

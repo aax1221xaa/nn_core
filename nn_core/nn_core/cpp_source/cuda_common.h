@@ -6,6 +6,8 @@ typedef const int cint;
 typedef unsigned int uint;
 typedef const unsigned int cuint;
 
+#define STR_MAX			1024
+
 #define BLOCK_SIZE				32
 #define SQR_BLOCK_SIZE			BLOCK_SIZE * BLOCK_SIZE
 #define CONST_ELEM_SIZE			16384
@@ -46,14 +48,14 @@ struct MemBlock {
 uint get_elem_size(const Tensor& tensor);
 size_t get_mem_size(const Tensor& tensor);
 dim3 get_grid_size(dim3 block_size, cuint x = 1, cuint y = 1, cuint z = 1);
-void create_streams(Stream& st, cuint amount);
+void set_streams(Stream& st, cuint amount);
 void free_streams(Stream& stream);
 void sync_streams(const Stream& stream);
 void set_host_tensor(Tensor& tensor, int n, int c, int h, int w);
 void set_dev_tensor(Tensor& tensor, int n, int c, int h, int w);
 void set_like_tensor(Tensor& dst, const Tensor& src, int mem_type, bool set_zero);
 void free_tensor(Tensor& tensor);
-void copy_tensor(const Tensor& src, Tensor& dst);
+void copy_tensor(Tensor& dst, const Tensor& src);
 const char* dim_to_str(const Tensor& tensor);
 void print_tensor(const Tensor& t);
 

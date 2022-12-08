@@ -80,6 +80,14 @@
     <ClCompile Include="cpp_source\cuda_common.cpp" />
     <ClCompile Include="cpp_source\Dimension.cpp" />
     <ClCompile Include="cpp_source\Exception.cpp" />
+    <ClCompile Include="cpp_source\nn_layer.cpp" />
+    <ClCompile Include="cpp_source\nn_link.cpp" />
+    <ClCompile Include="cpp_source\nn_base_layer.cpp" />
+    <ClCompile Include="cpp_source\nn_loss.cpp" />
+    <ClCompile Include="cpp_source\nn_manager.cpp" />
+    <ClCompile Include="cpp_source\nn_model.cpp" />
+    <ClCompile Include="cpp_source\nn_optimizer.cpp" />
+    <ClCompile Include="cpp_source\nn_tensor.cpp" />
     <ClCompile Include="cpp_source\ObjectID.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
@@ -89,6 +97,14 @@
     <ClInclude Include="cpp_source\cuda_common.h" />
     <ClInclude Include="cpp_source\Dimension.h" />
     <ClInclude Include="cpp_source\Exception.h" />
+    <ClInclude Include="cpp_source\nn_layer.h" />
+    <ClInclude Include="cpp_source\nn_link.h" />
+    <ClInclude Include="cpp_source\nn_base_layer.h" />
+    <ClInclude Include="cpp_source\nn_loss.h" />
+    <ClInclude Include="cpp_source\nn_manager.h" />
+    <ClInclude Include="cpp_source\nn_model.h" />
+    <ClInclude Include="cpp_source\nn_optimizer.h" />
+    <ClInclude Include="cpp_source\nn_tensor.h" />
     <ClInclude Include="cpp_source\ObjectID.h" />
     <ClInclude Include="cuda_source\add_bias.cuh" />
     <ClInclude Include="cuda_source\convolution.cuh" />

@@ -12,40 +12,42 @@ Dim::Dim() {
 
 }
 
-Dim::Dim(const std::vector<int>& dim_) :
-	dim(dim_)
+Dim::Dim(const initializer_list<int>& arr) :
+	dim(arr)
 {
 }
 
-int& Dim::operator[](int axis) {
+
+const int& Dim::operator[](int axis) {
 	if (axis < 0) {
-		return dim[dim.max_size() - axis - 1];
+		return dim[dim.size() + axis];
 	}
 	
 	return dim[axis];
 }
 
-bool Dim::operator==(Dim& pDim) {
-	size_t pSize = pDim.GetSize();
-	size_t size = GetSize();
+const bool Dim::operator==(const Dim& pDim) {
+	size_t pSize = pDim.size();
+	size_t cSize = size();
+	bool match_flag = true;
 
-	if (pSize != size) return false;
+	if (pSize != cSize) match_flag = false;
 
-	for (size_t i = 0; i < size; ++i) {
-		if (pDim.dim[i] != dim[i]) return false;
+	for (size_t i = 0; i < cSize; ++i) {
+		if (pDim.dim[i] != dim[i]) match_flag = false;
 	}
 
-	return true;
+	return match_flag;
 }
 
-void Dim::Set(const std::vector<int>& dim_) {
+void Dim::set(const initializer_list<int>& dim_) {
 	dim = dim_;
 }
 
-std::vector<int>& Dim::Get() {
-	return dim;
+const unsigned int Dim::size() const {
+	return (unsigned int)dim.size();
 }
 
-const size_t Dim::GetSize() {
-	return dim.size();
+void Dim::clear() {
+	dim.clear();
 }

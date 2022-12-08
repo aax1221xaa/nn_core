@@ -68,6 +68,60 @@ __global__ void __conv_2d(
 	}
 }
 
+__global__ void __correl_2d(
+	float* d_output,
+	float* d_kernel,
+	float* d_input,
+	cuint dout_w,
+	cuint dk_n,
+	cuint dk_w,
+	cuint dk_h,
+	cuint dk_c,
+	cuint din_w,
+	cuint din_h
+) {
+	cuint cx = blockIdx.x * blockDim.x + threadIdx.x;
+	cuint cy = blockIdx.y * blockDim.y + threadIdx.y;
+	cuint sidx = threadIdx.y * BLOCK_SIZE + threadIdx.x;
+
+	cuint x0 = cx % din_w;
+	cuint y0 = cx / din_w;
+
+	cuint n = dk_w * dk_h * dk_c;
+	cuint tn = dk_w * dk_h * dk_n;
+	cuint k = din_w * din_h;
+
+	__shared__ float share_in[BLOCK_SIZE * BLOCK_SIZE];
+	__shared__ float share_k[BLOCK_SIZE * BLOCK_SIZE];
+
+	float* p_dout = d_output + (y0 * dout_w + x0);
+	float* p_kernel = d_kernel + (cy * dk_w * dk_h);
+
+	float sum = 0.f;
+
+	for (uint i = 0; i < tn; i += BLOCK_SIZE) {
+		__syncthreads();
+
+		cuint wh = (threadIdx.x + i) % (dk_w * dk_h);
+		cuint t_c = (threadIdx.x + i) / (dk_w * dk_h);
+		float* pk = p_kernel + (t_c * dk_w * dk_h * dk_c);
+
+		share_k[sidx] = (i + threadIdx.x) < tn && cy < dk_c ? pk[wh] : 0.f;
+		share_in[sidx] = cx < k && (threadIdx.y + i) < tn ? p_dout[__indices[threadIdx.y + i]] : 0.f;
+
+		__syncthreads();
+
+#pragma unroll
+		for (uint e = 0; e < BLOCK_SIZE; ++e) {
+			sum += share_in[e * BLOCK_SIZE + threadIdx.x] * share_k[threadIdx.y * BLOCK_SIZE + e];
+		}
+	}
+
+	if (cx < k && cy < dk_c) {
+		d_input[cy * k + cx] = sum;
+	}
+}
+
 __global__ void __kernel_conv_2d_32x32_c_ind(
 	float* input,
 	float* d_output,
@@ -372,47 +426,29 @@ void correl_2d(
 	}
 	check_cuda(cudaMemcpyToSymbol(__indices, indices.data, sizeof(uint) * indices.len));
 
-	Tensor t_kernel;
-	set_dev_tensor(t_kernel, d_kernel.c, d_kernel.n, d_kernel.h, d_kernel.w);
-
-	dim3 threads(SQR_BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, get_elem_size(d_kernel));
-
-	__transpose<<<blocks, threads, 0, stream.str[0]>>>(
-		d_kernel.data,
-		t_kernel.data,
-		d_kernel.n,
-		d_kernel.c,
-		d_kernel.h,
-		d_kernel.w
-	);
-	check_cuda(cudaStreamSynchronize(stream.str[0]));
-
-	threads = dim3(BLOCK_SIZE, BLOCK_SIZE);
-	blocks = get_grid_size(threads, d_dinput.w * d_dinput.h, d_dinput.c);
+	dim3 threads = dim3(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 blocks = get_grid_size(threads, d_dinput.w * d_dinput.h, d_dinput.c);
 
 	for (int i = 0; i < stream.str_size; ++i) {
 		float* d_dout = d_doutput.data + (i * d_doutput.c * d_doutput.h * d_doutput.w);
 		float* d_din = d_dinput.data + (i * d_dinput.c * d_dinput.h * d_dinput.w);
 
-		__conv_2d<<<blocks, threads, 0, stream.str[i]>>>(
+		__correl_2d<<<blocks, threads, 0, stream.str[i]>>>(
 			d_dout,
-			t_kernel.data,
+			d_kernel.data,
 			d_din,
 			d_doutput.w,
-			t_kernel.n,
-			t_kernel.w,
-			t_kernel.h,
-			t_kernel.c,
+			d_kernel.n,
+			d_kernel.w,
+			d_kernel.h,
+			d_kernel.c,
 			d_dinput.w,
-			d_dinput.h,
-			1, 1
+			d_dinput.h
 		);
 	}
 	sync_streams(stream);
 
 	free_memblock(indices);
-	free_tensor(t_kernel);
 }
 
 /*            transpose             */	
