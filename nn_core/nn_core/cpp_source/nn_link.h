@@ -1,35 +1,40 @@
 #pragma once
 #include "nn_base_layer.h"
+#include "nn_manager.h"
 
 
 
 class NN_Link {
-protected:
-	static vector<NN_Link*> total_links;
+public:
+	static vector<NN_Ptr<NN_Link>> total_links;
+
+	static void add_link(NN_Ptr<NN_Link>& link);
+	static void clear_select();
+	static void clear_links();
 
 public:
 	bool is_selected;
 
-	vector<NN_Link*> m_prev;
-	vector<NN_Link*> m_next;
+	vector<NN_Ptr<NN_Link>> m_prev;
+	vector<NN_Ptr<NN_Link>> m_next;
 
-	NN_Link* parent;
-	vector<NN_Link*> child;
+	NN_Ptr<NN_Link> parent;
+	vector<NN_Ptr<NN_Link>> child;
 
-	vector<NN_Tensor*> input;
-	NN_Tensor output;
+	vector<NN_Ptr<NN_Tensor>> input;
+	NN_Ptr<NN_Tensor> output;
 
-	NN_Tensor d_input;
-	vector<NN_Tensor*> d_output;
+	NN_Ptr<NN_Tensor> d_input;
+	vector<NN_Ptr<NN_Tensor>> d_output;
 
-	NN_Layer* m_layer;
+	vector<Dim*> input_shape;
+	Dim output_shape;
 
-	NN_Link(NN_Layer* layer);
-	NN_Link(NN_Link* parent_link);
+	NN_Ptr<NN_Layer> m_layer;
 
-	NN_Link* operator()(NN_Link* prev_link);
-	NN_Link* operator()(vector<NN_Link*> prev_link);
+	NN_Link(NN_Ptr<NN_Layer>& layer);
+	NN_Link(NN_Ptr<NN_Link>& parent_link);
 
-	static NN_Link* create_link(NN_Link* parent_link = NULL, NN_Layer* layer = NULL);
-	static void destroy_links();
+	NN_Ptr<NN_Link> operator()(NN_Ptr<NN_Link>& prev_link);
+	NN_Ptr<NN_Link> operator()(vector<NN_Ptr<NN_Link>>& prev_link);
 };

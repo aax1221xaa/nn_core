@@ -7,7 +7,7 @@ Object_Linker::Object_Linker(){
 	head->prev = head;
 	head->next = head;
 	
-	head->nCpy = 0;
+	head->ref_cnt = 0;
 }
 
 
@@ -22,7 +22,7 @@ Object_ID* Object_Linker::Create(){
 	current->prev = before;
 	current->next = after;
 
-	current->nCpy = 1;
+	current->ref_cnt = 1;
 
 	return current;
 }

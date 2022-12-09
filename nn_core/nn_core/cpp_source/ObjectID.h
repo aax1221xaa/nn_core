@@ -6,7 +6,7 @@
 
 
 struct Object_ID{
-	int nCpy;
+	int ref_cnt;
 
 	Object_ID *prev;
 	Object_ID *next;
