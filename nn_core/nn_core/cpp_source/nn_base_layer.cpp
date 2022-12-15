@@ -2,5 +2,13 @@
 
 
 NN_Layer::NN_Layer() {
-	trainable = false;
+
+}
+
+NN_Layer::~NN_Layer() {
+
+}
+
+void NN_Layer::build(vector<Dim*>& input_shape) {
+
 }

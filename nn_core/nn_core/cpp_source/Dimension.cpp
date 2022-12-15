@@ -18,7 +18,7 @@ Dim::Dim(const initializer_list<int>& arr) :
 }
 
 
-const int& Dim::operator[](int axis) {
+int& Dim::operator[](int axis) {
 	if (axis < 0) {
 		return dim[dim.size() + axis];
 	}

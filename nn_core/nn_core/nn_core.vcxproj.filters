@@ -51,16 +51,10 @@
     <ClCompile Include="cpp_source\nn_layer.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\nn_link.cpp">
-      <Filter>소스 파일\cpp</Filter>
-    </ClCompile>
     <ClCompile Include="cpp_source\nn_tensor.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
     <ClCompile Include="cpp_source\nn_model.cpp">
-      <Filter>소스 파일\cpp</Filter>
-    </ClCompile>
-    <ClCompile Include="cpp_source\nn_manager.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
     <ClCompile Include="cpp_source\nn_loss.cpp">
@@ -70,6 +64,12 @@
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
     <ClCompile Include="cpp_source\nn_base_layer.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\nn_manager.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\nn_link.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
   </ItemGroup>
@@ -113,16 +113,10 @@
     <ClInclude Include="cpp_source\nn_layer.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
-    <ClInclude Include="cpp_source\nn_link.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
     <ClInclude Include="cpp_source\nn_tensor.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_model.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
-    <ClInclude Include="cpp_source\nn_manager.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_loss.h">
@@ -132,6 +126,15 @@
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_base_layer.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\nn_ptr.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\nn_manager.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\nn_link.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
   </ItemGroup>
