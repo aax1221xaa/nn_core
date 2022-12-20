@@ -57,8 +57,13 @@ public:
 	NN_Ptr<NN_Link> parent;
 	vector<NN_Ptr<NN_Link>> child;
 
+	vector<NN_Ptr<NN_Tensor>> input;
 	NN_Ptr<NN_Tensor> output;
+
+	vector<NN_Ptr<NN_Tensor>> d_output;
 	NN_Ptr<NN_Tensor> d_input;
+
+	vector<Dim*> input_shape;
 	Dim output_shape;
 
 	NN_Ptr<NN_Layer> layer;

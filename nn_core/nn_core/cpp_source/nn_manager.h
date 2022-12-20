@@ -11,7 +11,9 @@ protected:
 public:
 	static void add_link(NN_Ptr<NN_Link>& link);
 	static void clear_links();
-	static void clear_select_flags();
+	static void clear_select_flag();
+	static vector<NN_Ptr<NN_Link>>& get_links();
+	static void set_linked_count();
 
 	NN_Manager();
 	~NN_Manager();

@@ -12,9 +12,19 @@ void NN_Manager::clear_links() {
 	links.clear();
 }
 
-void NN_Manager::clear_select_flags() {
+void NN_Manager::clear_select_flag() {
 	for (NN_Ptr<NN_Link>& p : links) {
 		p->is_selected = false;
+	}
+}
+
+vector<NN_Ptr<NN_Link>>& NN_Manager::get_links() {
+	return links;
+}
+
+void NN_Manager::set_linked_count() {
+	for (NN_Ptr<NN_Link>& p : links) {
+		NN_Link::set_linked_count(p);
 	}
 }
 

@@ -34,12 +34,13 @@ public:
 
 class NN_Model : public NN_Layer, public NN_Link {
 protected:
-	int get_link_index(vector<NN_Ptr<NN_Link>>& link_list, NN_Ptr<NN_Link>& target);
+	static int where_selected_link(vector<NN_Ptr<NN_Link>>& link_list);
+	static int get_link_index(vector<NN_Ptr<NN_Link>>& link_list, NN_Ptr<NN_Link>& target);
+	static bool set_terminal_node(vector<NN_Ptr<NN_Link>>& storage, vector<NN_Ptr<NN_Link>>& node);
 
 public:
 	vector<NN_Ptr<NN_Link>> input_nodes;
 	vector<NN_Ptr<NN_Link>> output_nodes;
-	vector<NN_Ptr<NN_Link>> m_layers;
 
 	NN_Model(NN_Coupler<NN_Link>& inputs, NN_Coupler<NN_Link>& outputs);
 

@@ -17,7 +17,7 @@ NN_Link::NN_Link(NN_Ptr<NN_Link> parent_link) :
 	output(new NN_Tensor),
 	d_input(new NN_Tensor)
 {
-	is_selected = false;
+	is_selected = true;
 	trainable = true;
 
 	parent_link->child.push_back(this);
