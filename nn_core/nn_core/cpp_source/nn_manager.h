@@ -6,14 +6,13 @@ class NN_Manager {
 protected:
 	static bool init_flag;
 
-	static vector<NN_Ptr<NN_Link>> links;
+	static vector<NN_Link*> reg_links;
 
 public:
-	static void add_link(NN_Ptr<NN_Link>& link);
+	static void add_link(NN_Link* link);
 	static void clear_links();
 	static void clear_select_flag();
-	static vector<NN_Ptr<NN_Link>>& get_links();
-	static void set_linked_count();
+	static vector<NN_Link*> get_links();
 
 	NN_Manager();
 	~NN_Manager();

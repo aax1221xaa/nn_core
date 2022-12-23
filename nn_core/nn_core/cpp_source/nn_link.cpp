@@ -1,51 +1,41 @@
 #include "nn_link.h"
 
 
-NN_Link::NN_Link(NN_Ptr<NN_Layer> p_layer) :
-	layer(p_layer),
-	output(new NN_Tensor),
-	d_input(new NN_Tensor),
+NN_Link::NN_Link(NN_Layer* p_layer) :
+	op_layer(p_layer),
 	parent(NULL)
 {
 	is_selected = false;
 	trainable = true;
 }
 
-NN_Link::NN_Link(NN_Ptr<NN_Link> parent_link) :
+NN_Link::NN_Link(NN_Link* parent_link) :
 	parent(parent_link),
-	layer(parent_link->layer),
-	output(new NN_Tensor),
-	d_input(new NN_Tensor)
+	op_layer(parent_link->op_layer)
 {
-	is_selected = true;
+	is_selected = false;
 	trainable = true;
-
-	parent_link->child.push_back(this);
 }
 
-NN_Coupler<NN_Link> NN_Link::operator()(NN_Coupler<NN_Link>& m_prev_link) {
-	prev_link = m_prev_link.object;
+NN_Link::~NN_Link() {
+	delete op_layer;
+}
 
-	for (NN_Ptr<NN_Link>& p_prev : m_prev_link.object) {
-		p_prev->next_link.push_back(this);
+NN_Vec<NN_Coupler<NN_Link>> NN_Link::operator()(const NN_Vec<NN_Coupler<NN_Link>> m_prev_link) {
+	for (const NN_Coupler<NN_Link>& p_coupler : m_prev_link.arr) {
+		prev_link.push_back(p_coupler.link);
+		input.push_back(p_coupler.output);
+		d_output.push_back(p_coupler.d_input);
+		input_shape.push_back(p_coupler.out_size);
+		p_coupler.link->next_link.push_back(this);
 	}
 
-	return NN_Ptr<NN_Link>(this);
-}
+	NN_Coupler<NN_Link> p;
 
-void NN_Link::operator()(NN_Ptr<NN_Link>& m_prev_link) {
-	prev_link.push_back(m_prev_link);
-	m_prev_link->next_link.push_back(this);
-}
+	p.link = this;
+	p.output = &output;
+	p.d_input = &d_input;
+	p.out_size = &output_shape;
 
-NN_Ptr<NN_Tensor> NN_Link::get_prev_output(NN_Ptr<NN_Link>& p_current) {
-	return this->output;
-}
-
-NN_Ptr<NN_Tensor> NN_Link::get_next_dinput(NN_Ptr<NN_Link>& p_current) {
-	return this->d_input;
-}
-
-Dim NN_Link::get_next_output_shape(NN_Ptr<NN_Link>& p_current){
-	return this->output_shape;
+	return p;
 }
