@@ -9,10 +9,10 @@ public:
 	NN_Input(const Dim& input_size, int batch, const string layer_name);
 	~NN_Input();
 
-	void calculate_output_size(vector<Dim*>& input_shape, Dim& output_shape);
-	void build(vector<Dim*>& input_shape);
-	void forward(vector<NN_Tensor*>& input, NN_Tensor* output);
-	void backward(vector<NN_Tensor*>& d_output, NN_Tensor* d_input);
+	void calculate_output_size(NN_Vec<Dim*> input_shape, Dim& output_shape);
+	void build(Dim& input_shape);
+	void run_forward(NN_Vec<NN_Tensor*> input, NN_Tensor& output);
+	void run_backward(NN_Vec<NN_Tensor*> d_output, NN_Tensor& d_input);
 };
 
 

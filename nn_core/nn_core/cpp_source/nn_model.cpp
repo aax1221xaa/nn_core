@@ -1,5 +1,4 @@
 #include "nn_model.h"
-#include <queue>
 
 
 NN_Link* NN_Model::get_child_link(NN_Link* parent_link) {
@@ -137,6 +136,10 @@ NN_Model::NN_Model(NN_Vec<NN_Link*>& inputs, NN_Vec<NN_Link*>& outputs) :
 	NN_Manager::clear_select_flag();
 }
 
+NN_Model::~NN_Model() {
+
+}
+
 void NN_Model::calculate_output_size(NN_Vec<Dim*> input_shape, Dim& output_shape) {
 
 }
@@ -179,7 +182,7 @@ void NN_Model::compile(const vector<NN_Loss*>& loss, const vector<NN_Optimizer*>
 }
 
 NN_Tensor NN_Model::train_on_batch(const vector<NN_Tensor>& samples, const vector<NN_Tensor>& truth) {
-
+	return NN_Tensor();
 }
 
 NN_Tensor NN_Model::fit(
@@ -188,9 +191,16 @@ NN_Tensor NN_Model::fit(
 	uint batch,
 	uint iter
 ) {
-
+	return NN_Tensor();
 }
 
 vector<NN_Tensor> NN_Model::predict(const vector<NN_Tensor>& x) {
+	return x;
+}
 
+NN_Model& Model(NN_Vec<NN_Link*>& inputs, NN_Vec<NN_Link*>& outputs) {
+	NN_Model* model = new NN_Model(inputs, outputs);
+	NN_Manager::add_link(model);
+	
+	return *model;
 }

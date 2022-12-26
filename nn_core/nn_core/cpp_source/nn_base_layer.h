@@ -31,7 +31,7 @@ NN_Vec<_T>::NN_Vec(const vector<_T>& p) {
 template <class _T>
 NN_Vec<_T>::NN_Vec(const vector<NN_Vec<_T>>& p) {
 	for (NN_Vec& p_coupler : p) {
-		for (NN_Ptr<_T>& p_ptr : p_coupler.arr) {
+		for (_T& p_ptr : p_coupler.arr) {
 			arr.push_back(p_ptr);
 		}
 	}
@@ -52,7 +52,7 @@ public:
 	string name;
 
 	NN_Layer();
-	virtual ~NN_Layer() = 0;
+	virtual ~NN_Layer();
 
 	virtual void calculate_output_size(NN_Vec<Dim*> input_shape, Dim& output_shape) = 0;
 	virtual void build(Dim& input_shape);
