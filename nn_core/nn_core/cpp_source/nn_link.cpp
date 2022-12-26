@@ -39,3 +39,11 @@ NN_Vec<NN_Coupler<NN_Link>> NN_Link::operator()(const NN_Vec<NN_Coupler<NN_Link>
 
 	return p;
 }
+
+void NN_Link::operator()(NN_Link* m_prev_link) {
+	prev_link.push_back(m_prev_link);
+	m_prev_link->next_link.push_back(this);
+	input.push_back(&m_prev_link->output);
+	d_output.push_back(&m_prev_link->d_input);
+	input_shape.push_back(&m_prev_link->output_shape);
+}

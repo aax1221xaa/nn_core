@@ -54,8 +54,8 @@ public:
 	NN_Layer();
 	virtual ~NN_Layer() = 0;
 
-	virtual void calculate_output_size(NN_Vec<Dim*> input_shape, NN_Vec<Dim*> output_shape) = 0;
-	virtual void build(NN_Vec<Dim*> input_shape);
-	virtual void run_forward(NN_Vec<NN_Tensor*> input, NN_Vec<NN_Tensor*> output) = 0;
-	virtual void run_backward(NN_Vec<NN_Tensor*> d_output, NN_Vec<NN_Tensor*> d_input) = 0;
+	virtual void calculate_output_size(NN_Vec<Dim*> input_shape, Dim& output_shape) = 0;
+	virtual void build(Dim& input_shape);
+	virtual void run_forward(NN_Vec<NN_Tensor*> input, NN_Tensor& output) = 0;
+	virtual void run_backward(NN_Vec<NN_Tensor*> d_output, NN_Tensor& d_input) = 0;
 };

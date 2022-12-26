@@ -33,6 +33,7 @@ public:
 class NN_Model : public NN_Layer, public NN_Link {
 protected:
 	static NN_Link* get_child_link(NN_Link* parent_link);
+	static int get_unselect_prev(NN_Link* p_current);
 
 public:
 	vector<NN_Link*> input_nodes;
@@ -40,10 +41,10 @@ public:
 
 	NN_Model(NN_Vec<NN_Link*>& inputs, NN_Vec<NN_Link*>& outputs);
 
-	void calculate_output_size(NN_Vec<Dim*> input_shape, NN_Vec<Dim*> output_shape);
-	void build(NN_Vec<Dim*> input_shape);
-	void run_forward(NN_Vec<NN_Tensor*> input, NN_Vec<NN_Tensor*> output);
-	void run_backward(NN_Vec<NN_Tensor*> d_output, NN_Vec<NN_Tensor*> d_input);
+	void calculate_output_size(NN_Vec<Dim*> input_shape, Dim& output_shape);
+	void build(Dim& input_shape);
+	void run_forward(NN_Vec<NN_Tensor*> input, NN_Tensor& output);
+	void run_backward(NN_Vec<NN_Tensor*> d_output, NN_Tensor& d_input);
 
 	void compile(const vector<NN_Loss*>& loss, const vector<NN_Optimizer*>& optimizer);
 	NN_Tensor train_on_batch(const vector<NN_Tensor>& samples, const vector<NN_Tensor>& truth);

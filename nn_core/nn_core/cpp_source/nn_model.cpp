@@ -12,6 +12,16 @@ NN_Link* NN_Model::get_child_link(NN_Link* parent_link) {
 	return p_child;
 }
 
+int NN_Model::get_unselect_prev(NN_Link* p_current) {
+	int unselectd_link = 0;
+
+	for (NN_Link* p_link : p_current->prev_link) {
+		if (!p_link->is_selected) ++unselectd_link;
+	}
+
+	return unselectd_link;
+}
+
 NN_Vec<NN_Coupler<NN_Link>> NN_Model::operator()(const NN_Vec<NN_Coupler<NN_Link>> m_prev_link) {
 	for (int i = 0; i < input_nodes.size(); ++i) {
 		prev_link.push_back(m_prev_link[i].link);
@@ -127,48 +137,40 @@ NN_Model::NN_Model(NN_Vec<NN_Link*>& inputs, NN_Vec<NN_Link*>& outputs) :
 	NN_Manager::clear_select_flag();
 }
 
-void NN_Model::calculate_output_size(NN_Vec<Dim*> input_shape, NN_Vec<Dim*> output_shape) {
+void NN_Model::calculate_output_size(NN_Vec<Dim*> input_shape, Dim& output_shape) {
 
 }
 
-void NN_Model::build(NN_Vec<Dim*> input_shape) {
+void NN_Model::build(Dim& input_shape) {
 
 }
 
-void NN_Model::run_forward(NN_Vec<NN_Tensor*> input, NN_Vec<NN_Tensor*> output) {
-	if (input_nodes.size() != input.arr.size()) {
-		ErrorExcept(
-			"[NN_Model::run_forward] invalid input and input_nodes size."
-		);
-	}
-
+void NN_Model::run_forward(NN_Vec<NN_Tensor*> input, NN_Tensor& output) {
 	vector<NN_Link*> order_links;
-	
-	NN_Manager::clear_select_flag();
 
-	for (int i = 0; i < input_nodes.size(); ++i) {
-		input_nodes[i]->op_layer->run_forward(input[i], &input_nodes[i]->output);
-		input_nodes[i]->is_selected = true;
-		order_links.push_back(input_nodes[i]);
-	}
+	for (NN_Link* p_input : input_nodes) order_links.push_back(p_input);
+
 	while (!order_links.empty()) {
 		NN_Link* p_current_link = order_links.front();
-		
-		if (!p_current_link->is_selected) {
+
+		if (get_unselect_prev(p_current_link) == 0 && !p_current_link->is_selected) {
 			p_current_link->op_layer->run_forward(
 				p_current_link->input,
 				p_current_link->output
 			);
+
+			p_current_link->is_selected = true;
+
+			for (NN_Link* p_next_link : p_current_link->next_link) {
+				order_links.push_back(p_next_link);
+			}
+
+			order_links.erase(order_links.begin());
 		}
-		p_current_link->is_selected = true;
-		for (NN_Ptr<NN_Link>& p_next_link : p_current_link->next_link) {
-			order_links.push(p_next_link);
-		}
-		order_links.pop();
 	}
 }
 
-void NN_Model::run_backward(NN_Vec<NN_Tensor*> d_output, NN_Vec<NN_Tensor*> d_input) {
+void NN_Model::run_backward(NN_Vec<NN_Tensor*> d_output, NN_Tensor& d_input) {
 
 }
 

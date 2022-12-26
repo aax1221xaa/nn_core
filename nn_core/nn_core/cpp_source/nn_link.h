@@ -36,4 +36,5 @@ public:
 	~NN_Link();
 
 	virtual NN_Vec<NN_Coupler<NN_Link>> operator()(const NN_Vec<NN_Coupler<NN_Link>> m_prev_link);
+	void operator()(NN_Link* m_prev_link);
 };
