@@ -35,16 +35,16 @@ NN_Vec<NN_Coupler<NN_Link>> NN_Model::operator()(const NN_Vec<NN_Coupler<NN_Link
 		NN_Coupler<NN_Link> args;
 
 		args.link = this;
-		args.output = &output_nodes[i]->output;
-		args.d_input = &output_nodes[i]->d_input;
-		args.out_size = &output_nodes[i]->output_shape;
+		args.output = output_nodes[i]->output;
+		args.d_input = output_nodes[i]->d_input;
+		args.out_size = output_nodes[i]->output_shape;
 	}
 
 	return p_currents;
 }
 
 NN_Model::NN_Model(NN_Vec<NN_Link*>& inputs, NN_Vec<NN_Link*>& outputs) :
-	NN_Link((NN_Layer*)this)
+	NN_Link(shared_ptr<NN_Layer>(this))
 {
 	vector<NN_Link*> tmp_links;
 	vector<NN_Link*> order_links;
@@ -115,6 +115,8 @@ NN_Model::NN_Model(NN_Vec<NN_Link*>& inputs, NN_Vec<NN_Link*>& outputs) :
 		if (!p_link->is_selected) {
 			NN_Link* p_child_link = new NN_Link(p_link);
 			
+			NN_Manager::add_link(p_child_link);
+
 			p_child_link->is_selected = true;
 			p_link->child.push_back(p_child_link);
 			p_link->is_selected = true;
@@ -140,15 +142,15 @@ NN_Model::~NN_Model() {
 
 }
 
-void NN_Model::calculate_output_size(NN_Vec<Dim*> input_shape, Dim& output_shape) {
+void NN_Model::calculate_output_size(vector<NN_Shape_t>& input_shape, NN_Shape_t& output_shape) {
 
 }
 
-void NN_Model::build(Dim& input_shape) {
+void NN_Model::build(vector<NN_Shape_t>& input_shape) {
 
 }
 
-void NN_Model::run_forward(NN_Vec<NN_Tensor*> input, NN_Tensor& output) {
+void NN_Model::run_forward(vector<NN_Tensor_t>& input, NN_Tensor_t& output) {
 	vector<NN_Link*> order_links;
 
 	for (NN_Link* p_input : input_nodes) order_links.push_back(p_input);
@@ -173,7 +175,7 @@ void NN_Model::run_forward(NN_Vec<NN_Tensor*> input, NN_Tensor& output) {
 	}
 }
 
-void NN_Model::run_backward(NN_Vec<NN_Tensor*> d_output, NN_Tensor& d_input) {
+void NN_Model::run_backward(vector<NN_Tensor_t>& d_output, NN_Tensor_t& d_input) {
 
 }
 
@@ -181,20 +183,20 @@ void NN_Model::compile(const vector<NN_Loss*>& loss, const vector<NN_Optimizer*>
 
 }
 
-NN_Tensor NN_Model::train_on_batch(const vector<NN_Tensor>& samples, const vector<NN_Tensor>& truth) {
-	return NN_Tensor();
+NN_Tensor_t NN_Model::train_on_batch(const vector<NN_Tensor_t>& samples, const vector<NN_Tensor_t>& truth) {
+	
 }
 
-NN_Tensor NN_Model::fit(
-	const vector<NN_Tensor>& samples,
-	const vector<NN_Tensor>& truth,
+NN_Tensor_t NN_Model::fit(
+	const vector<NN_Tensor_t>& samples,
+	const vector<NN_Tensor_t>& truth,
 	uint batch,
 	uint iter
 ) {
-	return NN_Tensor();
+	
 }
 
-vector<NN_Tensor> NN_Model::predict(const vector<NN_Tensor>& x) {
+vector<NN_Tensor_t> NN_Model::predict(const vector<NN_Tensor_t>& x) {
 	return x;
 }
 

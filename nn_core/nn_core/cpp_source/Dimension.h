@@ -1,26 +1,46 @@
 #pragma once
 #include <vector>
+#include <memory>
+#include "cuda_common.h"
 
 
 using namespace std;
 
-/*********************************************/
-/*                                           */
-/*                     Dim                   */
-/*                                           */
-/*********************************************/
 
-class Dim {
+class NN_Shape {
 public:
-	vector<int> dim;
+	int* shape;
+	int len;
 
-	Dim();
-	Dim(const initializer_list<int>& arr);
-	
-	int& operator[](int axis);
-	const bool operator==(const Dim& pDim);
+	class Iterator {
+	public:
+		int* p_shape;
+		int index;
 
-	void set(const initializer_list<int>& dim_);
-	const unsigned int size() const;
+		Iterator(int* _shape, int _index);
+		Iterator(const Iterator& p);
+		
+		const Iterator& operator++();
+		const Iterator& operator--();
+		bool operator!=(const Iterator& p) const;
+		bool operator==(const Iterator& p) const;
+		int& operator*() const;
+	};
+
+	NN_Shape();
+	NN_Shape(const initializer_list<int>& _shape);
+	~NN_Shape();
+
+	void set(const initializer_list<int>& _shape);
 	void clear();
+
+	int& operator[](int axis);
+	const Iterator begin() const;
+	const Iterator end() const;
+
+	bool operator==(const NN_Shape& p);
 };
+
+typedef shared_ptr<NN_Shape> NN_Shape_t;
+
+const char* shape_to_str(const NN_Shape& shape);

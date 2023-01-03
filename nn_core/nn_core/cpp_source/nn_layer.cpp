@@ -29,11 +29,18 @@ void NN_Input::run_backward(NN_Vec<NN_Tensor*> d_output, NN_Tensor& d_input) {
 }
 
 
-NN_Link& Input(const Dim& input_size, int batch, const string layer_name) {
+NN_Vec<NN_Coupler<NN_Link>> Input(const Dim& input_size, int batch, const string layer_name) {
 	NN_Layer* layer = new NN_Input(input_size, batch, layer_name);
 	NN_Link* link = new NN_Link(layer);
 
 	NN_Manager::add_link(link);
 
-	return *link;
+	NN_Coupler<NN_Link> p = {
+		link,
+		&link->output,
+		&link->d_input,
+		&link->output_shape
+	};
+
+	return p;
 }

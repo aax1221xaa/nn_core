@@ -4,6 +4,7 @@
 
 
 
+
 template <class _T>
 class NN_Vec {
 public:
@@ -54,8 +55,8 @@ public:
 	NN_Layer();
 	virtual ~NN_Layer();
 
-	virtual void calculate_output_size(NN_Vec<Dim*> input_shape, Dim& output_shape) = 0;
-	virtual void build(Dim& input_shape);
-	virtual void run_forward(NN_Vec<NN_Tensor*> input, NN_Tensor& output) = 0;
-	virtual void run_backward(NN_Vec<NN_Tensor*> d_output, NN_Tensor& d_input) = 0;
+	virtual void calculate_output_size(vector<NN_Shape_t>& input_shape, NN_Shape_t& output_shape) = 0;
+	virtual void build(vector<NN_Shape_t>& input_shape);
+	virtual void run_forward(vector<NN_Tensor_t>& input, NN_Tensor_t& output) = 0;
+	virtual void run_backward(vector<NN_Tensor_t>& d_output, NN_Tensor_t& d_input) = 0;
 };

@@ -17,20 +17,20 @@ public:
 	NN_Model(NN_Vec<NN_Link*>& inputs, NN_Vec<NN_Link*>& outputs);
 	~NN_Model();
 
-	void calculate_output_size(NN_Vec<Dim*> input_shape, Dim& output_shape);
-	void build(Dim& input_shape);
-	void run_forward(NN_Vec<NN_Tensor*> input, NN_Tensor& output);
-	void run_backward(NN_Vec<NN_Tensor*> d_output, NN_Tensor& d_input);
+	void calculate_output_size(vector<NN_Shape_t>& input_shape, NN_Shape_t& output_shape);
+	void build(vector<NN_Shape_t>& input_shape);
+	void run_forward(vector<NN_Tensor_t>& input, NN_Tensor_t& output);
+	void run_backward(vector<NN_Tensor_t>& d_output, NN_Tensor_t& d_input);
 
 	void compile(const vector<NN_Loss*>& loss, const vector<NN_Optimizer*>& optimizer);
-	NN_Tensor train_on_batch(const vector<NN_Tensor>& samples, const vector<NN_Tensor>& truth);
-	NN_Tensor fit(
-		const vector<NN_Tensor>& samples,
-		const vector<NN_Tensor>& truth,
+	NN_Tensor_t train_on_batch(const vector<NN_Tensor_t>& samples, const vector<NN_Tensor_t>& truth);
+	NN_Tensor_t fit(
+		const vector<NN_Tensor_t>& samples,
+		const vector<NN_Tensor_t>& truth,
 		uint batch,
 		uint iter
 	);
-	vector<NN_Tensor> predict(const vector<NN_Tensor>& x);
+	vector<NN_Tensor_t> predict(const vector<NN_Tensor_t>& x);
 
 	NN_Vec<NN_Coupler<NN_Link>> operator()(const NN_Vec<NN_Coupler<NN_Link>> m_prev_link);
 };

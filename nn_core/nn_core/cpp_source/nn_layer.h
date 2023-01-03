@@ -16,4 +16,4 @@ public:
 };
 
 
-NN_Link& Input(const Dim& input_size, int batch, const string layer_name = "");
+NN_Vec<NN_Coupler<NN_Link>> Input(const Dim& input_size, int batch, const string layer_name = "");

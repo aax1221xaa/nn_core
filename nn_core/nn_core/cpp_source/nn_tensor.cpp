@@ -1,87 +1,110 @@
 #include "nn_tensor.h"
 
 
-extern char str_buffer[STR_MAX];
-extern int str_idx;
-
-
 NN_Tensor::NN_Tensor() {
 	data = NULL;
+	attr = none;
 	dtype = none;
-	device_type = none;
-	size = 0;
+	len = 0;
 }
 
-NN_Tensor::NN_Tensor(const Dim& _shape, int _dtype, int _device_type) {
-	shape = _shape;
+NN_Tensor::NN_Tensor(const int _attr, const int _dtype) {
+	data = NULL;
+	attr = _attr;
 	dtype = _dtype;
-	device_type = _device_type;
-
-	size = get_type_size(dtype);
-
-	try {
-		for (int n : shape.dim) {
-			if (n < 0) {
-				ErrorExcept(
-					"[nn_tensor_host_malloc] invalid size. %s",
-					shape_to_str(*this)
-				);
-			}
-			else {
-				size *= n;
-			}
-		}
-
-		if (device_type == CPU) {
-			data = malloc(size);
-		}
-		else if (device_type == GPU) {
-			check_cuda(cudaMalloc(&data, size));
-		}
-	}
-	catch (Exception& e) {
-		e.Put();
-	}
+	len = 0;
 }
 
 NN_Tensor::~NN_Tensor() {
 	try {
-		if (device_type == CPU) {
-			free(data);
-		}
-		else if (device_type == GPU) {
-			check_cuda(cudaFree(data));
-		}
+		clear_tensor();
 	}
-	catch (Exception& e) {
+	catch (Exception e) {
 		e.Put();
 	}
 }
 
-void NN_Tensor::copyto(NN_Tensor& dst) {
-	if (size != dst.size) {
-		ErrorExcept("[nn_tensor_copy] src와 dst 사이즈가 맞지 않습니다. %d != %d", size, dst.size);
+void NN_Tensor::clear_tensor() {
+	if (attr == CPU) {
+		free(data);
+	}
+	else if (attr == GPU) {
+		check_cuda(cudaFree(data));
 	}
 
-	if (device_type == CPU) {
-		if (dst.device_type == CPU) {
-			memcpy_s(dst.data, dst.size, data, size);
+	data = NULL;
+	attr = none;
+	dtype = none;
+	len = 0;
+}
+
+void NN_Tensor::set_tensor(const NN_Shape& shape, const int _attr, const int _dtype) {
+	size_t size = 1;
+
+	for (int n : shape) {
+		if (n < 1) {
+			ErrorExcept(
+				"[NN_Tensor::set_tensor] invalid shape %s",
+				shape_to_str(shape)
+			);
 		}
-		else if (dst.device_type == GPU) {
-			check_cuda(cudaMemcpy(dst.data, data, size, cudaMemcpyHostToDevice));
+		size *= n;
+	}
+
+	if (_attr != attr || _dtype != dtype || len != size) {
+		clear_tensor();
+	}
+
+	attr = _attr;
+	dtype = _dtype;
+	len = size;
+
+	size_t elem_size = get_elem_size(dtype);
+
+	if (attr == CPU) {
+		data = malloc(len * elem_size);
+	}
+	else if (attr == GPU) {
+		check_cuda(cudaMalloc(&data, len * elem_size));
+	}
+}
+
+void NN_Tensor::copy_to(NN_Tensor& dst) {
+	size_t elem_size = get_elem_size(dtype);
+
+	if (len != dst.len || dtype != dst.dtype) {
+		if (dst.attr == CPU) {
+			free(dst.data);
+			dst.data = malloc(elem_size * len);
+		}
+		else if (dst.attr == GPU) {
+			check_cuda(cudaFree(dst.data));
+			check_cuda(cudaMalloc(&dst.data, elem_size * len));
 		}
 	}
-	else if (device_type == GPU) {
-		if (dst.device_type == CPU) {
-			check_cuda(cudaMemcpy(dst.data, data, size, cudaMemcpyDeviceToHost));
+
+	dst.dtype = dtype;
+	dst.len = len;
+
+	if (attr == CPU) {
+		if (dst.attr == CPU) {
+			memcpy_s(dst.data, elem_size * len, data, elem_size * len);
 		}
-		else if (dst.device_type == GPU) {
-			check_cuda(cudaMemcpy(dst.data, data, size, cudaMemcpyDeviceToDevice));
+		else if (dst.attr == GPU) {
+			check_cuda(cudaMemcpy(dst.data, data, elem_size * len, cudaMemcpyHostToDevice));
+		}
+	}
+	else if (attr == GPU) {
+		if (dst.attr == CPU) {
+			check_cuda(cudaMemcpy(dst.data, data, elem_size * len, cudaMemcpyDeviceToHost));
+		}
+		else if (dst.attr == GPU) {
+			check_cuda(cudaMemcpy(dst.data, data, elem_size * len, cudaMemcpyDeviceToDevice));
 		}
 	}
 }
 
-const size_t NN_Tensor::get_type_size(int type) {
+size_t NN_Tensor::get_elem_size(const int type) {
 	size_t size = 0;
 
 	switch (type)
@@ -109,33 +132,4 @@ const size_t NN_Tensor::get_type_size(int type) {
 	}
 
 	return size;
-}
-
-const char* NN_Tensor::shape_to_str(const NN_Tensor& tensor) {
-	char tmp_buff[128] = { '\0', };
-	char elem[32] = { '\0', };
-
-	sprintf_s(tmp_buff, "[");
-	for (int n : tensor.shape.dim) {
-		sprintf_s(elem, "%d, ", n);
-		strcat_s(tmp_buff, elem);
-	}
-	strcat_s(tmp_buff, "]");
-
-	int str_size = strlen(tmp_buff) + 1;
-	int clearance = STR_MAX - str_idx;
-	char* p_buff = NULL;
-
-	if (clearance >= str_size) {
-		p_buff = &str_buffer[str_idx];
-		str_idx += str_size;
-	}
-	else {
-		p_buff = str_buffer;
-		str_idx = 0;
-	}
-
-	strcpy_s(p_buff, sizeof(char) * str_size, tmp_buff);
-
-	return p_buff;
 }
