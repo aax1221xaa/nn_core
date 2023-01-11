@@ -11,11 +11,22 @@
 int main() {
 	NN_Manager nn;
 
-	NN x_input = Input({ 28, 28, 1 }, 32, "input");
-	NN x = Test("test_1")(x_input);
-	x = Test("test_2")(x);
-	x = Test("test_3")(x);
-	NN y_output = Test("test_4")(x);
+	NN x_input_1 = Input({ 28, 28, 1 }, 32, "input_1");
+	NN x_input_2 = Input({ 28, 28, 1 }, 32, "input_2");
+
+	NN x = Test("test_1_1")(x_input_1);
+	x = Test("test_1_2")(x);
+	x = Test("test_1_3")(x);
+	NN feature_1 = Test("test_1_4")(x);
+
+	x = Test("test_2_1")(x_input_2);
+	x = Test("test_2_2")(x);
+	x = Test("test_2_3")(x);
+	NN feature_2 = Test("test_2_4")(x);
+
+	NN_List<NN_Link> test({ x_input_1, x_input_2, { feature_1, feature_2 } });
+
+	x = Test("test_3_1")({ feature_1, feature_2 });
 
 	NN_Model model = Model(x_input, y_output, "model_1");
 
