@@ -45,7 +45,9 @@ NN_Shape::NN_Shape() {
 	len = 0;
 }
 
-NN_Shape::NN_Shape(const initializer_list<int>& _shape) {
+NN_Shape::NN_Shape(const initializer_list<int>& _shape) :
+	NN_Shape()
+{
 	set(_shape);
 }
 
@@ -54,11 +56,13 @@ NN_Shape::~NN_Shape() {
 }
 
 void NN_Shape::set(const initializer_list<int>& _shape) {
-	size_t _len = _shape.size();
+	int _len = _shape.size();
 
 	if (len != _len) {
 		delete[] shape;
 		shape = new int[_len];
+
+		len = _len;
 	}
 
 	int i = 0;
@@ -92,7 +96,7 @@ const NN_Shape::Iterator NN_Shape::begin() const {
 	return NN_Shape::Iterator(shape, 0);
 }
 const NN_Shape::Iterator NN_Shape::end() const {
-	return NN_Shape::Iterator(shape, len - 1);
+	return NN_Shape::Iterator(shape, len);
 }
 
 bool NN_Shape::operator==(const NN_Shape& p) {
