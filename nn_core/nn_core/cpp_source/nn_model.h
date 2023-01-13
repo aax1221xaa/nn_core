@@ -39,7 +39,7 @@ public:
 	);
 	vector<NN_Tensor_t> predict(const vector<NN_Tensor_t>& x);
 
-	NN_List<NN_Link> operator()(const NN_List<NN_Link> m_prev_link);
+	NN_Coupler<NN_Link> operator()(NN_Coupler<NN_Link> m_prev_link);
 };
 
 NN_Model& Model(NN& inputs, NN& outputs, const string& model_name);

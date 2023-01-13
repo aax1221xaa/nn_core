@@ -22,8 +22,8 @@ NN_Link::~NN_Link() {
 	
 }
 
-NN_Vec<NN_List<NN_Link>> NN_Link::operator()(const NN_Vec<NN_List<NN_Link>> m_prev_link) {
-	for (const NN_List<NN_Link>& p_coupler : m_prev_link.arr) {
+NN_Coupler<NN_Link> NN_Link::operator()(NN_Coupler<NN_Link> m_prev_link) {
+	for (const Link_Param<NN_Link>& p_coupler : m_prev_link) {
 		prev_link.push_back(p_coupler.link);
 		input.push_back(p_coupler.output);
 		d_output.push_back(p_coupler.d_input);
@@ -31,12 +31,7 @@ NN_Vec<NN_List<NN_Link>> NN_Link::operator()(const NN_Vec<NN_List<NN_Link>> m_pr
 		p_coupler.link->next_link.push_back(this);
 	}
 
-	NN_List<NN_Link> p;
-
-	p.link = this;
-	p.output = &output;
-	p.d_input = &d_input;
-	p.out_size = &out_shape;
+	NN_Coupler<NN_Link> p(this);
 
 	return p;
 }

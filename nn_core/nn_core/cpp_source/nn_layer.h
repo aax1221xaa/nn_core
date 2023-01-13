@@ -16,7 +16,7 @@ public:
 };
 
 
-NN_Vec<NN_List<NN_Link>> Input(const NN_Shape& input_size, int batch, const string layer_name = "");
+NN Input(const NN_Shape& input_size, int batch, const string layer_name = "");
 
 
 class NN_Test : public NN_Layer {

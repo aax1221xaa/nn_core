@@ -21,7 +21,7 @@ int NN_Model::get_unselect_prev(NN_Link* p_current) {
 	return unselectd_link;
 }
 
-NN_Vec<NN_List<NN_Link>> NN_Model::operator()(const NN_Vec<NN_List<NN_Link>> m_prev_link) {
+NN_Coupler<NN_Link> NN_Model::operator()(NN_Coupler<NN_Link> m_prev_link) {
 	for (int i = 0; i < input_nodes.size(); ++i) {
 		prev_link.push_back(m_prev_link[i].link);
 		input_nodes[i]->input.push_back(m_prev_link[i].output);
@@ -30,9 +30,9 @@ NN_Vec<NN_List<NN_Link>> NN_Model::operator()(const NN_Vec<NN_List<NN_Link>> m_p
 		m_prev_link[i].link->next_link.push_back(this);
 	}
 
-	vector<NN_List<NN_Link>> p_currents;
+	vector<Link_Param<NN_Link>> p_currents;
 	for (int i = 0; i < output_nodes.size(); ++i) {
-		NN_List<NN_Link> args;
+		Link_Param<NN_Link> args;
 
 		args.link = this;
 		args.output = &output_nodes[i]->output;
@@ -184,8 +184,8 @@ NN_Model::NN_Model(NN& inputs, NN& outputs, const string& model_name) :
 {
 	op_layer = this;
 
-	for (NN_List<NN_Link>& p_input : inputs.arr) input_nodes.push_back(p_input.link);
-	for (NN_List<NN_Link>& p_output : outputs.arr) output_nodes.push_back(p_output.link);
+	for (Link_Param<NN_Link>& p_input : inputs) input_nodes.push_back(p_input.link);
+	for (Link_Param<NN_Link>& p_output : outputs) output_nodes.push_back(p_output.link);
 
 	vector<NN_Link*> tmp_links = find_root(input_nodes, output_nodes);
 	tmp_links = gen_child(tmp_links);

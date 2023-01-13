@@ -24,11 +24,9 @@ int main() {
 	x = Test("test_2_3")(x);
 	NN feature_2 = Test("test_2_4")(x);
 
-	NN_List<NN_Link> test({ x_input_1, x_input_2, { feature_1, feature_2 } });
+	NN y_output = Test("test_3_1")({ feature_1, feature_2 });
 
-	x = Test("test_3_1")({ feature_1, feature_2 });
-
-	NN_Model model = Model(x_input, y_output, "model_1");
+	NN_Model model = Model(x_input_1, y_output, "model_1");
 
 	for (NN_Link* p : NN_Manager::reg_links) {
 		printf("%s\n", p->op_layer->layer_name.c_str());

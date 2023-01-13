@@ -30,7 +30,7 @@ void NN_Input::run_backward(vector<NN_Tensor*>& d_output, NN_Tensor& d_input) {
 }
 
 
-NN_Vec<NN_List<NN_Link>> Input(const NN_Shape& input_size, int batch, const string layer_name) {
+NN Input(const NN_Shape& input_size, int batch, const string layer_name) {
 	NN_Layer* layer = new NN_Input(input_size, batch, layer_name);
 	NN_Link* link = new NN_Link;
 
@@ -39,14 +39,7 @@ NN_Vec<NN_List<NN_Link>> Input(const NN_Shape& input_size, int batch, const stri
 	NN_Manager::add_layer(layer);
 	NN_Manager::add_link(link);
 
-	NN_List<NN_Link> p = {
-		link,
-		&link->output,
-		&link->d_input,
-		&link->out_shape
-	};
-
-	return p;
+	return NN(link);
 }
 
 
