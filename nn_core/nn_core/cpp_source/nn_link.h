@@ -27,12 +27,12 @@ public:
 		int index;
 
 		Iterator(Link_Param<_T>* _param, int _index);
-		Iterator(const Iterator& p);
+		Iterator(typename const Iterator& p);
 
 		typename const Iterator& operator++();
 		typename const Iterator& operator--();
-		bool operator!=(const Iterator& p) const;
-		bool operator==(const Iterator& p) const;
+		bool operator!=(typename const Iterator& p) const;
+		bool operator==(typename const Iterator& p) const;
 		Link_Param<_T>& operator*() const;
 	};
 
@@ -64,7 +64,7 @@ NN_Coupler<_T>::Iterator::Iterator(Link_Param<_T>* _param, int _index) {
 }
 
 template <class _T>
-NN_Coupler<_T>::Iterator::Iterator(const NN_Coupler<_T>::Iterator& p) :
+NN_Coupler<_T>::Iterator::Iterator(typename const NN_Coupler<_T>::Iterator& p) :
 	p_param(p.p_param),
 	index(p.index)
 {
@@ -85,12 +85,12 @@ typename const NN_Coupler<_T>::Iterator& NN_Coupler<_T>::Iterator::operator--() 
 }
 
 template <class _T>
-bool NN_Coupler<_T>::Iterator::operator!=(const NN_Coupler<_T>::Iterator& p) const {
+bool NN_Coupler<_T>::Iterator::operator!=(typename const NN_Coupler<_T>::Iterator& p) const {
 	return index != p.index;
 }
 
 template <class _T>
-bool NN_Coupler<_T>::Iterator::operator==(const NN_Coupler<_T>::Iterator& p) const {
+bool NN_Coupler<_T>::Iterator::operator==(typename const NN_Coupler<_T>::Iterator& p) const {
 	return index == p.index;
 }
 

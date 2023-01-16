@@ -1,4 +1,5 @@
 #include "nn_model.h"
+#include <queue>
 
 
 NN_Link* NN_Model::get_child_link(NN_Link* parent_link) {
@@ -21,7 +22,7 @@ int NN_Model::get_unselect_prev(NN_Link* p_current) {
 	return unselectd_link;
 }
 
-NN_Coupler<NN_Link> NN_Model::operator()(NN_Coupler<NN_Link> m_prev_link) {
+NN NN_Model::operator()(NN m_prev_link) {
 	for (int i = 0; i < input_nodes.size(); ++i) {
 		prev_link.push_back(m_prev_link[i].link);
 		input_nodes[i]->input.push_back(m_prev_link[i].output);
@@ -47,10 +48,12 @@ NN_Coupler<NN_Link> NN_Model::operator()(NN_Coupler<NN_Link> m_prev_link) {
 
 vector<NN_Link*> NN_Model::find_root(vector<NN_Link*>& in_nodes, vector<NN_Link*>& out_nodes) {
 	vector<NN_Link*> tmp_links;
-	vector<NN_Link*> order_links = out_nodes;
+	queue<NN_Link*> order_links;
 	int least_io = in_nodes.size();
 
 	NN_Manager::clear_select_flag();
+
+	for (NN_Link* p_out_node : out_nodes) order_links.push(p_out_node);
 
 	while (!order_links.empty() && least_io > 0) {
 		NN_Link* p_current = order_links.front();
@@ -70,15 +73,18 @@ vector<NN_Link*> NN_Model::find_root(vector<NN_Link*>& in_nodes, vector<NN_Link*
 		if (!is_touched) {
 			for (NN_Link* p_prev_link : p_current->prev_link) {
 				if (!p_prev_link->is_selected) {
-					order_links.push_back(p_prev_link);
+					order_links.push(p_prev_link);
 				}
 			}
 		}
 
-		order_links.erase(order_links.begin());
+		order_links.pop();
 	}
 
-	order_links = in_nodes;
+	order_links = queue<NN_Link*>();
+	
+	for (NN_Link* p_in_node : in_nodes) order_links.push(p_in_node);
+
 	least_io = out_nodes.size();
 
 	while (!order_links.empty() && least_io > 0) {
@@ -100,11 +106,11 @@ vector<NN_Link*> NN_Model::find_root(vector<NN_Link*>& in_nodes, vector<NN_Link*
 		if (!is_touched) {
 			for (NN_Link* p_next_link : p_current->next_link) {
 				if (p_next_link->is_selected) {
-					order_links.push_back(p_next_link);
+					order_links.push(p_next_link);
 				}
 			}
 		}
-		order_links.erase(order_links.begin());
+		order_links.pop();
 	}
 	NN_Manager::clear_select_flag();
 
@@ -142,14 +148,20 @@ vector<NN_Link*> NN_Model::gen_child(vector<NN_Link*>& selected_parents) {
 	return tmp_links;
 }
 
-vector<NN_Link*> NN_Model::set_operate_list(vector<NN_Link*> in_layers, vector<NN_Link*> out_layers) {
+vector<NN_Link*> NN_Model::set_operate_list(vector<NN_Link*> in_layers) {
 	vector<NN_Link*> tmp_list;
+	queue<NN_Link*> _in_layers;
 
-	for (NN_Link* p_link : in_layers) {
+	for (NN_Link* p_in_layer : in_layers) _in_layers.push(p_in_layer);
+
+	while (!_in_layers.empty()) {
+		NN_Link* p_link = _in_layers.front();
+
+		_in_layers.pop();
 		if (!p_link->is_selected && get_unselect_prev(p_link) == 0) {
 			for (NN_Link* p_next_link : p_link->next_link) {
 				if (!p_next_link->is_selected) {
-					in_layers.push_back(p_next_link);
+					_in_layers.push(p_next_link);
 				}
 			}
 			tmp_list.push_back(p_link);
@@ -160,26 +172,29 @@ vector<NN_Link*> NN_Model::set_operate_list(vector<NN_Link*> in_layers, vector<N
 	return tmp_list;
 }
 
-NN_Model::NN_Model(NN_Model* parent) :
+NN_Model::NN_Model(NN_Model* p_parent) :
 	NN_Layer("model_child")
 {
-	NN_Manager::clear_select_flag();
-	gen_child(parent->operate_list);
+	parent = p_parent;
+	p_parent->child.push_back(this);
+
+//	NN_Manager::clear_select_flag();
+	gen_child(p_parent->operate_list);
 	
-	for (NN_Link* p_input_parent : parent->input_nodes) {
+	for (NN_Link* p_input_parent : p_parent->input_nodes) {
 		input_nodes.push_back(get_child_link(p_input_parent));
 	}
-	for (NN_Link* p_output_parent : parent->output_nodes) {
+	for (NN_Link* p_output_parent : p_parent->output_nodes) {
 		output_nodes.push_back(get_child_link(p_output_parent));
 	}
 
-	NN_Manager::clear_select_flag();
+//	NN_Manager::clear_select_flag();
 
-	operate_list = set_operate_list(input_nodes, output_nodes);
+	operate_list = set_operate_list(input_nodes);
 	op_layer = this;
 }
 
-NN_Model::NN_Model(NN& inputs, NN& outputs, const string& model_name) :
+NN_Model::NN_Model(const NN& inputs, const NN& outputs, const string& model_name) :
 	NN_Layer(model_name)
 {
 	op_layer = this;
@@ -199,7 +214,8 @@ NN_Model::NN_Model(NN& inputs, NN& outputs, const string& model_name) :
 
 	NN_Manager::clear_select_flag();
 
-	operate_list = set_operate_list(input_nodes, output_nodes);
+	operate_list = set_operate_list(input_nodes);
+	NN_Manager::clear_select_flag();
 }
 
 NN_Model::~NN_Model() {
@@ -267,7 +283,11 @@ vector<NN_Tensor_t> NN_Model::predict(const vector<NN_Tensor_t>& x) {
 	return x;
 }
 
-NN_Model& Model(NN& inputs, NN& outputs, const string& model_name) {
+void NN_Model::summary() {
+	for (NN_Link* p : operate_list) printf("%s\n", p->op_layer->layer_name.c_str());
+}
+
+NN_Model& Model(const NN& inputs, const NN& outputs, const string& model_name) {
 	NN_Model* model = new NN_Model(inputs, outputs, model_name);
 	NN_Manager::add_link(model);
 	

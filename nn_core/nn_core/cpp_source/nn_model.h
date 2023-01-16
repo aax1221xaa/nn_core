@@ -12,15 +12,15 @@ protected:
 
 	static vector<NN_Link*> find_root(vector<NN_Link*>& in_nodes, vector<NN_Link*>& out_nodes);
 	static vector<NN_Link*> gen_child(vector<NN_Link*>& selected_parents);
-	static vector<NN_Link*> set_operate_list(vector<NN_Link*> in_layers, vector<NN_Link*> out_layers);
+	static vector<NN_Link*> set_operate_list(vector<NN_Link*> in_layers);
 
 public:
 	vector<NN_Link*> input_nodes;
 	vector<NN_Link*> output_nodes;
 	vector<NN_Link*> operate_list;
 
-	NN_Model(NN_Model* parent);
-	NN_Model(NN& inputs, NN& outputs, const string& model_name);
+	NN_Model(NN_Model* p_parent);
+	NN_Model(const NN& inputs, const NN& outputs, const string& model_name);
 	~NN_Model();
 	NN_Link* create_child_link();
 
@@ -38,8 +38,9 @@ public:
 		uint iter
 	);
 	vector<NN_Tensor_t> predict(const vector<NN_Tensor_t>& x);
+	void summary();
 
-	NN_Coupler<NN_Link> operator()(NN_Coupler<NN_Link> m_prev_link);
+	NN operator()(NN m_prev_link);
 };
 
-NN_Model& Model(NN& inputs, NN& outputs, const string& model_name);
+NN_Model& Model(const NN& inputs, const NN& outputs, const string& model_name);
