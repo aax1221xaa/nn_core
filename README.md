@@ -40,3 +40,7 @@ model class description:
 
 I'll change layer link solution to unique name rather than linked list.
 
+================== meuru ===================
+
+I finally made algorithm that connecting complex layers.
+
