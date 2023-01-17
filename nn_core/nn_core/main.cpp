@@ -27,7 +27,6 @@ int main() {
 	x = Test("test_3_1")(x);
 	x = Test("test_3_2")(x);
 	NN y_output = Test("test_3_3")(x);
-	
 
 	NN_Model& model = Model({ x_input_1, x_input_2 }, y_output, "model_1");
 

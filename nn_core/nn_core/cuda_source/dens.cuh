@@ -1,7 +1,7 @@
 #ifndef DENSE_CUH
 #define DENSE_CUH
 
-#include "../cpp_source/cuda_common.h"
+#include "../cpp_source/nn_tensor.h"
 
 
 
@@ -13,9 +13,9 @@
 
 void dens(
 	const cudaStream_t st,
-	const Tensor& input,
-	const Tensor& weight,
-	Tensor& output
+	const NN_Tensor& input,
+	const NN_Tensor& weight,
+	NN_Tensor& output
 );
 
 

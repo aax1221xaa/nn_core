@@ -75,3 +75,38 @@ NN_Link& Test(const string name) {
 
 	return *link;
 }
+
+
+NN_Dense::NN_Dense(int _amounts, const string& _layer_name) :
+	NN_Layer(_layer_name)
+{
+	amounts = _amounts;
+}
+
+void NN_Dense::calculate_output_size(vector<NN_Shape*>& input_shape, NN_Shape& output_shape) {
+
+}
+
+void NN_Dense::build(vector<NN_Shape*>& input_shape) {
+	const NN_Shape& shape = *(input_shape[0]);
+	// [batch, 784]
+	// [784, amounts] + [amounts]
+	// [batch, amounts]
+
+	int ch = shape[1];
+
+	weight.set_tensor({ ch, amounts }, GPU, float32);
+	bias.set_tensor({ amounts }, GPU, float32);
+}
+
+void NN_Dense::run_forward(vector<NN_Tensor*>& input, NN_Tensor& output) {
+
+}
+
+void NN_Dense::run_backward(vector<NN_Tensor*>& d_output, NN_Tensor& d_input) {
+
+}
+
+NN_Link& Dense(int amounts, const string& _layer_name) {
+
+}

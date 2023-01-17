@@ -1,13 +1,12 @@
 #pragma once
-#include <vector>
-#include <memory>
 #include "cuda_common.h"
 
 
-using namespace std;
-
-
 class NN_Shape {
+protected:
+	static char str_buffer[STR_MAX];
+	static int str_idx;
+
 public:
 	int* shape;
 	int len;
@@ -28,19 +27,18 @@ public:
 	};
 
 	NN_Shape();
+	NN_Shape(const NN_Shape& p);
 	NN_Shape(const initializer_list<int>& _shape);
 	~NN_Shape();
 
 	void set(const initializer_list<int>& _shape);
 	void clear();
+	const char* get_str() const;
 
-	int& operator[](int axis);
+	int& operator[](int axis) const;
 	const Iterator begin() const;
 	const Iterator end() const;
 
 	bool operator==(const NN_Shape& p);
+	const NN_Shape& operator=(const NN_Shape& p);
 };
-
-typedef shared_ptr<NN_Shape> NN_Shape_t;
-
-const char* shape_to_str(const NN_Shape& shape);

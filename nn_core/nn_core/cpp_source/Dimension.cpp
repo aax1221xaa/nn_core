@@ -1,7 +1,8 @@
 #include "Dimension.h"
 
-extern char str_buffer[STR_MAX];
-extern int str_idx;
+
+char NN_Shape::str_buffer[STR_MAX] = { '\0' };
+int NN_Shape::str_idx = 0;
 
 
 NN_Shape::Iterator::Iterator(int* _shape, int _index) :
@@ -45,6 +46,13 @@ NN_Shape::NN_Shape() {
 	len = 0;
 }
 
+NN_Shape::NN_Shape(const NN_Shape& p) {
+	len = p.len;
+	shape = new int[len];
+
+	for (int i = 0; i < len; ++i) shape[i] = p.shape[i];
+}
+
 NN_Shape::NN_Shape(const initializer_list<int>& _shape) :
 	NN_Shape()
 {
@@ -73,7 +81,7 @@ void NN_Shape::clear() {
 	delete[] shape;
 }
 
-int& NN_Shape::operator[](int axis) {
+int& NN_Shape::operator[](int axis) const {
 	int index = 0;
 
 	if (axis < 0) {
@@ -116,15 +124,17 @@ bool NN_Shape::operator==(const NN_Shape& p) {
 	return equal_flag;
 }
 
-const char* shape_to_str(const NN_Shape& shape) {
+const char* NN_Shape::get_str() const {
 	char tmp_buff[128] = { '\0', };
-	char elem[32] = { '\0', };
+	char elem[16] = { '\0', };
 
 	sprintf_s(tmp_buff, "[");
-	for (const int& n : shape) {
-		sprintf_s(elem, "%d, ", n);
+
+	for (int i = 0; i < len; ++i) {
+		sprintf_s(elem, "%d, ", shape[i]);
 		strcat_s(tmp_buff, elem);
 	}
+
 	strcat_s(tmp_buff, "]");
 
 	int str_size = strlen(tmp_buff) + 1;
@@ -143,4 +153,19 @@ const char* shape_to_str(const NN_Shape& shape) {
 	strcpy_s(p_buff, sizeof(char) * str_size, tmp_buff);
 
 	return p_buff;
+}
+
+const NN_Shape& NN_Shape::operator=(const NN_Shape& p) {
+	if (this == &p) return *this;
+
+	if (len != p.len) {
+		delete[] shape;
+		shape = new int[p.len];
+
+		len = p.len;
+	}
+
+	for (int i = 0; i < len; ++i) shape[i] = p.shape[i];
+
+	return *this;
 }

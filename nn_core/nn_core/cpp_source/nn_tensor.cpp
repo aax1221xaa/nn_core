@@ -38,14 +38,14 @@ void NN_Tensor::clear_tensor() {
 	len = 0;
 }
 
-void NN_Tensor::set_tensor(const NN_Shape& shape, const int _attr, const int _dtype) {
+void NN_Tensor::set_tensor(const NN_Shape& _shape, const int _attr, const int _dtype) {
 	size_t size = 1;
 
-	for (int n : shape) {
+	for (int n : _shape) {
 		if (n < 1) {
 			ErrorExcept(
 				"[NN_Tensor::set_tensor] invalid shape %s",
-				shape_to_str(shape)
+				_shape.get_str()
 			);
 		}
 		size *= n;
@@ -57,6 +57,7 @@ void NN_Tensor::set_tensor(const NN_Shape& shape, const int _attr, const int _dt
 
 	attr = _attr;
 	dtype = _dtype;
+	shape = _shape;
 	len = size;
 
 	size_t elem_size = get_elem_size(dtype);
