@@ -95,8 +95,8 @@ void NN_Dense::build(vector<NN_Shape*>& input_shape) {
 
 	int ch = shape[1];
 
-	weight.set_tensor({ ch, amounts }, GPU, float32);
-	bias.set_tensor({ amounts }, GPU, float32);
+	weight.create({ ch, amounts });
+	bias.create({ amounts });
 }
 
 void NN_Dense::run_forward(vector<NN_Tensor*>& input, NN_Tensor& output) {

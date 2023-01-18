@@ -66,7 +66,7 @@ void check_dens(
 	const NN_Shape& w_shape = weight.shape;
 	const NN_Shape& out_shape = output.shape;
 
-	if (input.attr != GPU || weight.attr != GPU || output.attr != GPU) {
+	if (input.device_type != GPU || weight.device_type != GPU || output.device_type != GPU) {
 		ErrorExcept(
 			"[check_dense] Tensor is not GPU Memory"
 		);
@@ -100,10 +100,10 @@ void dens(
 	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, output.shape[-1], output.shape[0]);
 
-	__matmul << <blocks, threads, 0, st >> > (
-		(const float*)input.data,
-		(const float*)weight.data,
-		(float*)output.data,
+	__matmul<<<blocks, threads, 0, st>>>(
+		input.data,
+		weight.data,
+		output.data,
 		input.shape[0],
 		input.shape[-1],
 		output.shape[-1]

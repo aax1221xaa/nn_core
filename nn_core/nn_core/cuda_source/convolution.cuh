@@ -1,7 +1,7 @@
 ﻿#ifndef _CONVOLUTION_CUH_
 #define _CONVULUTION_CUH_
 
-#include "../cpp_source/cuda_common.h"
+#include "../cpp_source/nn_tensor.h"
 
 
 
@@ -19,41 +19,41 @@ int get_output_size(
 );
 
 void conv_2d(
-	const Stream& stream,
-	const Tensor& d_input,
-	const Tensor& d_kernel,
-	Tensor& d_output,
+	cudaStream_t& stream,
+	const NN_Tensor& d_input,
+	const NN_Tensor& d_kernel,
+	NN_Tensor& d_output,
 	int st_w,
 	int st_h
 );
 
 void correl_2d(
-	const Stream& stream,
-	const Tensor& d_doutput,
-	const Tensor& d_kernel,
-	Tensor& d_dinput
+	cudaStream_t& stream,
+	const NN_Tensor& d_doutput,
+	const NN_Tensor& d_kernel,
+	NN_Tensor& d_dinput
 );
 
 void transpose(
-	const Stream& stream,
-	const Tensor& d_input,
-	Tensor& d_output
+	cudaStream_t& stream,
+	const NN_Tensor& d_input,
+	NN_Tensor& d_output
 );
 
 void dilation_2d(
-	const Stream& stream,
-	const Tensor& d_input,
-	Tensor& d_output,
+	cudaStream_t& stream,
+	const NN_Tensor& d_input,
+	NN_Tensor& d_output,
 	uint scale,
 	int offset_x,
 	int offset_y
 );
 
 void kernel_conv_2d(
-	const Stream& stream,
-	const Tensor& d_doutput,
-	const Tensor& d_input,
-	Tensor& d_gradient
+	cudaStream_t& stream,
+	const NN_Tensor& d_doutput,
+	const NN_Tensor& d_input,
+	NN_Tensor& d_gradient
 );
 
 #endif // !_CONVOLUTION_CUH_

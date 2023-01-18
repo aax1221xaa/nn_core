@@ -1,136 +1,102 @@
 #include "nn_tensor.h"
 
 
-NN_Tensor::NN_Tensor() {
-	data = NULL;
-	attr = none;
-	dtype = none;
-	len = 0;
-}
-
-NN_Tensor::NN_Tensor(const int _attr, const int _dtype) {
-	data = NULL;
-	attr = _attr;
-	dtype = _dtype;
-	len = 0;
-}
-
-NN_Tensor::~NN_Tensor() {
-	try {
-		clear_tensor();
-	}
-	catch (Exception e) {
-		e.Put();
-	}
-}
-
-void NN_Tensor::clear_tensor() {
-	if (attr == CPU) {
-		free(data);
-	}
-	else if (attr == GPU) {
-		check_cuda(cudaFree(data));
-	}
-
-	data = NULL;
-	attr = none;
-	dtype = none;
-	len = 0;
-}
-
-void NN_Tensor::set_tensor(const NN_Shape& _shape, const int _attr, const int _dtype) {
+const size_t NN_Tensor::get_elem_size() const {
 	size_t size = 1;
 
-	for (int n : _shape) {
+	for (int n : shape) {
 		if (n < 1) {
 			ErrorExcept(
-				"[NN_Tensor::set_tensor] invalid shape %s",
-				_shape.get_str()
+				"[NN_Tensor::get_length] shape is invalid %s",
+				shape.get_str()
 			);
 		}
 		size *= n;
 	}
 
-	if (_attr != attr || _dtype != dtype || len != size) {
-		clear_tensor();
-	}
+	return size;
+}
 
-	attr = _attr;
-	dtype = _dtype;
+NN_Tensor::NN_Tensor(const int _device_type) :
+	device_type(_device_type)
+{
+	data = NULL;
+}
+
+NN_Tensor::NN_Tensor(const NN_Shape& _shape, const int _device_type) :
+	shape(_shape),
+	device_type(_device_type)
+{
+	try {
+		size_t size = sizeof(float) * get_elem_size();
+
+		if (device_type == CPU) {
+			data = new float[size];
+		}
+		else if (device_type == GPU) {
+			check_cuda(cudaMalloc(&data, size));
+		}
+	}
+	catch (Exception& e) {
+		e.Put();
+	}
+}
+
+NN_Tensor::~NN_Tensor() {
+	try {
+		if (device_type == CPU) delete[] data;
+		else if (device_type == GPU) check_cuda(cudaFree(data));
+	}
+	catch (Exception& e) {
+		e.Put();
+	}
+}
+
+void NN_Tensor::clear() {
+	if (device_type == CPU) delete[] data;
+	else if (device_type == GPU) check_cuda(cudaFree(data));
+
+	data = NULL;
+	shape.clear();
+}
+
+void NN_Tensor::create(const NN_Shape& _shape) {
+	clear();
 	shape = _shape;
-	len = size;
 
-	size_t elem_size = get_elem_size(dtype);
+	size_t len = get_elem_size();
 
-	if (attr == CPU) {
-		data = malloc(len * elem_size);
+	if (device_type == CPU) {
+		data = new float[len];
 	}
-	else if (attr == GPU) {
-		check_cuda(cudaMalloc(&data, len * elem_size));
+	else if (device_type == GPU) {
+		check_cuda(cudaMalloc(&data, sizeof(float) * len));
 	}
 }
 
 void NN_Tensor::copy_to(NN_Tensor& dst) {
-	size_t elem_size = get_elem_size(dtype);
+	size_t src_len = sizeof(float) * get_elem_size();
+	size_t dst_len = sizeof(float) * dst.get_elem_size();
 
-	if (len != dst.len || dtype != dst.dtype) {
-		if (dst.attr == CPU) {
-			free(dst.data);
-			dst.data = malloc(elem_size * len);
-		}
-		else if (dst.attr == GPU) {
-			check_cuda(cudaFree(dst.data));
-			check_cuda(cudaMalloc(&dst.data, elem_size * len));
-		}
+	if (src_len != dst_len) {
+		dst.clear();
+		dst.create(shape);
 	}
 
-	dst.dtype = dtype;
-	dst.len = len;
-
-	if (attr == CPU) {
-		if (dst.attr == CPU) {
-			memcpy_s(dst.data, elem_size * len, data, elem_size * len);
+	if (device_type == CPU) {
+		if (dst.device_type == CPU) {
+			memcpy_s(dst.data, src_len, data, src_len);
 		}
-		else if (dst.attr == GPU) {
-			check_cuda(cudaMemcpy(dst.data, data, elem_size * len, cudaMemcpyHostToDevice));
+		else if (dst.device_type == GPU) {
+			check_cuda(cudaMemcpy(dst.data, data, src_len, cudaMemcpyHostToDevice));
 		}
 	}
-	else if (attr == GPU) {
-		if (dst.attr == CPU) {
-			check_cuda(cudaMemcpy(dst.data, data, elem_size * len, cudaMemcpyDeviceToHost));
+	else if (device_type == GPU) {
+		if (dst.device_type == CPU) {
+			check_cuda(cudaMemcpy(dst.data, data, src_len, cudaMemcpyDeviceToHost));
 		}
-		else if (dst.attr == GPU) {
-			check_cuda(cudaMemcpy(dst.data, data, elem_size * len, cudaMemcpyDeviceToDevice));
+		else if (dst.device_type == GPU) {
+			check_cuda(cudaMemcpy(dst.data, data, src_len, cudaMemcpyDeviceToDevice));
 		}
 	}
-}
-
-size_t NN_Tensor::get_elem_size(const int type) {
-	size_t size = 0;
-
-	switch (type)
-	{
-	case int8:
-	case uint8:
-		size = sizeof(char);
-		break;
-
-	case int32:
-	case uint32:
-		size = sizeof(int);
-		break;
-
-	case float32:
-		size = sizeof(float);
-		break;
-
-	case float64:
-		size = sizeof(double);
-		break;
-
-	default:
-		break;
-	}
-
-	return size;
 }

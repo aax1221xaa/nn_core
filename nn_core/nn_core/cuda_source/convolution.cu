@@ -294,36 +294,36 @@ int get_output_size(
 }
 
 void check_conv_2d(
-	const Tensor& d_input,
-	const Tensor& d_kernel,
-	const Tensor& d_output,
+	const NN_Tensor& d_input,
+	const NN_Tensor& d_kernel,
+	const NN_Tensor& d_output,
 	int st_w,
 	int st_h
 ) {
-	int out_h = get_output_size(d_input.h, d_kernel.h, 0, st_h);
-	int out_w = get_output_size(d_input.w, d_kernel.w, 0, st_w);
+	int out_h = get_output_size(d_input.shape[-2], d_kernel.shape[-2], 0, st_h);
+	int out_w = get_output_size(d_input.shape[-1], d_kernel.shape[-1], 0, st_w);
 
-	if (d_output.h != out_h || d_output.w != out_w) {
+	if (d_output.shape[-2] != out_h || d_output.shape[-1] != out_w) {
 		ErrorExcept(
 			"[check_conv_2d] invalid output dimension %s",
-			dim_to_str(d_output)
+			d_output.shape.get_str()
 		);
 	}
-	else if (d_kernel.c != d_input.c || d_kernel.n != d_output.c) {
+	else if (d_kernel.shape[1] != d_input.shape[1] || d_kernel.shape[0] != d_output.shape[1]) {
 		ErrorExcept(
 			"[check_conv_2d] invalid channels input: %s, kernel: %s, output: %s",
-			dim_to_str(d_input),
-			dim_to_str(d_kernel),
-			dim_to_str(d_output)
+			d_input.shape.get_str(),
+			d_kernel.shape.get_str(),
+			d_output.shape.get_str()
 		);
 	}
 }
 
 void conv_2d(
-	const Stream& stream,
-	const Tensor& d_input,
-	const Tensor& d_kernel,
-	Tensor& d_output,
+	cudaStream_t& stream,
+	const NN_Tensor& d_input,
+	const NN_Tensor& d_kernel,
+	NN_Tensor& d_output,
 	int st_w,
 	int st_h
 ) {
@@ -335,76 +335,77 @@ void conv_2d(
 		st_h
 	);
 
-	MemBlock<uint> indices;
+	uint batch = d_input.shape[0];
+	uint kc = d_kernel.shape[1];
+	uint kh = d_kernel.shape[2];
+	uint kw = d_kernel.shape[3];
+	uint *indices = new uint[kc * kh * kw];
 
-	create_host_memblock(indices, get_elem_size(d_kernel));
-
-	for (int c = 0; c < d_kernel.c; ++c) {
-		for (int h = 0; h < d_kernel.h; ++h) {
-			uint* p_indices = indices.data + (c * d_kernel.h * d_kernel.w);
-			for (int w = 0; w < d_kernel.w; ++w) {
-				p_indices[h * d_kernel.w + w] = (c * d_input.h * d_input.w) + (h * d_input.w) + w;
+	for (int c = 0; c < kc; ++c) {
+		for (int h = 0; h < kh; ++h) {
+			uint* p_indices = indices + (c * kh * kw);
+			for (int w = 0; w < kw; ++w) {
+				p_indices[h * kw + w] = (c * d_input.shape[2] * d_input.shape[3]) + (h * d_input.shape[3]) + w;
 			}
 		}
 	}
-	check_cuda(cudaMemcpyToSymbol(__indices, indices.data, sizeof(uint) * indices.len));
+	check_cuda(cudaMemcpyToSymbol(__indices, indices, sizeof(uint) * kc * kh * kw));
 
 	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, d_output.w * d_output.h, d_output.c);
+	dim3 blocks = get_grid_size(threads, d_output.shape[3] * d_output.shape[2], d_output.shape[1]);
 
-	for (int i = 0; i < stream.str_size; ++i) {
-		float* d_in = d_input.data + (i * d_input.w * d_input.h * d_input.c);
-		float* d_out = d_output.data + (i * d_output.w * d_output.h * d_output.c);
+	for (int i = 0; i < batch; ++i) {
+		float* d_in = d_input.data + (i * d_input.shape[3] * d_input.shape[2] * d_input.shape[1]);
+		float* d_out = d_output.data + (i * d_output.shape[3] * d_output.shape[2] * d_output.shape[1]);
 
-		__conv_2d << <blocks, threads, 0, stream.str[i] >> > (
+		__conv_2d<<<blocks, threads, 0, stream>>>(
 			d_in,
 			d_kernel.data,
 			d_out,
-			d_input.w,
-			d_kernel.n,
-			d_kernel.w,
-			d_kernel.h,
-			d_kernel.c,
-			d_output.w,
-			d_output.h,
+			d_input.shape[3],
+			d_kernel.shape[0],
+			d_kernel.shape[3],
+			d_kernel.shape[2],
+			d_kernel.shape[1],
+			d_output.shape[3],
+			d_output.shape[2],
 			st_w,
 			st_h
 			);
 	}
-	sync_streams(stream);
-
-	free_memblock(indices);
+	check_cuda(cudaStreamSynchronize(stream));
+	delete[] indices;
 }
 
 
 /*             correlation_2d            */
 
 void check_correl_2d(
-	const Tensor& d_doutput,
-	const Tensor& d_kernel,
-	const Tensor& d_dinput
+	const NN_Tensor& d_doutput,
+	const NN_Tensor& d_kernel,
+	const NN_Tensor& d_dinput
 ) {
-	int d_in_w = d_doutput.w - d_kernel.w + 1;
-	int d_in_h = d_doutput.h - d_kernel.h + 1;
+	int d_in_w = d_doutput.shape[3] - d_kernel.shape[3] + 1;
+	int d_in_h = d_doutput.shape[2] - d_kernel.shape[2] + 1;
 
 	if (
-		d_doutput.c != d_kernel.n ||
-		d_dinput.c != d_kernel.c ||
-		d_dinput.w != d_in_w ||
-		d_dinput.h != d_in_h
+		d_doutput.shape[1] != d_kernel.shape[0] ||
+		d_dinput.shape[1] != d_kernel.shape[1] ||
+		d_dinput.shape[3] != d_in_w ||
+		d_dinput.shape[2] != d_in_h
 		) {
 		ErrorExcept(
 			"[check_correl_2d] invalid (d_output, kernel, d_input) size. d_doutput: %s, d_tkernel: %s, d_dinput: %s",
-			dim_to_str(d_doutput), dim_to_str(d_kernel), dim_to_str(d_dinput)
+			d_doutput.shape.get_str(), d_kernel.shape.get_str(), d_dinput.shape.get_str()
 		);
 	}
 }
 
 void correl_2d(
-	const Stream& stream,
-	const Tensor& d_doutput,
-	const Tensor& d_kernel,
-	Tensor& d_dinput
+	cudaStream_t& stream,
+	const NN_Tensor& d_doutput,
+	const NN_Tensor& d_kernel,
+	NN_Tensor& d_dinput
 ) {
 	check_correl_2d(
 		d_doutput,
@@ -412,92 +413,111 @@ void correl_2d(
 		d_dinput
 	);
 
-	MemBlock<uint> indices;
+	uint batch = d_doutput.shape[0];
+	uint kn = d_kernel.shape[0];
+	uint kh = d_kernel.shape[2];
+	uint kw = d_kernel.shape[3];
+	uint* indices = new uint[kn * kh * kw];
 
-	create_host_memblock(indices, get_elem_size(d_kernel));
-
-	for (int c = 0; c < d_kernel.n; ++c) {
-		uint* p_indices = indices.data + (c * d_kernel.h * d_kernel.w);
-		for (int h = 0; h < d_kernel.h; ++h) {
-			for (int w = 0; w < d_kernel.w; ++w) {
-				p_indices[h * d_kernel.w + w] = (c * d_doutput.h * d_doutput.w) + (d_kernel.h - h - 1) * d_doutput.w + (d_kernel.w - w - 1);
+	for (int n = 0; n < kn; ++n) {
+		uint* p_indices = indices + (n * kh * kw);
+		for (int h = 0; h < kh; ++h) {
+			for (int w = 0; w < kw; ++w) {
+				p_indices[h * kw + w] = (n * d_doutput.shape[2] * d_doutput.shape[3]) + (kh - h - 1) * d_doutput.shape[3] + (kw - w - 1);
 			}
 		}
 	}
-	check_cuda(cudaMemcpyToSymbol(__indices, indices.data, sizeof(uint) * indices.len));
+	check_cuda(cudaMemcpyToSymbol(__indices, indices, sizeof(uint) * kn * kh * kw));
 
 	dim3 threads = dim3(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, d_dinput.w * d_dinput.h, d_dinput.c);
+	dim3 blocks = get_grid_size(threads, d_dinput.shape[3] * d_dinput.shape[2], d_dinput.shape[1]);
 
-	for (int i = 0; i < stream.str_size; ++i) {
-		float* d_dout = d_doutput.data + (i * d_doutput.c * d_doutput.h * d_doutput.w);
-		float* d_din = d_dinput.data + (i * d_dinput.c * d_dinput.h * d_dinput.w);
+	for (int i = 0; i < batch; ++i) {
+		float* d_dout = d_doutput.data + (i * d_doutput.shape[1] * d_doutput.shape[2] * d_doutput.shape[3]);
+		float* d_din = d_dinput.data + (i * d_dinput.shape[1] * d_dinput.shape[2] * d_dinput.shape[3]);
 
-		__correl_2d<<<blocks, threads, 0, stream.str[i]>>>(
+		__correl_2d<<<blocks, threads, 0, stream>>>(
 			d_dout,
 			d_kernel.data,
 			d_din,
-			d_doutput.w,
-			d_kernel.n,
-			d_kernel.w,
-			d_kernel.h,
-			d_kernel.c,
-			d_dinput.w,
-			d_dinput.h
+			d_doutput.shape[3],
+			d_kernel.shape[0],
+			d_kernel.shape[3],
+			d_kernel.shape[2],
+			d_kernel.shape[1],
+			d_dinput.shape[3],
+			d_dinput.shape[2]
 		);
 	}
-	sync_streams(stream);
-
-	free_memblock(indices);
+	check_cuda(cudaStreamSynchronize(stream));
+	delete[] indices;
 }
 
 /*            transpose             */	
 
-void transpose(
-	const Stream& stream,
-	const Tensor& d_input,
-	Tensor& d_output
+void check_transpose(
+	const NN_Tensor& d_input,
+	const NN_Tensor& d_output
 ) {
-	if (get_elem_size(d_input) != get_elem_size(d_output)) {
+	const NN_Shape& in_shape = d_input.shape;
+	const NN_Shape& out_shape = d_output.shape;
+
+	if (in_shape.len < 2 || out_shape.len < 2) {
 		ErrorExcept(
-			"[transpose] invalid input, output size. input: %d, output: %d",
-			get_elem_size(d_input),
-			get_elem_size(d_output)
+			"[check_transpose] input, output tensor channels are smaller than 2. input: %s, output: %s",
+			in_shape.get_str(),
+			out_shape.get_str()
 		);
 	}
 
-	dim3 threads(SQR_BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, get_elem_size(d_input));
+	if (in_shape[0] != out_shape[1] || in_shape[1] != out_shape[0]) {
+		ErrorExcept(
+			"[check_transpose] input, output tensor 0, 1 channels are invalid. input: %s, output: %s",
+			in_shape.get_str(),
+			out_shape.get_str()
+		);
+	}
+}
 
-	__transpose<<<blocks, threads, 0, stream.str[0]>>>(
+void transpose(
+	cudaStream_t& stream,
+	const NN_Tensor& d_input,
+	NN_Tensor& d_output
+) {
+	check_transpose(d_input, d_output);
+
+	dim3 threads(SQR_BLOCK_SIZE);
+	dim3 blocks = get_grid_size(threads, d_input.get_elem_size());
+
+	__transpose<<<blocks, threads, 0, stream>>>(
 		d_input.data,
 		d_output.data,
-		d_input.n,
-		d_input.c,
-		d_input.h,
-		d_input.w
+		d_input.shape[0],
+		d_input.shape[1],
+		d_input.shape[2],
+		d_input.shape[3]
 	);
-	check_cuda(cudaStreamSynchronize(stream.str[0]));
+	check_cuda(cudaStreamSynchronize(stream));
 }
 
 /*            dilation_2d           */
 
 void check_dilation_2d(
-	const Tensor& input,
-	const Tensor& output,
+	const NN_Tensor& input,
+	const NN_Tensor& output,
 	uint scale,
 	int offset_x,
 	int offset_y
 ) {
-	int out_w = input.w * scale + offset_x;
-	int out_h = input.h * scale + offset_y;
+	int out_w = input.shape[3] * scale + offset_x;
+	int out_h = input.shape[2] * scale + offset_y;
 
-	if (out_w > output.w || out_h > output.h) {
+	if (out_w > output.shape[3] || out_h > output.shape[2]) {
 		ErrorExcept(
 			"[check_dilation_2d] output is too small. output: %s, expect output: [%d, %d, %d, %d]",
-			dim_to_str(output),
-			output.n,
-			output.c,
+			output.shape.get_str(),
+			output.shape[0],
+			output.shape[1],
 			out_h,
 			out_w
 		);
@@ -505,9 +525,9 @@ void check_dilation_2d(
 }
 
 void dilation_2d(
-	const Stream& stream,
-	const Tensor& d_input,
-	Tensor& d_output,
+	cudaStream_t& stream,
+	const NN_Tensor& d_input,
+	NN_Tensor& d_output,
 	uint scale,
 	int offset_x,
 	int offset_y
@@ -520,63 +540,67 @@ void dilation_2d(
 		offset_y
 	);
 
-	check_cuda(cudaMemset(d_output.data, 0, get_mem_size(d_output)));
+	check_cuda(cudaMemset(d_output.data, 0, sizeof(float) * d_output.get_elem_size()));
 
 	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, d_input.w, d_input.h);
+	dim3 blocks = get_grid_size(threads, d_input.shape[3], d_input.shape[2]);
 
-	for (int i = 0; i < stream.str_size; ++i) {
-		float* d_in = d_input.data + (i * d_input.h * d_input.w * d_input.c);
-		float* d_out = d_output.data + (i * d_output.h * d_output.w * d_output.c);
+	for (int i = 0; i < d_input.shape[0]; ++i) {
+		float* d_in = d_input.data + (i * d_input.shape[3] * d_input.shape[2] * d_input.shape[1]);
+		float* d_out = d_output.data + (i * d_output.shape[3] * d_output.shape[2] * d_output.shape[1]);
 
-		__dilation_2d << <blocks, threads, 0, stream.str[i] >> > (
+		__dilation_2d<<<blocks, threads, 0, stream>>>(
 			d_in,
 			d_out,
-			d_input.w,
-			d_input.h,
-			d_input.c,
-			d_output.w,
-			d_output.h,
+			d_input.shape[3],
+			d_input.shape[2],
+			d_input.shape[1],
+			d_output.shape[3],
+			d_output.shape[2],
 			scale,
 			offset_x,
 			offset_y
 			);
 	}
 
-	sync_streams(stream);
+	check_cuda(cudaStreamSynchronize(stream));
 }
 
 
 /*          kernel_convolution_2d          */
 
 void check_kernel_conv_2d(
-	const Tensor& d_doutput,
-	const Tensor& d_input,
-	Tensor& d_gradient
+	const NN_Tensor& d_doutput,
+	const NN_Tensor& d_input,
+	NN_Tensor& d_gradient
 ) {
-	int in_h = d_input.h - d_doutput.h + 1;
-	int in_w = d_input.w - d_doutput.w + 1;
+	const NN_Shape& dout_shape = d_doutput.shape;
+	const NN_Shape& in_shape = d_input.shape;
+	const NN_Shape& grad_shape = d_gradient.shape;
 
-	if (d_gradient.h != in_h || 
-		d_gradient.w != in_w || 
-		d_gradient.n != d_doutput.c ||
-		d_gradient.c != d_input.c || 
-		d_input.n != d_doutput.n) {
+	int in_h = in_shape[2] - dout_shape[2] + 1;
+	int in_w = in_shape[3] - dout_shape[3] + 1;
+
+	if (grad_shape[2] != in_h ||
+		grad_shape[3] != in_w ||
+		grad_shape[0] != dout_shape[1] ||
+		grad_shape[1] != in_shape[1] ||
+		in_shape[0] != dout_shape[0]) {
 
 		ErrorExcept(
 			"[check_kernel_conv_2d] invalid tensor arguments size. d_input: %s, d_doutput: %s, gradient: %s",
-			dim_to_str(d_input),
-			dim_to_str(d_doutput),
-			dim_to_str(d_gradient)
+			in_shape.get_str(),
+			dout_shape.get_str(),
+			grad_shape.get_str()
 		);
 	}
 }
 
 void kernel_conv_2d(
-	const Stream& stream,
-	const Tensor& d_doutput,
-	const Tensor& d_input,
-	Tensor& d_gradient
+	cudaStream_t& stream,
+	const NN_Tensor& d_doutput,
+	const NN_Tensor& d_input,
+	NN_Tensor& d_gradient
 ) {
 	check_kernel_conv_2d(
 		d_doutput,
@@ -584,78 +608,75 @@ void kernel_conv_2d(
 		d_gradient
 	);
 
-	MemBlock<uint> indices;
+	uint* indices = new uint[d_doutput.shape[2] * d_doutput.shape[3]];
 
-	create_host_memblock(indices, d_doutput.h * d_doutput.w);
-
-	for (int h = 0; h < d_doutput.h; ++h) {
-		for (int w = 0; w < d_doutput.w; ++w) {
-			indices.data[h * d_doutput.w + w] = h * d_input.w + w;
+	for (int h = 0; h < d_doutput.shape[2]; ++h) {
+		for (int w = 0; w < d_doutput.shape[3]; ++w) {
+			indices[h * d_doutput.shape[3] + w] = h * d_input.shape[3] + w;
 		}
 	}
 
-	check_cuda(cudaMemset(d_gradient.data, 0, get_mem_size(d_gradient)));
+	check_cuda(cudaMemset(d_gradient.data, 0, sizeof(float) * d_gradient.get_elem_size()));
 
 	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 blocks = get_grid_size(
 		threads,
-		d_gradient.h * d_gradient.w * d_gradient.c,
-		d_gradient.n
+		d_gradient.shape[2] * d_gradient.shape[3] * d_gradient.shape[1],
+		d_gradient.shape[0]
 	);
 
-	if (indices.len < CONST_ELEM_SIZE) {
+	if (d_doutput.shape[2] * d_doutput.shape[3] < CONST_ELEM_SIZE) {
 
-		check_cuda(cudaMemcpyToSymbol(__indices, indices.data, sizeof(uint) * indices.len));
+		check_cuda(cudaMemcpyToSymbol(__indices, indices, sizeof(uint) * d_doutput.shape[2] * d_doutput.shape[3]));
 
-		for (uint i = 0; i < stream.str_size; ++i) {
-			float* d_in = d_input.data + (i * d_input.h * d_input.w * d_input.c);
-			float* d_dout = d_doutput.data + (i * d_doutput.h * d_doutput.w * d_doutput.c);
+		for (uint i = 0; i < d_doutput.shape[0]; ++i) {
+			float* d_in = d_input.data + (i * d_input.shape[3] * d_input.shape[2] * d_input.shape[1]);
+			float* d_dout = d_doutput.data + (i * d_doutput.shape[3] * d_doutput.shape[2] * d_doutput.shape[1]);
 
-			__kernel_conv_2d_32x32_c_ind << <blocks, threads, 0, stream.str[i] >> > (
+			__kernel_conv_2d_32x32_c_ind<<<blocks, threads, 0, stream>>>(
 				d_in,
 				d_dout,
 				d_gradient.data,
-				d_input.h,
-				d_input.w,
-				d_input.c,
-				d_doutput.h,
-				d_doutput.w,
-				d_doutput.c,
-				d_gradient.h,
-				d_gradient.w
+				d_input.shape[2],
+				d_input.shape[3],
+				d_input.shape[1],
+				d_doutput.shape[2],
+				d_doutput.shape[3],
+				d_doutput.shape[1],
+				d_gradient.shape[2],
+				d_gradient.shape[3]
 				);
-			check_cuda(cudaStreamSynchronize(stream.str[i]));
+			check_cuda(cudaStreamSynchronize(stream));
 		}
 	}
 	else {
-		MemBlock<uint> d_indices;
+		uint* d_indices = NULL;
 
-		create_dev_memblock(d_indices, indices.len);
-		check_cuda(cudaMemcpy(d_indices.data, indices.data, sizeof(uint) * indices.len, cudaMemcpyHostToDevice));
+		check_cuda(cudaMalloc(&d_indices, sizeof(uint) * d_doutput.shape[2] * d_doutput.shape[3]));
+		check_cuda(cudaMemcpy(d_indices, indices, sizeof(uint) * d_doutput.shape[2] * d_doutput.shape[3], cudaMemcpyHostToDevice));
 
-		for (uint i = 0; i < stream.str_size; ++i) {
-			float* d_in = d_input.data + (i * d_input.h * d_input.w * d_input.c);
-			float* d_dout = d_doutput.data + (i * d_doutput.h * d_doutput.w * d_doutput.c);
+		for (uint i = 0; i < d_doutput.shape[0]; ++i) {
+			float* d_in = d_input.data + (i * d_input.shape[3] * d_input.shape[2] * d_input.shape[1]);
+			float* d_dout = d_doutput.data + (i * d_doutput.shape[3] * d_doutput.shape[2] * d_doutput.shape[1]);
 
-			__kernel_conv_2d_32x32_g_ind << <blocks, threads, 0, stream.str[i] >> > (
+			__kernel_conv_2d_32x32_g_ind<<<blocks, threads, 0, stream>>>(
 				d_in,
 				d_dout,
 				d_gradient.data,
-				d_indices.data,
-				d_input.h,
-				d_input.w,
-				d_input.c,
-				d_doutput.h,
-				d_doutput.w,
-				d_doutput.c,
-				d_gradient.h,
-				d_gradient.w
+				d_indices,
+				d_input.shape[2],
+				d_input.shape[3],
+				d_input.shape[1],
+				d_doutput.shape[2],
+				d_doutput.shape[3],
+				d_doutput.shape[1],
+				d_gradient.shape[2],
+				d_gradient.shape[3]
 				);
-			check_cuda(cudaStreamSynchronize(stream.str[i]));
+			check_cuda(cudaStreamSynchronize(stream));
 		}
 
-		free_memblock(d_indices);
+		check_cuda(cudaFree(d_indices));
 	}
-
-	free_memblock(indices);
+	delete[] indices;
 }
