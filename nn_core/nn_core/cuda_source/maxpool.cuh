@@ -1,7 +1,7 @@
 #ifndef MAXPOOL_CUH
 #define MAXPOOL_CUH
 
-#include "../cpp_source/cuda_common.h"
+#include "../cpp_source/nn_tensor.h"
 
 int calc_output_size(
 	int input_size,
@@ -10,9 +10,9 @@ int calc_output_size(
 );
 
 void maxpool_2d(
-	Stream& stream,
-	Tensor& input,
-	Tensor& output,
+	cudaStream_t stream,
+	NN_Tensor4D input,
+	NN_Tensor4D output,
 	int kernel_w,
 	int kernel_h,
 	int stride_w,

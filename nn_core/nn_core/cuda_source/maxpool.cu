@@ -97,9 +97,9 @@ int calc_output_size(
 }
 
 void maxpool_2d(
-	Stream& stream,
-	Tensor& input,
-	Tensor& output,
+	cudaStream_t stream,
+	NN_Tensor4D input,
+	NN_Tensor4D output,
 	int kernel_w,
 	int kernel_h,
 	int stride_w,
@@ -123,11 +123,11 @@ void maxpool_2d(
 	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, output.w, output.h);
 	
-	for (int i = 0; i < stream.str_size; ++i) {
+	for (int i = 0; i < input.n; ++i) {
 		float* d_in = input.data + (i * input.h * input.w * input.c);
 		float* d_out = output.data + (i * output.h * output.w * output.c);
 
-		__maxpool_2d << <blocks, threads, smem_size, stream.str[i] >> > (
+		__maxpool_2d << <blocks, threads, smem_size, stream >> > (
 			d_in,
 			d_out,
 			input.w,
@@ -144,5 +144,5 @@ void maxpool_2d(
 			);
 	}
 
-	sync_streams(stream);
+	check_cuda(cudaStreamSynchronize(stream));
 }

@@ -18,31 +18,14 @@ __global__ void __add_bias(
 	float* a,
 	float* b,
 	float* c,
-	uint len,
-	uint ch
+	cuint node_size,
+	cuint channels
 ) {
-	extern __shared__ float sm_b[];
-	uint cx = blockIdx.x * blockDim.x + threadIdx.x;
+	cuint index = blockIdx.x * blockDim.x + threadIdx.x;
+	cuint n_channel = index / node_size;
 
-	__syncthreads();
-
-	for (uint i = 0; i < ch; i += BLOCK_SIZE) {
-		int tidx = threadIdx.x + i;
-
-		if (tidx < ch) {
-			sm_b[tidx] = b[tidx];
-		}
-	}
-
-	__syncthreads();
-
-	for (uint i = 0; i < ch; ++i) {
-		float* pa = a + (len * i);
-		float* pc = c + (len * i);
-
-		if (cx < len) {
-			pc[cx] = pa[cx] + sm_b[i];
-		}
+	if (n_channel < channels) {
+		c[index] = a[index] + b[n_channel];
 	}
 }
 
@@ -55,47 +38,53 @@ __global__ void __add_bias(
 /**********************************************/
 
 void check_add_bias(
-	const Tensor& input,
-	const Tensor& bias,
-	const Tensor& output
+	const NN_Tensor4D input,
+	const NN_Tensor4D bias,
+	const NN_Tensor4D output
 ) {
-	int input_len = input.h * input.w;
-	int output_len = output.h * output.w;
+	int in_node_size = input.h * input.w;
+	int out_node_size = output.h * output.w;
 
-	if (input_len != output_len || input.c != output.c || bias.w != output.c) {
+	if (in_node_size != out_node_size || 
+		input.c != output.c || 
+		bias.n != output.c ||
+		get_elem_size(input) != get_elem_size(output)
+		) {
 		ErrorExcept(
-			"[check_add_bias] invalid size. input: [%d, %d, %d], bias: [%d], output: [%d, %d, %d]",
-			input.c, input.h, input.w, bias.w, output.c, output.h, output.w
+			"[check_add_bias] invalid size. input: %s, bias: %s, output: %s",
+			dim_to_str(input),
+			dim_to_str(bias),
+			dim_to_str(output)
 		);
 	}
 }
 
 void add_bias(
-	const Stream& stream,
-	const Tensor& input,
-	const Tensor& bias,
-	Tensor& output
+	cudaStream_t stream,
+	const NN_Tensor4D input,
+	const NN_Tensor4D bias,
+	NN_Tensor4D output
 ) {
 	check_add_bias(input, bias, output);
 
-	uint length = output.h * output.w;
-	size_t share_size = sizeof(float) * output.c;
+	uint node_size = output.h * output.w;
+	uint channel_size = output.c;
 
 	dim3 threads(SQR_BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, length);
+	dim3 blocks = get_grid_size(threads, output.c * output.h * output.w);
 
-	for (int i = 0; i < stream.str_size; ++i) {
-		float* p_input = input.data + (i * length * input.c);
-		float* p_output = output.data + (i * length * output.c);
+	for (int i = 0; i < input.n; ++i) {
+		float* p_input = input.data + (i * input.h * input.w * input.c);
+		float* p_output = output.data + (i * output.h * output.w * output.c);
 
-		__add_bias << <blocks, threads, share_size, stream.str[i] >> > (
+		__add_bias << <blocks, threads, 0, stream >> > (
 			p_input,
 			bias.data,
 			p_output,
-			length,
-			output.c
+			node_size,
+			channel_size
 		);
 	}
 
-	sync_streams(stream);
+	check_cuda(cudaStreamSynchronize(stream));
 }

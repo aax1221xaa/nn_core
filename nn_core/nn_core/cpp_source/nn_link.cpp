@@ -11,7 +11,9 @@ NN_Link* NN_Link::create_child_link() {
 	return p_child;
 }
 
-NN_Link::NN_Link() {
+NN_Link::NN_Link() :
+	output(GPU), d_input(GPU)
+{
 	op_layer = NULL;
 	parent = NULL;
 	is_selected = false;

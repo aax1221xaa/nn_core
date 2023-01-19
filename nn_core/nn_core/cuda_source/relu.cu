@@ -35,9 +35,9 @@ __global__ void __relu(
 /**********************************************/
 
 void relu(
-	const Stream& stream,
-	const Tensor& input,
-	Tensor& output
+	cudaStream_t stream,
+	const NN_Tensor4D input,
+	NN_Tensor4D output
 ) {
 	uint input_size = get_elem_size(input);
 	uint output_size = get_elem_size(output);
@@ -47,19 +47,18 @@ void relu(
 	}
 
 	uint length = input.h * input.w * input.c;
-	dim3 threads(BLOCK_SIZE);
+	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks(get_grid_size(threads, length));
 
-	for (int i = 0; i < stream.str_size; ++i) {
+	for (int i = 0; i < input.n; ++i) {
 		float* d_in = input.data + (i * length);
 		float* d_out = output.data + (i * length);
 
-		__relu<<<blocks, threads, 0, stream.str[i]>>>(
+		__relu<<<blocks, threads, 0, stream>>>(
 			d_in,
 			d_out,
 			length
 		);
 	}
-
-	sync_streams(stream);
+	check_cuda(cudaStreamSynchronize(stream));
 }

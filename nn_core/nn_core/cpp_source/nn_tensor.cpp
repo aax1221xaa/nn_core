@@ -1,5 +1,46 @@
 #include "nn_tensor.h"
+#include <random>
 
+
+extern char str_buffer[STR_MAX];
+extern int str_idx;
+
+
+const char* dim_to_str(const NN_Tensor4D& tensor) {
+	char tmp_buff[128] = { '\0', };
+	char elem[16] = { '\0', };
+	int shape[4] = { tensor.n, tensor.c, tensor.h, tensor.w };
+
+	sprintf_s(tmp_buff, "[");
+
+	for (int i = 0; i < 4; ++i) {
+		sprintf_s(elem, "%d, ", shape[i]);
+		strcat_s(tmp_buff, elem);
+	}
+
+	strcat_s(tmp_buff, "]");
+
+	int str_size = strlen(tmp_buff) + 1;
+	int clearance = STR_MAX - str_idx;
+	char* p_buff = NULL;
+
+	if (clearance >= str_size) {
+		p_buff = &str_buffer[str_idx];
+		str_idx += str_size;
+	}
+	else {
+		p_buff = str_buffer;
+		str_idx = 0;
+	}
+
+	strcpy_s(p_buff, sizeof(char) * str_size, tmp_buff);
+
+	return p_buff;
+}
+
+size_t get_elem_size(const NN_Tensor4D& tensor) {
+	return tensor.n * tensor.c * tensor.h * tensor.w;
+}
 
 const size_t NN_Tensor::get_elem_size() const {
 	size_t size = 1;
@@ -99,4 +140,32 @@ void NN_Tensor::copy_to(NN_Tensor& dst) {
 			check_cuda(cudaMemcpy(dst.data, data, src_len, cudaMemcpyDeviceToDevice));
 		}
 	}
+}
+
+NN_Tensor4D NN_Tensor::get_4dtensor() {
+	NN_Tensor4D tensor;
+	int* p_dim[4] = { &tensor.n, &tensor.c, &tensor.h, &tensor.w };
+
+	tensor.data = data;
+	tensor.n = tensor.c = tensor.h = tensor.w = 1;
+
+	int i = 0;
+	for (int dim : shape) {
+		*(p_dim[i++]) = dim;
+	}
+
+	return tensor;
+}
+
+void set_uniform(NN_Tensor& tensor) {
+	random_device rd;
+	mt19937 gen(rd());
+	uniform_real_distribution<float> dis(0.f, 1.f);
+
+	size_t size = tensor.get_elem_size();
+	float* tmp = new float[size];
+
+	for (size_t i = 0; i < size; ++i) tmp[i] = dis(gen);
+	check_cuda(cudaMemcpy(tensor.data, tmp, sizeof(float) * size, cudaMemcpyHostToDevice));
+	delete[] tmp;
 }

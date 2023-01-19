@@ -27,7 +27,11 @@ public:
 	void calculate_output_size(vector<NN_Shape*>& input_shape, NN_Shape& output_shape);
 	void build(vector<NN_Shape*>& input_shape);
 	void run_forward(vector<NN_Tensor*>& input, NN_Tensor& output);
-	void run_backward(vector<NN_Tensor*>& d_output, NN_Tensor& d_input);
+	void run_backward(
+		vector<NN_Tensor*>& input,
+		NN_Tensor& d_output,
+		vector<NN_Tensor*>& d_input,
+		NN_Tensor& output);
 
 	void compile(const vector<NN_Loss*>& loss, const vector<NN_Optimizer*>& optimizer);
 	NN_Tensor_t train_on_batch(const vector<NN_Tensor_t>& samples, const vector<NN_Tensor_t>& truth);

@@ -35,9 +35,21 @@ void NN_Manager::clear_select_flag() {
 
 NN_Manager::NN_Manager() {
 	init_flag = true;
+	try {
+		check_cuda(cudaStreamCreate(&NN_Layer::stream));
+	}
+	catch (Exception& e) {
+		e.Put();
+	}
 }
 
 NN_Manager::~NN_Manager() {
-	clear_layers();
-	clear_links();
+	try {
+		clear_layers();
+		clear_links();
+		check_cuda(cudaStreamDestroy(NN_Layer::stream));
+	}
+	catch (Exception& e) {
+		e.Put();
+	}
 }

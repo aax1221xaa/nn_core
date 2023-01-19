@@ -254,7 +254,12 @@ void NN_Model::run_forward(vector<NN_Tensor*>& input, NN_Tensor& output) {
 	}
 }
 
-void NN_Model::run_backward(vector<NN_Tensor*>& d_output, NN_Tensor& d_input) {
+void NN_Model::run_backward(
+	vector<NN_Tensor*>& input,
+	NN_Tensor& d_output,
+	NN_Tensor& d_input,
+	NN_Tensor& output) 
+{
 
 }
 
@@ -263,7 +268,7 @@ void NN_Model::compile(const vector<NN_Loss*>& loss, const vector<NN_Optimizer*>
 }
 
 NN_Tensor_t NN_Model::train_on_batch(const vector<NN_Tensor_t>& samples, const vector<NN_Tensor_t>& truth) {
-	NN_Tensor_t loss(new NN_Tensor());
+	NN_Tensor_t loss(new NN_Tensor(CPU));
 
 	return loss;
 }
@@ -274,7 +279,7 @@ NN_Tensor_t NN_Model::fit(
 	uint batch,
 	uint iter
 ) {
-	NN_Tensor_t loss(new NN_Tensor());
+	NN_Tensor_t loss(new NN_Tensor(CPU));
 
 	return loss;
 }

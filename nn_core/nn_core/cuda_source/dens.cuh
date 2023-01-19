@@ -13,9 +13,9 @@
 
 void dens(
 	const cudaStream_t st,
-	const NN_Tensor& input,
-	const NN_Tensor& weight,
-	NN_Tensor& output
+	const NN_Tensor4D input,
+	const NN_Tensor4D weight,
+	NN_Tensor4D output
 );
 
 

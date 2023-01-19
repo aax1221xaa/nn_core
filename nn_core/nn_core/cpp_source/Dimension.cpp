@@ -1,8 +1,8 @@
 #include "Dimension.h"
 
 
-char NN_Shape::str_buffer[STR_MAX] = { '\0' };
-int NN_Shape::str_idx = 0;
+char str_buffer[STR_MAX] = { '\0' };
+int str_idx = 0;
 
 
 NN_Shape::Iterator::Iterator(int* _shape, int _index) :

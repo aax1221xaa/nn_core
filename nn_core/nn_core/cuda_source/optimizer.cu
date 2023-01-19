@@ -85,9 +85,9 @@ __global__ void __adam(
 /**********************************************/
 
 void check_sgd(
-	const Tensor& gradient,
-	const Tensor& momentum,
-	const Tensor& weight
+	const NN_Tensor4D gradient,
+	const NN_Tensor4D momentum,
+	const NN_Tensor4D weight
 ) {
 	uint g_size = get_elem_size(gradient);
 	uint m_size = get_elem_size(momentum);
@@ -103,9 +103,9 @@ void check_sgd(
 }
 
 void check_rms_prop(
-	const Tensor& gradient,
-	const Tensor& g,
-	const Tensor& weight
+	const NN_Tensor4D gradient,
+	const NN_Tensor4D g,
+	const NN_Tensor4D weight
 ) {
 	uint g_size = get_elem_size(gradient);
 	uint m_size = get_elem_size(g);
@@ -121,10 +121,10 @@ void check_rms_prop(
 }
 
 void check_adam(
-	const Tensor& gradient,
-	const Tensor& square_g,
-	const Tensor& decay_avg,
-	const Tensor& weight
+	const NN_Tensor4D gradient,
+	const NN_Tensor4D square_g,
+	const NN_Tensor4D decay_avg,
+	const NN_Tensor4D weight
 ) {
 	uint g_size = get_elem_size(gradient);
 	uint sqg_size = get_elem_size(square_g);
@@ -144,10 +144,10 @@ void check_adam(
 }
 
 void sgd(
-	Stream& stream,
-	const Tensor& gradient,
-	Tensor& momentum,
-	Tensor& weight,
+	cudaStream_t stream,
+	const NN_Tensor4D gradient,
+	NN_Tensor4D momentum,
+	NN_Tensor4D weight,
 	float learn_rate,
 	float momentum_rate
 ) {
@@ -157,7 +157,7 @@ void sgd(
 	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, length);
 
-	__sgd << <blocks, threads, 0, stream.str[0] >> > (
+	__sgd << <blocks, threads, 0, stream >> > (
 		gradient.data,
 		weight.data,
 		momentum.data,
@@ -165,14 +165,14 @@ void sgd(
 		learn_rate,
 		momentum_rate
 	);
-	check_cuda(cudaStreamSynchronize(stream.str[0]));
+	check_cuda(cudaStreamSynchronize(stream));
 }
 
 void rms_prop(
-	Stream& stream,
-	const Tensor& gradient,
-	Tensor& square_g,
-	Tensor& weight,
+	cudaStream_t stream,
+	const NN_Tensor4D gradient,
+	NN_Tensor4D square_g,
+	NN_Tensor4D weight,
 	float decay_rate,
 	float learn_rate
 ) {
@@ -182,7 +182,7 @@ void rms_prop(
 	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, length);
 
-	__rms_prop<<<blocks, threads, 0, stream.str[0]>>>(
+	__rms_prop<<<blocks, threads, 0, stream>>>(
 		gradient.data,
 		weight.data,
 		square_g.data,
@@ -190,15 +190,15 @@ void rms_prop(
 		learn_rate,
 		decay_rate
 	);
-	check_cuda(cudaStreamSynchronize(stream.str[0]));
+	check_cuda(cudaStreamSynchronize(stream));
 }
 
 void adam(
-	Stream& stream,
-	const Tensor& gradient,
-	Tensor& square_g,
-	Tensor& decay_g,
-	Tensor& weight,
+	cudaStream_t stream,
+	const NN_Tensor4D gradient,
+	NN_Tensor4D square_g,
+	NN_Tensor4D decay_g,
+	NN_Tensor4D weight,
 	float learn_rate,
 	float beta_1,
 	float beta_2
@@ -214,7 +214,7 @@ void adam(
 	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, length);
 
-	__adam<<<blocks, threads, 0, stream.str[0]>>>(
+	__adam<<<blocks, threads, 0, stream>>>(
 		gradient.data,
 		weight.data,
 		square_g.data,
@@ -224,5 +224,5 @@ void adam(
 		beta_1,
 		beta_2
 	);
-	check_cuda(cudaStreamSynchronize(stream.str[0]));
+	check_cuda(cudaStreamSynchronize(stream));
 }

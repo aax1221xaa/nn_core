@@ -3,10 +3,6 @@
 
 
 class NN_Shape {
-protected:
-	static char str_buffer[STR_MAX];
-	static int str_idx;
-
 public:
 	int* shape;
 	int len;

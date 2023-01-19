@@ -58,55 +58,38 @@ __global__ void __matmul(
 /**********************************************/
 
 void check_dens(
-	const NN_Tensor& input,
-	const NN_Tensor& weight,
-	const NN_Tensor& output
+	const NN_Tensor4D input,
+	const NN_Tensor4D weight,
+	const NN_Tensor4D output
 ) {
-	const NN_Shape& in_shape = input.shape;
-	const NN_Shape& w_shape = weight.shape;
-	const NN_Shape& out_shape = output.shape;
-
-	if (input.device_type != GPU || weight.device_type != GPU || output.device_type != GPU) {
+	if (input.n != output.n || input.c != weight.n || output.c != weight.c) {
 		ErrorExcept(
-			"[check_dense] Tensor is not GPU Memory"
-		);
-	}
-	if (in_shape.len != 2 || w_shape.len != 2 || out_shape.len != 2) {
-		ErrorExcept(
-			"[check_dense] invalid matrix shapes input: %s, weight: %s, output: %s",
-			in_shape.get_str(),
-			w_shape.get_str(),
-			out_shape.get_str()
-		);
-	}
-	if (in_shape[0] != out_shape[0] || in_shape[-1] != w_shape[0] || out_shape[-1] != w_shape[-1]) {
-		ErrorExcept(
-			"[check_dense] invalid matrix size input: %s, weight: %s, output: %s",
-			in_shape.get_str(),
-			w_shape.get_str(),
-			out_shape.get_str()
+			"[matmul_check] invalid matrix size input: %s, weight: %s, output: %s",
+			dim_to_str(input),
+			dim_to_str(weight),
+			dim_to_str(output)
 		);
 	}
 }
 
 void dens(
 	const cudaStream_t st,
-	const NN_Tensor& input,
-	const NN_Tensor& weight,
-	NN_Tensor& output
+	const NN_Tensor4D input,
+	const NN_Tensor4D weight,
+	NN_Tensor4D output
 ) {
 	check_dens(input, weight, output);
 
 	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, output.shape[-1], output.shape[0]);
+	dim3 blocks = get_grid_size(threads, output.c, output.n);
 
-	__matmul<<<blocks, threads, 0, st>>>(
+	__matmul << <blocks, threads, 0, st >> > (
 		input.data,
 		weight.data,
 		output.data,
-		input.shape[0],
-		input.shape[-1],
-		output.shape[-1]
+		input.n,
+		input.c,
+		output.c
 	);
 
 	check_cuda(cudaStreamSynchronize(st));
