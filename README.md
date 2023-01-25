@@ -44,3 +44,7 @@ I'll change layer link solution to unique name rather than linked list.
 
 I finally made algorithm that connecting complex layers.
 
+============== 该死的源代码。================
+
+It seems that the source code is messed up.
+
