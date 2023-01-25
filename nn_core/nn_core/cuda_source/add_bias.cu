@@ -37,27 +37,27 @@ __global__ void __add_bias(
 /*										      */
 /**********************************************/
 
-void check_add_bias(
-	const NN_Tensor4D input,
-	const NN_Tensor4D bias,
-	const NN_Tensor4D output
-) {
-	int in_node_size = input.h * input.w;
-	int out_node_size = output.h * output.w;
-
-	if (in_node_size != out_node_size || 
-		input.c != output.c || 
-		bias.n != output.c ||
-		get_elem_size(input) != get_elem_size(output)
-		) {
-		ErrorExcept(
-			"[check_add_bias] invalid size. input: %s, bias: %s, output: %s",
-			dim_to_str(input),
-			dim_to_str(bias),
-			dim_to_str(output)
-		);
-	}
-}
+//void check_add_bias(
+//	const NN_Tensor4D input,
+//	const NN_Tensor4D bias,
+//	const NN_Tensor4D output
+//) {
+//	int in_node_size = input.h * input.w;
+//	int out_node_size = output.h * output.w;
+//
+//	if (in_node_size != out_node_size || 
+//		input.c != output.c || 
+//		bias.n != output.c ||
+//		get_elem_size(input) != get_elem_size(output)
+//		) {
+//		ErrorExcept(
+//			"[check_add_bias] invalid size. input: %s, bias: %s, output: %s",
+//			dim_to_str(input),
+//			dim_to_str(bias),
+//			dim_to_str(output)
+//		);
+//	}
+//}
 
 void add_bias(
 	cudaStream_t stream,
@@ -65,7 +65,7 @@ void add_bias(
 	const NN_Tensor4D bias,
 	NN_Tensor4D output
 ) {
-	check_add_bias(input, bias, output);
+	//check_add_bias(input, bias, output);
 
 	uint node_size = output.h * output.w;
 	uint channel_size = output.c;

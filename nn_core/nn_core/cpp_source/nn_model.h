@@ -22,29 +22,30 @@ public:
 	NN_Model(NN_Model* p_parent);
 	NN_Model(const NN& inputs, const NN& outputs, const string& model_name);
 	~NN_Model();
+
+	NN operator()(NN m_prev_link);
+	void inner_link(NN_Link* p_prev);
+
 	NN_Link* create_child_link();
 
-	void calculate_output_size(vector<NN_Shape*>& input_shape, NN_Shape& output_shape);
-	void build(vector<NN_Shape*>& input_shape);
-	void run_forward(vector<NN_Tensor*>& input, NN_Tensor& output);
-	void run_backward(
-		vector<NN_Tensor*>& input,
-		NN_Tensor& d_output,
-		vector<NN_Tensor*>& d_input,
-		NN_Tensor& output);
+	NN_Link* get_output_info(NN_Link* p_next);
+	NN_Link* get_input_info(NN_Link* p_prev);
+
+	void calculate_output_size(vector<NN_Shape_t>& input_shape, NN_Shape& output_shape);
+	void build(vector<NN_Shape_t>& input_shape);
+	void run_forward(vector<NN_Tensor_t>& input, NN_Tensor& output);
+	void run_backward(vector<NN_Tensor_t>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor_t>& d_input);
 
 	void compile(const vector<NN_Loss*>& loss, const vector<NN_Optimizer*>& optimizer);
-	NN_Tensor_t train_on_batch(const vector<NN_Tensor_t>& samples, const vector<NN_Tensor_t>& truth);
-	NN_Tensor_t fit(
-		const vector<NN_Tensor_t>& samples,
-		const vector<NN_Tensor_t>& truth,
+	NN_Tensor train_on_batch(const vector<NN_Tensor>& samples, const vector<NN_Tensor>& truth);
+	NN_Tensor fit(
+		const vector<NN_Tensor>& samples,
+		const vector<NN_Tensor>& truth,
 		uint batch,
 		uint iter
 	);
-	vector<NN_Tensor_t> predict(const vector<NN_Tensor_t>& x);
+	vector<NN_Tensor> predict(const vector<NN_Tensor>& x);
 	void summary();
-
-	NN operator()(NN m_prev_link);
 };
 
 NN_Model& Model(const NN& inputs, const NN& outputs, const string& model_name);

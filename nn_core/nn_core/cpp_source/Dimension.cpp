@@ -47,40 +47,55 @@ NN_Shape::NN_Shape() {
 }
 
 NN_Shape::NN_Shape(const NN_Shape& p) {
+	id = p.id;
+
+	shape = p.shape;
 	len = p.len;
+
+	if (id) ++id->ref_cnt;
+}
+
+NN_Shape::NN_Shape(const initializer_list<int>& _shape) {
+	len = _shape.size();
+
 	shape = new int[len];
-
-	for (int i = 0; i < len; ++i) shape[i] = p.shape[i];
-}
-
-NN_Shape::NN_Shape(const initializer_list<int>& _shape) :
-	NN_Shape()
-{
-	set(_shape);
-}
-
-NN_Shape::~NN_Shape() {
-	delete[] shape;
-}
-
-void NN_Shape::set(const initializer_list<int>& _shape) {
-	int _len = _shape.size();
-
-	if (len != _len) {
-		delete[] shape;
-		shape = new int[_len];
-
-		len = _len;
-	}
 
 	int i = 0;
 	for (const int& n : _shape) shape[i++] = n;
+
+	id = linker.Create();
+}
+
+NN_Shape::~NN_Shape() {
+	clear();
+}
+
+void NN_Shape::set(const initializer_list<int>& _shape) {
+	clear();
+
+	len = _shape.size();
+
+	shape = new int[len];
+
+	int i = 0;
+	for (const int& n : _shape) shape[i++] = n;
+
+	id = linker.Create();
 }
 
 void NN_Shape::clear() {
-	delete[] shape;
-}
+	if (id) {
+		if (id->ref_cnt > 1) --id->ref_cnt;
+		else {
+			delete[] shape;
+			linker.Erase(id);
+		}
+	}
 
+	id = NULL;
+	shape = NULL;
+	len = 0;
+}
 int& NN_Shape::operator[](int axis) const {
 	int index = 0;
 
@@ -154,18 +169,32 @@ const char* NN_Shape::get_str() const {
 
 	return p_buff;
 }
-
 const NN_Shape& NN_Shape::operator=(const NN_Shape& p) {
 	if (this == &p) return *this;
 
-	if (len != p.len) {
-		delete[] shape;
-		shape = new int[p.len];
+	clear();
 
-		len = p.len;
-	}
+	id = p.id;
+	shape = p.shape;
+	len = p.len;
 
-	for (int i = 0; i < len; ++i) shape[i] = p.shape[i];
+	if (id) ++id->ref_cnt;
 
 	return *this;
+}
+
+const size_t NN_Shape::get_elem_size() const {
+	size_t elem_size = 1;
+
+	for (int i = 0; i < len; ++i) {
+		int n = shape[i];
+
+		if (n < 1) {
+			elem_size = 0;
+			break;
+		}
+		else elem_size *= n;
+	}
+
+	return elem_size;
 }

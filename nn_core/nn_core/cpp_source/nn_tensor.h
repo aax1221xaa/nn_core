@@ -5,40 +5,30 @@
 
 
 enum { CPU = 1, GPU = 2 };
-//enum { none = -1, boolean = 1, int8, uint8, int32, uint32, float32, float64 };
 
 
-struct NN_Tensor4D {
-	float* data;
-
-	int n;
-	int c;
-	int h;
-	int w;
-};
-
-const char* dim_to_str(const NN_Tensor4D& tensor);
-size_t get_elem_size(const NN_Tensor4D& tensor);
-
-class NN_Tensor {
+class NN_Tensor : public NN_Shared_Ptr {
 public:
+	int device_type;
 	float* data;
-	NN_Shape shape;
-
-	const int device_type;
-
-	NN_Tensor(const int _device_type);
-	NN_Tensor(const NN_Shape& _shape, const int _device_type);
+	size_t bytes;
+	
+	NN_Tensor();
+	NN_Tensor(const NN_Shape _shape, int _device_type);
+	NN_Tensor(const size_t _bytes, int _device_type);
+	NN_Tensor(const NN_Tensor& p);
 	~NN_Tensor();
 
+	const NN_Tensor& operator=(const NN_Tensor& p);
+
 	void clear();
-	void create(const NN_Shape& _shape);
-	void copy_to(NN_Tensor& dst);
+	void set(const NN_Shape _shape, int _device_type);
+	void copy_to(NN_Tensor& dst, const int _device_type);
 	
-	const size_t get_elem_size() const;
-	NN_Tensor4D get_4dtensor();
+	static NN_Tensor zeros(const NN_Shape _shape, int _device_type);
+	static NN_Tensor zeros_like(const NN_Tensor& p, int _device_type);
 };
 
-void set_uniform(NN_Tensor& tensor);
+void set_uniform(NN_Tensor& p);
 
-typedef shared_ptr<NN_Tensor> NN_Tensor_t;
+typedef NN_Tensor* NN_Tensor_t;

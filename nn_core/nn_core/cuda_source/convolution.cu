@@ -283,7 +283,7 @@ __global__ void __dilation_2d(
 /**********************************************/
 
 /*                convolution_2d              */
-
+/*
 int get_output_size(
 	int input_size,
 	int kernel_size,
@@ -318,6 +318,7 @@ void check_conv_2d(
 		);
 	}
 }
+*/
 
 void conv_2d(
 	cudaStream_t stream,
@@ -327,13 +328,13 @@ void conv_2d(
 	int st_w,
 	int st_h
 ) {
-	check_conv_2d(
-		d_input,
-		d_kernel,
-		d_output,
-		st_w,
-		st_h
-	);
+	//check_conv_2d(
+	//	d_input,
+	//	d_kernel,
+	//	d_output,
+	//	st_w,
+	//	st_h
+	//);
 
 	uint *indices = new uint[d_kernel.c * d_kernel.h * d_kernel.w];
 
@@ -376,26 +377,26 @@ void conv_2d(
 
 /*             correlation_2d            */
 
-void check_correl_2d(
-	const NN_Tensor4D d_doutput,
-	const NN_Tensor4D d_kernel,
-	const NN_Tensor4D d_dinput
-) {
-	int d_in_w = d_doutput.w - d_kernel.w + 1;
-	int d_in_h = d_doutput.h - d_kernel.h + 1;
-
-	if (
-		d_doutput.c != d_kernel.n ||
-		d_dinput.c != d_kernel.c ||
-		d_dinput.w != d_in_w ||
-		d_dinput.h != d_in_h
-		) {
-		ErrorExcept(
-			"[check_correl_2d] invalid (d_output, kernel, d_input) size. d_doutput: %s, d_tkernel: %s, d_dinput: %s",
-			dim_to_str(d_doutput), dim_to_str(d_kernel), dim_to_str(d_dinput)
-		);
-	}
-}
+//void check_correl_2d(
+//	const NN_Tensor4D d_doutput,
+//	const NN_Tensor4D d_kernel,
+//	const NN_Tensor4D d_dinput
+//) {
+//	int d_in_w = d_doutput.w - d_kernel.w + 1;
+//	int d_in_h = d_doutput.h - d_kernel.h + 1;
+//
+//	if (
+//		d_doutput.c != d_kernel.n ||
+//		d_dinput.c != d_kernel.c ||
+//		d_dinput.w != d_in_w ||
+//		d_dinput.h != d_in_h
+//		) {
+//		ErrorExcept(
+//			"[check_correl_2d] invalid (d_output, kernel, d_input) size. d_doutput: %s, d_tkernel: %s, d_dinput: %s",
+//			dim_to_str(d_doutput), dim_to_str(d_kernel), dim_to_str(d_dinput)
+//		);
+//	}
+//}
 
 void correl_2d(
 	cudaStream_t stream,
@@ -403,11 +404,11 @@ void correl_2d(
 	const NN_Tensor4D d_kernel,
 	NN_Tensor4D d_dinput
 ) {
-	check_correl_2d(
-		d_doutput,
-		d_kernel,
-		d_dinput
-	);
+	//check_correl_2d(
+	//	d_doutput,
+	//	d_kernel,
+	//	d_dinput
+	//);
 
 	uint* indices = new uint[d_kernel.n * d_kernel.h * d_kernel.w];
 
@@ -447,33 +448,33 @@ void correl_2d(
 
 /*            transpose             */	
 
-void check_transpose(
-	const NN_Tensor4D d_input,
-	const NN_Tensor4D d_output
-) {
-	if (get_elem_size(d_input) != get_elem_size(d_output)) {
-		ErrorExcept(
-			"[transpose] invalid input, output size. input: %d, output: %d",
-			get_elem_size(d_input),
-			get_elem_size(d_output)
-		);
-	}
-
-	if (d_input.n != d_output.c || d_input.c != d_output.n) {
-		ErrorExcept(
-			"[check_transpose] input, output tensor 0, 1 channels are invalid. input: %s, output: %s",
-			dim_to_str(d_input),
-			dim_to_str(d_output)
-		);
-	}
-}
+//void check_transpose(
+//	const NN_Tensor4D d_input,
+//	const NN_Tensor4D d_output
+//) {
+//	if (get_elem_size(d_input) != get_elem_size(d_output)) {
+//		ErrorExcept(
+//			"[transpose] invalid input, output size. input: %d, output: %d",
+//			get_elem_size(d_input),
+//			get_elem_size(d_output)
+//		);
+//	}
+//
+//	if (d_input.n != d_output.c || d_input.c != d_output.n) {
+//		ErrorExcept(
+//			"[check_transpose] input, output tensor 0, 1 channels are invalid. input: %s, output: %s",
+//			dim_to_str(d_input),
+//			dim_to_str(d_output)
+//		);
+//	}
+//}
 
 void transpose(
 	cudaStream_t stream,
 	const NN_Tensor4D d_input,
 	NN_Tensor4D d_output
 ) {
-	check_transpose(d_input, d_output);
+	//check_transpose(d_input, d_output);
 
 	dim3 threads(SQR_BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, get_elem_size(d_input));
@@ -491,27 +492,27 @@ void transpose(
 
 /*            dilation_2d           */
 
-void check_dilation_2d(
-	const NN_Tensor4D input,
-	const NN_Tensor4D output,
-	uint scale,
-	int offset_x,
-	int offset_y
-) {
-	int out_w = input.w * scale + offset_x;
-	int out_h = input.h * scale + offset_y;
-
-	if (out_w > output.w || out_h > output.h) {
-		ErrorExcept(
-			"[check_dilation_2d] output is too small. output: %s, expect output: [%d, %d, %d, %d]",
-			dim_to_str(output),
-			output.n,
-			output.c,
-			out_h,
-			out_w
-		);
-	}
-}
+//void check_dilation_2d(
+//	const NN_Tensor4D input,
+//	const NN_Tensor4D output,
+//	uint scale,
+//	int offset_x,
+//	int offset_y
+//) {
+//	int out_w = input.w * scale + offset_x;
+//	int out_h = input.h * scale + offset_y;
+//
+//	if (out_w > output.w || out_h > output.h) {
+//		ErrorExcept(
+//			"[check_dilation_2d] output is too small. output: %s, expect output: [%d, %d, %d, %d]",
+//			dim_to_str(output),
+//			output.n,
+//			output.c,
+//			out_h,
+//			out_w
+//		);
+//	}
+//}
 
 void dilation_2d(
 	cudaStream_t stream,
@@ -521,13 +522,13 @@ void dilation_2d(
 	int offset_x,
 	int offset_y
 ) {
-	check_dilation_2d(
-		d_input,
-		d_output,
-		scale,
-		offset_x,
-		offset_y
-	);
+	//check_dilation_2d(
+	//	d_input,
+	//	d_output,
+	//	scale,
+	//	offset_x,
+	//	offset_y
+	//);
 
 	check_cuda(cudaMemset(d_output.data, 0, sizeof(float) * get_elem_size(d_output)));
 
@@ -558,28 +559,28 @@ void dilation_2d(
 
 /*          kernel_convolution_2d          */
 
-void check_kernel_conv_2d(
-	const NN_Tensor4D d_doutput,
-	const NN_Tensor4D d_input,
-	NN_Tensor4D d_gradient
-) {
-	int in_h = d_input.h - d_doutput.h + 1;
-	int in_w = d_input.w - d_doutput.w + 1;
-
-	if (d_gradient.h != in_h ||
-		d_gradient.w != in_w ||
-		d_gradient.n != d_doutput.c ||
-		d_gradient.c != d_input.c ||
-		d_input.n != d_doutput.n) {
-
-		ErrorExcept(
-			"[check_kernel_conv_2d] invalid tensor arguments size. d_input: %s, d_doutput: %s, gradient: %s",
-			dim_to_str(d_input),
-			dim_to_str(d_doutput),
-			dim_to_str(d_gradient)
-		);
-	}
-}
+//void check_kernel_conv_2d(
+//	const NN_Tensor4D d_doutput,
+//	const NN_Tensor4D d_input,
+//	NN_Tensor4D d_gradient
+//) {
+//	int in_h = d_input.h - d_doutput.h + 1;
+//	int in_w = d_input.w - d_doutput.w + 1;
+//
+//	if (d_gradient.h != in_h ||
+//		d_gradient.w != in_w ||
+//		d_gradient.n != d_doutput.c ||
+//		d_gradient.c != d_input.c ||
+//		d_input.n != d_doutput.n) {
+//
+//		ErrorExcept(
+//			"[check_kernel_conv_2d] invalid tensor arguments size. d_input: %s, d_doutput: %s, gradient: %s",
+//			dim_to_str(d_input),
+//			dim_to_str(d_doutput),
+//			dim_to_str(d_gradient)
+//		);
+//	}
+//}
 
 void kernel_conv_2d(
 	cudaStream_t stream,
@@ -587,11 +588,11 @@ void kernel_conv_2d(
 	const NN_Tensor4D d_input,
 	NN_Tensor4D d_gradient
 ) {
-	check_kernel_conv_2d(
-		d_doutput,
-		d_input,
-		d_gradient
-	);
+	//check_kernel_conv_2d(
+	//	d_doutput,
+	//	d_input,
+	//	d_gradient
+	//);
 
 	uint* indices = new uint[d_doutput.h * d_doutput.w];
 

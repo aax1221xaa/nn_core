@@ -1,7 +1,7 @@
 #pragma once
-#include "CudaCheck.h"
 #include <vector>
-#include <memory>
+#include "CudaCheck.h"
+#include "ObjectID.h"
 
 
 using namespace std;
@@ -21,3 +21,24 @@ typedef const unsigned int cuint;
 
 
 dim3 get_grid_size(const dim3 block, uint x = 1, uint y = 1, uint z = 1);
+
+class NN_Shared_Ptr {
+protected:
+	Object_ID* id;
+	static Object_Linker linker;
+
+public:
+	NN_Shared_Ptr();
+};
+
+
+struct NN_Tensor4D {
+	float* data;
+
+	int n;
+	int c;
+	int h;
+	int w;
+};
+
+const size_t get_elem_size(const NN_Tensor4D& tensor);

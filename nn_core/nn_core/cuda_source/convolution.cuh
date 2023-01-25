@@ -11,12 +11,12 @@
 /*										      */
 /**********************************************/
 
-int get_output_size(
-	int input_size,
-	int kernel_size,
-	int pad_size,
-	int stride
-);
+//int get_output_size(
+//	int input_size,
+//	int kernel_size,
+//	int pad_size,
+//	int stride
+//);
 
 void conv_2d(
 	cudaStream_t stream,

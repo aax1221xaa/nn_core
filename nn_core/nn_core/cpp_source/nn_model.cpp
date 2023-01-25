@@ -22,30 +22,6 @@ int NN_Model::get_unselect_prev(NN_Link* p_current) {
 	return unselectd_link;
 }
 
-NN NN_Model::operator()(NN m_prev_link) {
-	for (int i = 0; i < input_nodes.size(); ++i) {
-		prev_link.push_back(m_prev_link[i].link);
-		input_nodes[i]->input.push_back(m_prev_link[i].output);
-		input_nodes[i]->d_output.push_back(m_prev_link[i].d_input);
-		input_nodes[i]->in_shape.push_back(m_prev_link[i].out_size);
-		m_prev_link[i].link->next_link.push_back(this);
-	}
-
-	vector<Link_Param<NN_Link>> p_currents;
-	for (int i = 0; i < output_nodes.size(); ++i) {
-		Link_Param<NN_Link> args;
-
-		args.link = this;
-		args.output = &output_nodes[i]->output;
-		args.d_input = &output_nodes[i]->d_input;
-		args.out_size = &output_nodes[i]->out_shape;
-
-		p_currents.push_back(args);
-	}
-
-	return p_currents;
-}
-
 vector<NN_Link*> NN_Model::find_root(vector<NN_Link*>& in_nodes, vector<NN_Link*>& out_nodes) {
 	vector<NN_Link*> tmp_links;
 	queue<NN_Link*> order_links;
@@ -191,13 +167,13 @@ NN_Model::NN_Model(NN_Model* p_parent) :
 //	NN_Manager::clear_select_flag();
 
 	operate_list = set_operate_list(input_nodes);
-	op_layer = this;
+	cont.op_layer = this;
 }
 
 NN_Model::NN_Model(const NN& inputs, const NN& outputs, const string& model_name) :
 	NN_Layer(model_name)
 {
-	op_layer = this;
+	cont.op_layer = this;
 
 	for (Link_Param<NN_Link>& p_input : inputs) input_nodes.push_back(p_input.link);
 	for (Link_Param<NN_Link>& p_output : outputs) output_nodes.push_back(p_output.link);
@@ -222,13 +198,77 @@ NN_Model::~NN_Model() {
 
 }
 
+NN NN_Model::operator()(NN m_prev_link) {
+	for (int i = 0; i < input_nodes.size(); ++i) {
+		prev_link.push_back(m_prev_link[i].link);
+		m_prev_link[i].link->next_link.push_back(this);
+
+		input_nodes[i]->cont.input.push_back(&m_prev_link[i].p_cont->output);
+		input_nodes[i]->cont.in_shape.push_back(&m_prev_link[i].p_cont->out_shape);
+
+		NN_Tensor_t p_dio = new NN_Tensor;
+
+		m_prev_link[i].p_cont->d_input.push_back(p_dio);
+		input_nodes[i]->cont.d_output.push_back(p_dio);
+	}
+
+	vector<Link_Param<NN_Link>> p_currents;
+	for (int i = 0; i < output_nodes.size(); ++i) {
+		Link_Param<NN_Link> args;
+
+		args.link = this;
+		args.p_cont = &output_nodes[i]->cont;
+
+		p_currents.push_back(args);
+	}
+
+	return p_currents;
+}
+
+void NN_Model::inner_link(NN_Link* p_prev) {
+	int index = 0;
+	for (NN_Link* p_prev_parent : parent->prev_link) {
+		if (p_prev_parent == p_prev->parent) {
+			NN_Container& p_child_cont = p_prev_parent->cont;
+
+			in_node
+		}
+	}
+}
+
 NN_Link* NN_Model::create_child_link() {
 	NN_Model* p_child = new NN_Model(this);
 
 	return p_child;
 }
 
-void NN_Model::calculate_output_size(vector<NN_Shape*>& input_shape, NN_Shape& output_shape) {
+NN_Link* NN_Model::get_output_info(NN_Link* p_next) {
+	int index = 0;
+
+	for (int i = 0; i < parent->next_link.size(); ++i) {
+		if (parent->next_link[i] == p_next->parent) {
+			index = i;
+			break;
+		}
+	}
+
+	return output_nodes[index];
+}
+
+NN_Link* NN_Model::get_input_info(NN_Link* p_prev) {
+	int index = 0;
+
+	for (int i = 0; i < parent->prev_link.size(); ++i) {
+		if (parent->prev_link[i] == p_prev->parent) {
+			index = i;
+			break;
+		}
+	}
+
+	return input_nodes[index];
+}
+
+void NN_Model::calculate_output_size(vector<NN_Shape_t>& input_shape, NN_Shape& output_shape) {
 	for (NN_Link* p : operate_list) {
 		vector<NN_Shape*>& in_shape = p->in_shape;
 		NN_Shape& out_shape = p->out_shape;
@@ -237,7 +277,7 @@ void NN_Model::calculate_output_size(vector<NN_Shape*>& input_shape, NN_Shape& o
 	}
 }
 
-void NN_Model::build(vector<NN_Shape*>& input_shape) {
+void NN_Model::build(vector<NN_Shape_t>& input_shape) {
 	for (NN_Link* p : operate_list) {
 		vector<NN_Shape*>& in_shape = p->in_shape;
 
@@ -245,21 +285,11 @@ void NN_Model::build(vector<NN_Shape*>& input_shape) {
 	}
 }
 
-void NN_Model::run_forward(vector<NN_Tensor*>& input, NN_Tensor& output) {
-	for (NN_Link* p : operate_list) {
-		vector<NN_Tensor*>& input = p->input;
-		NN_Tensor& output = p->output;
-
-		p->op_layer->run_forward(input, output);
-	}
+void NN_Model::run_forward(vector<NN_Tensor_t>& input, NN_Tensor& output) {
+	vector<NN_Tensor_t> p_prev_tensor;
 }
 
-void NN_Model::run_backward(
-	vector<NN_Tensor*>& input,
-	NN_Tensor& d_output,
-	NN_Tensor& d_input,
-	NN_Tensor& output) 
-{
+void NN_Model::run_backward(vector<NN_Tensor_t>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor_t>& d_input) {
 
 }
 
@@ -267,24 +297,20 @@ void NN_Model::compile(const vector<NN_Loss*>& loss, const vector<NN_Optimizer*>
 
 }
 
-NN_Tensor_t NN_Model::train_on_batch(const vector<NN_Tensor_t>& samples, const vector<NN_Tensor_t>& truth) {
-	NN_Tensor_t loss(new NN_Tensor(CPU));
-
-	return loss;
+NN_Tensor NN_Model::train_on_batch(const vector<NN_Tensor>& samples, const vector<NN_Tensor>& truth) {
+	return NN_Tensor();
 }
 
-NN_Tensor_t NN_Model::fit(
-	const vector<NN_Tensor_t>& samples,
-	const vector<NN_Tensor_t>& truth,
+NN_Tensor NN_Model::fit(
+	const vector<NN_Tensor>& samples,
+	const vector<NN_Tensor>& truth,
 	uint batch,
 	uint iter
 ) {
-	NN_Tensor_t loss(new NN_Tensor(CPU));
-
-	return loss;
+	return NN_Tensor();
 }
 
-vector<NN_Tensor_t> NN_Model::predict(const vector<NN_Tensor_t>& x) {
+vector<NN_Tensor> NN_Model::predict(const vector<NN_Tensor>& x) {
 	return x;
 }
 

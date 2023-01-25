@@ -2,7 +2,8 @@
 #include "cuda_common.h"
 
 
-class NN_Shape {
+
+class NN_Shape : public NN_Shared_Ptr {
 public:
 	int* shape;
 	int len;
@@ -26,7 +27,7 @@ public:
 	NN_Shape(const NN_Shape& p);
 	NN_Shape(const initializer_list<int>& _shape);
 	~NN_Shape();
-
+	
 	void set(const initializer_list<int>& _shape);
 	void clear();
 	const char* get_str() const;
@@ -37,4 +38,8 @@ public:
 
 	bool operator==(const NN_Shape& p);
 	const NN_Shape& operator=(const NN_Shape& p);
+
+	const size_t get_elem_size() const;
 };
+
+typedef NN_Shape* NN_Shape_t;

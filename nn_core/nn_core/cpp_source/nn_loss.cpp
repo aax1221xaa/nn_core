@@ -1,7 +1,7 @@
 #include "nn_loss.h"
 
 NN_Loss::NN_Loss() :
-	d_output(GPU)
+	d_output()
 {
 	name = "";
 }

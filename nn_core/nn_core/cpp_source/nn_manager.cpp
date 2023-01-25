@@ -4,6 +4,8 @@
 bool NN_Manager::init_flag = false;
 vector<NN_Layer*> NN_Manager::reg_layers;
 vector<NN_Link*> NN_Manager::reg_links;
+vector<NN_Tensor_t> NN_Manager::reg_tensor;
+vector<NN_Tensor_t> NN_Manager::reg_weight;
 
 void NN_Manager::add_layer(NN_Layer* layer) {
 	reg_layers.push_back(layer);
@@ -11,6 +13,14 @@ void NN_Manager::add_layer(NN_Layer* layer) {
 
 void NN_Manager::add_link(NN_Link* link) {
 	reg_links.push_back(link);
+}
+
+void NN_Manager::add_tensor(NN_Tensor_t tensor) {
+	reg_tensor.push_back(tensor);
+}
+
+void NN_Manager::add_weight(NN_Tensor_t weight) {
+	reg_weight.push_back(weight);
 }
 
 void NN_Manager::clear_layers() {
@@ -23,6 +33,16 @@ void NN_Manager::clear_links() {
 		delete p;
 	}
 	reg_links.clear();
+}
+
+void NN_Manager::clear_tensors() {
+	for (NN_Tensor_t p : reg_tensor) delete p;
+	reg_tensor.clear();
+}
+
+void NN_Manager::clear_weights() {
+	for (NN_Tensor_t p : reg_weight) delete p;
+	reg_weight.clear();
 }
 
 vector<NN_Link*> NN_Manager::get_links() {
@@ -47,6 +67,8 @@ NN_Manager::~NN_Manager() {
 	try {
 		clear_layers();
 		clear_links();
+		clear_tensors();
+		clear_weights();
 		check_cuda(cudaStreamDestroy(NN_Layer::stream));
 	}
 	catch (Exception& e) {

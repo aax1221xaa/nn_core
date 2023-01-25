@@ -88,13 +88,13 @@ int calc_shared_mem_size(
 	return (BLOCK_SIZE - 1) * strides + kernel_size;
 }
 
-int calc_output_size(
-	int input_size,
-	int k_size,
-	int strides
-) {
-	return (input_size - k_size) / strides + 1;
-}
+//int calc_output_size(
+//	int input_size,
+//	int k_size,
+//	int strides
+//) {
+//	return (input_size - k_size) / strides + 1;
+//}
 
 void maxpool_2d(
 	cudaStream_t stream,
@@ -105,15 +105,15 @@ void maxpool_2d(
 	int stride_w,
 	int stride_h
 ) {
-	int out_w = calc_output_size(input.w, kernel_w, stride_w);
-	int out_h = calc_output_size(input.h, kernel_h, stride_h);
+	//int out_w = calc_output_size(input.w, kernel_w, stride_w);
+	//int out_h = calc_output_size(input.h, kernel_h, stride_h);
 
-	if (input.n != output.n || out_w != output.w || out_h != output.h || input.c != output.c) {
-		ErrorExcept(
-			"[maxpool_2d] invalid output size. %s",
-			dim_to_str(output)
-		);
-	}
+	//if (input.n != output.n || out_w != output.w || out_h != output.h || input.c != output.c) {
+	//	ErrorExcept(
+	//		"[maxpool_2d] invalid output size. %s",
+	//		dim_to_str(output)
+	//	);
+	//}
 
 	int share_w = calc_shared_mem_size(kernel_w, stride_w);
 	int share_h = calc_shared_mem_size(kernel_h, stride_h);
