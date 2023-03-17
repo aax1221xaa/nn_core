@@ -4,7 +4,7 @@
 NN_Link* NN_Link::create_child_link() {
 	NN_Link* p_child = new NN_Link;
 
-	p_child->cont.op_layer = cont.op_layer;
+	p_child->op_layer = op_layer;
 
 	p_child->parent = this;
 	child.push_back(p_child);
@@ -22,42 +22,42 @@ NN_Link::~NN_Link() {
 
 }
 
-NN NN_Link::operator()(NN m_prev_link) {
+NN_Coupler<NN_Link> NN_Link::operator()(NN_Coupler<NN_Link> m_prev_link) {
 	for (const Link_Param<NN_Link>& p_prev_link : m_prev_link) {
 		prev_link.push_back(p_prev_link.link);
 		p_prev_link.link->next_link.push_back(this);
 
-		cont.input.push_back(&p_prev_link.p_cont->output);
-		cont.in_shape.push_back(&p_prev_link.p_cont->out_shape);
+		input.push_back(&p_prev_link.sub_link->output);
 
 		NN_Tensor_t p_dio = new NN_Tensor;
+		p_prev_link.sub_link->d_output.push_back(p_dio);
+		d_input.push_back(p_dio);
 
-		p_prev_link.p_cont->d_output.push_back(p_dio);
-		cont.d_input.push_back(p_dio);
+		in_shape.push_back(&p_prev_link.sub_link->out_shape);
 	}
 
-	NN p(this);
+	NN_Coupler<NN_Link> p(this);
 
 	return p;
 }
 
-void NN_Link::inner_link(NN_Link* p_prev) {
-	prev_link.push_back(p_prev);
-	p_prev->next_link.push_back(this);
+void NN_Link::inner_link(NN_Link* m_prev_link) {
+	prev_link.push_back(m_prev_link);
+	m_prev_link->next_link.push_back(this);
 
-	cont.input.push_back(&p_prev->cont.output);
-	cont.in_shape.push_back(&p_prev->cont.out_shape);
-
+	input.push_back(&m_prev_link->output);
+	
 	NN_Tensor_t p_dio = new NN_Tensor;
+	m_prev_link->d_output.push_back(p_dio);
+	d_input.push_back(p_dio);
 
-	cont.d_input.push_back(p_dio);
-	p_prev->cont.d_output.push_back(p_dio);
+	in_shape.push_back(&m_prev_link->out_shape);
 }
 
-NN_Link* NN_Link::get_output_info(NN_Link* p_next) {
+NN_Link* NN_Link::get_prev_ptr(NN_Link* p_current) {
 	return this;
 }
 
-NN_Link* NN_Link::get_input_info(NN_Link* p_prev) {
+NN_Link* NN_Link::get_current_ptr(NN_Link* p_prev) {
 	return this;
 }

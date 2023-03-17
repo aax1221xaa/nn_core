@@ -167,13 +167,13 @@ NN_Model::NN_Model(NN_Model* p_parent) :
 //	NN_Manager::clear_select_flag();
 
 	operate_list = set_operate_list(input_nodes);
-	cont.op_layer = this;
+	op_layer = this;
 }
 
-NN_Model::NN_Model(const NN& inputs, const NN& outputs, const string& model_name) :
+NN_Model::NN_Model(const NN_Coupler<NN_Link>& inputs, const NN_Coupler<NN_Link>& outputs, const string& model_name) :
 	NN_Layer(model_name)
 {
-	cont.op_layer = this;
+	op_layer = this;
 
 	for (Link_Param<NN_Link>& p_input : inputs) input_nodes.push_back(p_input.link);
 	for (Link_Param<NN_Link>& p_output : outputs) output_nodes.push_back(p_output.link);
@@ -198,42 +198,53 @@ NN_Model::~NN_Model() {
 
 }
 
-NN NN_Model::operator()(NN m_prev_link) {
-	for (int i = 0; i < input_nodes.size(); ++i) {
+NN_Coupler<NN_Link> NN_Model::operator()(NN_Coupler<NN_Link> m_prev_link) {
+	for (int i = 0; i < m_prev_link.len; ++i) {
 		prev_link.push_back(m_prev_link[i].link);
 		m_prev_link[i].link->next_link.push_back(this);
 
-		input_nodes[i]->cont.input.push_back(&m_prev_link[i].p_cont->output);
-		input_nodes[i]->cont.in_shape.push_back(&m_prev_link[i].p_cont->out_shape);
+		input_nodes[i]->input.push_back(&m_prev_link[i].sub_link->output);
 
 		NN_Tensor_t p_dio = new NN_Tensor;
+		m_prev_link[i].sub_link->d_output.push_back(p_dio);
+		input_nodes[i]->d_input.push_back(p_dio);
 
-		m_prev_link[i].p_cont->d_input.push_back(p_dio);
-		input_nodes[i]->cont.d_output.push_back(p_dio);
+		input_nodes[i]->in_shape.push_back(&m_prev_link[i].sub_link->out_shape);
 	}
 
-	vector<Link_Param<NN_Link>> p_currents;
-	for (int i = 0; i < output_nodes.size(); ++i) {
-		Link_Param<NN_Link> args;
+	vector<Link_Param<NN_Link>> args;
+	for (NN_Link* p_link : output_nodes) {
+		Link_Param<NN_Link> arg;
 
-		args.link = this;
-		args.p_cont = &output_nodes[i]->cont;
+		arg.link = this;
+		arg.sub_link = p_link;
 
-		p_currents.push_back(args);
+		args.push_back(arg);
 	}
 
-	return p_currents;
+	return args;
 }
 
-void NN_Model::inner_link(NN_Link* p_prev) {
+NN_Link* NN_Model::get_prev_ptr(NN_Link* p_current) {
 	int index = 0;
-	for (NN_Link* p_prev_parent : parent->prev_link) {
-		if (p_prev_parent == p_prev->parent) {
-			NN_Container& p_child_cont = p_prev_parent->cont;
 
-			in_node
-		}
+	for (NN_Link* p_next : next_link) {
+		if (p_next == p_current) break;
+		else ++index;
 	}
+
+	return output_nodes[index];
+}
+
+NN_Link* NN_Model::get_current_ptr(NN_Link* p_prev) {
+	int index = 0;
+
+	for (NN_Link* p_current : prev_link) {
+		if (p_current == p_prev) break;
+		else ++index;
+	}
+
+	return input_nodes[index];
 }
 
 NN_Link* NN_Model::create_child_link() {
@@ -242,54 +253,26 @@ NN_Link* NN_Model::create_child_link() {
 	return p_child;
 }
 
-NN_Link* NN_Model::get_output_info(NN_Link* p_next) {
-	int index = 0;
+void NN_Model::calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape) {
 
-	for (int i = 0; i < parent->next_link.size(); ++i) {
-		if (parent->next_link[i] == p_next->parent) {
-			index = i;
-			break;
-		}
-	}
-
-	return output_nodes[index];
 }
 
-NN_Link* NN_Model::get_input_info(NN_Link* p_prev) {
-	int index = 0;
+void NN_Model::build(vector<NN_Shape>& input_shape) {
 
-	for (int i = 0; i < parent->prev_link.size(); ++i) {
-		if (parent->prev_link[i] == p_prev->parent) {
-			index = i;
-			break;
-		}
-	}
-
-	return input_nodes[index];
 }
 
-void NN_Model::calculate_output_size(vector<NN_Shape_t>& input_shape, NN_Shape& output_shape) {
-	for (NN_Link* p : operate_list) {
-		vector<NN_Shape*>& in_shape = p->in_shape;
-		NN_Shape& out_shape = p->out_shape;
+void NN_Model::run_forward(vector<NN_Tensor>& input, NN_Tensor& output) {
+	vector<NN_Link*>::iterator p_op = input_nodes.begin();
 
-		p->op_layer->calculate_output_size(in_shape, out_shape);
-	}
-}
-
-void NN_Model::build(vector<NN_Shape_t>& input_shape) {
-	for (NN_Link* p : operate_list) {
-		vector<NN_Shape*>& in_shape = p->in_shape;
-
+	for (NN_Link* p_prev_link : prev_link) {
+		NN_Link* p_prev = p_prev_link->get_prev_ptr(p_prev_link);
+		
+		(*p_op++)->op_layer->run_forward({ p_prev->output }, output);
 
 	}
 }
 
-void NN_Model::run_forward(vector<NN_Tensor_t>& input, NN_Tensor& output) {
-	vector<NN_Tensor_t> p_prev_tensor;
-}
-
-void NN_Model::run_backward(vector<NN_Tensor_t>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor_t>& d_input) {
+void NN_Model::run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input) {
 
 }
 
@@ -318,7 +301,7 @@ void NN_Model::summary() {
 	for (NN_Link* p : operate_list) printf("%s\n", p->op_layer->layer_name.c_str());
 }
 
-NN_Model& Model(const NN& inputs, const NN& outputs, const string& model_name) {
+NN_Model& Model(const NN_Coupler<NN_Link>& inputs, const NN_Coupler<NN_Link>& outputs, const string& model_name) {
 	NN_Model* model = new NN_Model(inputs, outputs, model_name);
 	NN_Manager::add_link(model);
 	

@@ -7,6 +7,8 @@
 #include "cpp_source/nn_layer.h"
 
 
+typedef NN_Coupler<NN_Link> NN;
+
 
 int main() {
 	NN_Manager nn;

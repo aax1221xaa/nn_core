@@ -17,19 +17,19 @@ NN_Input::~NN_Input() {
 
 }
 
-void NN_Input::calculate_output_size(vector<NN_Shape_t>& input_shape, NN_Shape& output_shape) {
+void NN_Input::calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape) {
 
 }
 
-void NN_Input::build(vector<NN_Shape_t>& input_shape) {
+void NN_Input::build(vector<NN_Shape>& input_shape) {
 
 }
 
-void NN_Input::run_forward(vector<NN_Tensor_t>& input, NN_Tensor& output) {
+void NN_Input::run_forward(vector<NN_Tensor>& input, NN_Tensor& output) {
 
 }
 
-void NN_Input::run_backward(vector<NN_Tensor_t>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor_t>& d_input) {
+void NN_Input::run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input) {
 
 }
 
@@ -52,19 +52,19 @@ NN_Test::NN_Test(const string name) :
 {
 }
 
-void NN_Test::calculate_output_size(vector<NN_Shape_t>& input_shape, NN_Shape& output_shape) {
+void NN_Test::calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape) {
 
 }
 
-void NN_Test::build(vector<NN_Shape_t>& input_shape) {
+void NN_Test::build(vector<NN_Shape>& input_shape) {
 
 }
 
-void NN_Test::run_forward(vector<NN_Tensor_t>& input, NN_Tensor& output) {
+void NN_Test::run_forward(vector<NN_Tensor>& input, NN_Tensor& output) {
 
 }
 
-void NN_Test::run_backward(vector<NN_Tensor_t>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor_t>& d_input) {
+void NN_Test::run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input) {
 
 }
 
@@ -87,14 +87,14 @@ NN_Dense::NN_Dense(int _amounts, const string& _layer_name) :
 	amounts = _amounts;
 }
 
-void NN_Dense::calculate_output_size(vector<NN_Shape_t>& input_shape, NN_Shape& output_shape) {
-	NN_Shape& in_shape = *(input_shape[0]);
+void NN_Dense::calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape) {
+	NN_Shape& in_shape = input_shape[0];
 
 	output_shape.set({ in_shape[0], amounts });
 }
 
-void NN_Dense::build(vector<NN_Shape_t>& input_shape) {
-	const NN_Shape& shape = *(input_shape[0]);
+void NN_Dense::build(vector<NN_Shape>& input_shape) {
+	const NN_Shape& shape = input_shape[0];
 	// [batch, 784]
 	// [784, amounts] + [amounts]
 	// [batch, amounts]
@@ -106,11 +106,11 @@ void NN_Dense::build(vector<NN_Shape_t>& input_shape) {
 	check_cuda(cudaMemset(bias.data, 0, bias.bytes));
 }
 
-void NN_Dense::run_forward(vector<NN_Tensor_t>& input, NN_Tensor& output) {
+void NN_Dense::run_forward(vector<NN_Tensor>& input, NN_Tensor& output) {
 
 }
 
-void NN_Dense::run_backward(vector<NN_Tensor_t>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor_t>& d_input) {
+void NN_Dense::run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input) {
 
 }
 

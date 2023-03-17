@@ -20,21 +20,21 @@ public:
 	vector<NN_Link*> operate_list;
 
 	NN_Model(NN_Model* p_parent);
-	NN_Model(const NN& inputs, const NN& outputs, const string& model_name);
+	NN_Model(const NN_Coupler<NN_Link>& inputs, const NN_Coupler<NN_Link>& outputs, const string& model_name);
 	~NN_Model();
 
-	NN operator()(NN m_prev_link);
-	void inner_link(NN_Link* p_prev);
+	NN_Coupler<NN_Link> operator()(NN_Coupler<NN_Link> m_prev_link);
+	void inner_link(NN_Link* m_prev_link);
+	
+	NN_Link* get_prev_ptr(NN_Link* p_current);
+	NN_Link* get_current_ptr(NN_Link* p_prev);
 
 	NN_Link* create_child_link();
 
-	NN_Link* get_output_info(NN_Link* p_next);
-	NN_Link* get_input_info(NN_Link* p_prev);
-
-	void calculate_output_size(vector<NN_Shape_t>& input_shape, NN_Shape& output_shape);
-	void build(vector<NN_Shape_t>& input_shape);
-	void run_forward(vector<NN_Tensor_t>& input, NN_Tensor& output);
-	void run_backward(vector<NN_Tensor_t>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor_t>& d_input);
+	void calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape);
+	void build(vector<NN_Shape>& input_shape);
+	void run_forward(vector<NN_Tensor>& input, NN_Tensor& output);
+	void run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input);
 
 	void compile(const vector<NN_Loss*>& loss, const vector<NN_Optimizer*>& optimizer);
 	NN_Tensor train_on_batch(const vector<NN_Tensor>& samples, const vector<NN_Tensor>& truth);
@@ -48,4 +48,4 @@ public:
 	void summary();
 };
 
-NN_Model& Model(const NN& inputs, const NN& outputs, const string& model_name);
+NN_Model& Model(const NN_Coupler<NN_Link>& inputs, const NN_Coupler<NN_Link>& outputs, const string& model_name);

@@ -5,7 +5,7 @@
 template <class _T>
 struct Link_Param {
 	_T* link;
-	NN_Container_t p_cont;
+	_T* sub_link;
 };
 
 template <class _T>
@@ -31,8 +31,8 @@ public:
 
 	NN_Coupler();
 	NN_Coupler(_T* _link);
-	NN_Coupler(_T* _link, NN_Container_t _p_cont);
-	NN_Coupler(vector<Link_Param<_T>>& _params);
+	NN_Coupler(const Link_Param<_T>& _param);
+	NN_Coupler(const vector<Link_Param<_T>>& _params);
 	NN_Coupler(const NN_Coupler<_T>& p);
 	NN_Coupler(const initializer_list<NN_Coupler<_T>>& list);
 	~NN_Coupler();
@@ -102,25 +102,24 @@ NN_Coupler<_T>::NN_Coupler(_T* _link) {
 	param = new Link_Param<_T>;
 
 	param->link = _link;
-	param->p_cont = &_link->cont;
+	param->sub_link = _link;
 
 	len = 1;
 	id = linker.Create();
 }
 
 template <class _T>
-NN_Coupler<_T>::NN_Coupler(_T* _link, NN_Container_t _p_cont) {
+NN_Coupler<_T>::NN_Coupler(const Link_Param<_T>& _param) {
 	param = new Link_Param<_T>;
 
-	param->link = _link;
-	param->p_cont = _p_cont;
+	*param = _param;
 
 	len = 1;
 	id = linker.Create();
 }
 
 template <class _T>
-NN_Coupler<_T>::NN_Coupler(vector<Link_Param<_T>>& _params) {
+NN_Coupler<_T>::NN_Coupler(const vector<Link_Param<_T>>& _params) {
 	len = (int)_params.size();
 	param = new Link_Param<_T>[len];
 
@@ -228,23 +227,33 @@ public:
 	bool is_selected;
 	bool trainable;
 
+	int period;
+
 	vector<NN_Link*> prev_link;
 	vector<NN_Link*> next_link;
 
 	NN_Link* parent;
 	vector<NN_Link*> child;
 
-	NN_Container cont;
+	vector<NN_Tensor_t> input;
+	NN_Tensor output;
+
+	vector<NN_Tensor_t> d_input;
+	vector<NN_Tensor_t> d_output;
+
+	vector<NN_Shape_t> in_shape;
+	NN_Shape out_shape;
+
+	NN_Layer_t op_layer;
 
 	NN_Link();
 	virtual ~NN_Link();
 
 	virtual NN_Coupler<NN_Link> operator()(NN_Coupler<NN_Link> m_prev_link);
-	virtual void inner_link(NN_Link* p_prev);
+	void inner_link(NN_Link* m_prev_link);
+
+	virtual NN_Link* get_prev_ptr(NN_Link* p_current);
+	virtual NN_Link* get_current_ptr(NN_Link* p_prev);
+
 	virtual NN_Link* create_child_link();
-
-	virtual NN_Link* get_output_info(NN_Link* p_next);
-	virtual NN_Link* get_input_info(NN_Link* p_prev);
 };
-
-typedef NN_Coupler<NN_Link> NN;
