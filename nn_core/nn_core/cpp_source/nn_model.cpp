@@ -262,14 +262,7 @@ void NN_Model::build(vector<NN_Shape>& input_shape) {
 }
 
 void NN_Model::run_forward(vector<NN_Tensor>& input, NN_Tensor& output) {
-	vector<NN_Link*>::iterator p_op = input_nodes.begin();
 
-	for (NN_Link* p_prev_link : prev_link) {
-		NN_Link* p_prev = p_prev_link->get_prev_ptr(p_prev_link);
-		
-		(*p_op++)->op_layer->run_forward({ p_prev->output }, output);
-
-	}
 }
 
 void NN_Model::run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input) {

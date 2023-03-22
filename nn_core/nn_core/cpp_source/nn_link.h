@@ -257,3 +257,5 @@ public:
 
 	virtual NN_Link* create_child_link();
 };
+
+typedef NN_Coupler<NN_Link> NN;

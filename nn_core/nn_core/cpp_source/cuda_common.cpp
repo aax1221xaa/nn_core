@@ -21,3 +21,4 @@ NN_Shared_Ptr::NN_Shared_Ptr() :
 const size_t get_elem_size(const NN_Tensor4D& tensor) {
 	return size_t(tensor.h * tensor.c * tensor.h * tensor.w);
 }
+

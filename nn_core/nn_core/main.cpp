@@ -7,9 +7,8 @@
 #include "cpp_source/nn_layer.h"
 
 
-typedef NN_Coupler<NN_Link> NN;
 
-
+/*
 int main() {
 	NN_Manager nn;
 
@@ -51,6 +50,16 @@ int main() {
 	NN_Model model_2 = Model({ x_input_1, x_input_2 }, y_output_2, "model_2");
 
 	model_2.summary();
+
+	return 0;
+}
+*/
+
+int main() {
+	List<int> list({ 1, 2, {1, 2} });
+
+	list.append({ 1, 2, 3, 4, 5, {1, 2, 3} });
+	List<int> i = list[10][10];
 
 	return 0;
 }
