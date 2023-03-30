@@ -56,10 +56,8 @@ int main() {
 */
 
 int main() {
-	List<int> list({ 1, 2, {1, 2} });
+	List<int> list({ 1, 2, {3, 4} });
 
-	list.append({ 1, 2, 3, 4, 5, {1, 2, 3} });
-	List<int> i = list[10][10];
 
 	return 0;
 }

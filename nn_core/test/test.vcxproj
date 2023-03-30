@@ -75,7 +75,6 @@
   <ItemGroup>
     <ClCompile Include="..\nn_core\cpp_source\CudaCheck.cpp" />
     <ClCompile Include="..\nn_core\cpp_source\cuda_common.cpp" />
-    <ClCompile Include="..\nn_core\cpp_source\Dimension.cpp" />
     <ClCompile Include="..\nn_core\cpp_source\Exception.cpp" />
     <ClCompile Include="..\nn_core\cpp_source\ObjectID.cpp" />
     <ClCompile Include="main.cpp" />
@@ -83,7 +82,6 @@
   <ItemGroup>
     <ClInclude Include="..\nn_core\cpp_source\CudaCheck.h" />
     <ClInclude Include="..\nn_core\cpp_source\cuda_common.h" />
-    <ClInclude Include="..\nn_core\cpp_source\Dimension.h" />
     <ClInclude Include="..\nn_core\cpp_source\Exception.h" />
     <ClInclude Include="..\nn_core\cpp_source\ObjectID.h" />
     <ClInclude Include="cuda_kernel.cuh" />
