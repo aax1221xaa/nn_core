@@ -5,82 +5,85 @@
 #include "../cuda_source/convolution.cuh"
 
 
+/**********************************************/
+/*                                            */
+/*                  NN_Input                  */
+/*                                            */
+/**********************************************/
 
-NN_Input::NN_Input(const NN_Shape& input_size, int batch, const string _layer_name) :
+NN_Input::NN_Input(const vector<int>& input_size, int batch, const char* _layer_name) :
 	NN_Layer(_layer_name)
 {
-	m_shape = input_size;
-	m_shape[0] = batch;
+	_shape = input_size;
 }
 
 NN_Input::~NN_Input() {
 
 }
 
-void NN_Input::calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape) {
+shape_type NN_Input::calculate_output_size(shape_type& input_shape) {
+	return input_shape;
+}
+
+void NN_Input::build(shape_type& input_shape) {
 
 }
 
-void NN_Input::build(vector<NN_Shape>& input_shape) {
-
+NN_Tensor NN_Input::run_forward(cudaStream_t s, vector<NN_Tensor*>& input) {
+	return NN_Tensor();
 }
 
-void NN_Input::run_forward(vector<NN_Tensor>& input, NN_Tensor& output) {
-
-}
-
-void NN_Input::run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input) {
-
+NN_Tensor NN_Input::run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output) {
+	return NN_Tensor();
 }
 
 
-NN Input(const NN_Shape& input_size, int batch, const string layer_name) {
+vector<Layer_t<NN_Link>> Input(const vector<int>& input_size, int batch, const char* layer_name) {
 	NN_Layer* layer = new NN_Input(input_size, batch, layer_name);
-	NN_Link* link = new NN_Link;
+	NN_Link* node = new NN_Link;
 
-	link->op_layer = layer;
+	node->_forward = layer;
 
+	NN_Manager::add_node(node);
 	NN_Manager::add_layer(layer);
-	NN_Manager::add_link(link);
 
-	return NN(link);
+	return { Layer_t<NN_Link>{ node, &node->_output, &node->_d_output } };
 }
 
+/**********************************************/
+/*                                            */
+/*                   NN_Test                  */
+/*                                            */
+/**********************************************/
 
-NN_Test::NN_Test(const string name) :
+NN_Test::NN_Test(const char* name) :
 	NN_Layer(name)
 {
 }
 
-void NN_Test::calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape) {
+NN_Test::NN_Test(const NN_Test& p) :
+	NN_Layer(p._layer_name)
+{
 
 }
 
-void NN_Test::build(vector<NN_Shape>& input_shape) {
+shape_type NN_Test::calculate_output_size(shape_type& input_shape) {
+	return input_shape;
+}
+
+void NN_Test::build(shape_type& input_shape) {
 
 }
 
-void NN_Test::run_forward(vector<NN_Tensor>& input, NN_Tensor& output) {
-
+NN_Tensor NN_Test::run_forward(cudaStream_t s, vector<NN_Tensor*>& input) {
+	return NN_Tensor();
 }
 
-void NN_Test::run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input) {
-
+NN_Tensor NN_Test::run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output) {
+	return NN_Tensor();
 }
 
-NN_Link& Test(const string name) {
-	NN_Layer* layer = new NN_Test(name);
-	NN_Link* link = new NN_Link;
-
-	link->op_layer = layer;
-
-	NN_Manager::add_layer(layer);
-	NN_Manager::add_link(link);
-
-	return *link;
-}
-
-
+/*
 NN_Dense::NN_Dense(int _amounts, const string& _layer_name) :
 	NN_Layer(_layer_name)
 {
@@ -125,3 +128,4 @@ NN_Link& Dense(int amounts, const string& _layer_name) {
 
 	return *link;
 }
+*/

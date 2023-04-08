@@ -1,63 +1,79 @@
 #include "nn_link.h"
 
 
-NN_Link* NN_Link::create_child_link() {
-	NN_Link* p_child = new NN_Link;
+/**********************************************/
+/*                                            */
+/*                   NN_Link                  */
+/*                                            */
+/**********************************************/
 
-	p_child->op_layer = op_layer;
-
-	p_child->parent = this;
-	child.push_back(p_child);
-
-	return p_child;
-}
-
-NN_Link::NN_Link() {
-	parent = NULL;
-	is_selected = false;
-	trainable = true;
+NN_Link::NN_Link() :
+	is_selected(false),
+	trainable(true),
+	_forward(NULL),
+	_backward(NULL),
+	_parent(NULL)
+{
 }
 
 NN_Link::~NN_Link() {
 
 }
 
-NN_Coupler<NN_Link> NN_Link::operator()(NN_Coupler<NN_Link> m_prev_link) {
-	for (const Link_Param<NN_Link>& p_prev_link : m_prev_link) {
-		prev_link.push_back(p_prev_link.link);
-		p_prev_link.link->next_link.push_back(this);
+NN_Link* NN_Link::create_child() {
+	NN_Link* child_node = new NN_Link;
 
-		input.push_back(&p_prev_link.sub_link->output);
+	child_node->_parent = this;
+	child_node->is_selected = true;
+	child_node->_forward = _forward;
 
-		NN_Tensor_t p_dio = new NN_Tensor;
-		p_prev_link.sub_link->d_output.push_back(p_dio);
-		d_input.push_back(p_dio);
+	_child.push_back(child_node);
 
-		in_shape.push_back(&p_prev_link.sub_link->out_shape);
+	return child_node;
+}
+
+vector<Layer_t<NN_Link>> NN_Link::operator()(vector<Layer_t<NN_Link>>& prev_node) {
+	prev_node[0]._link->_next.push_back(this);
+	_prev.push_back(prev_node[0]._link);
+	_input.push_back(prev_node[0]._output);
+	prev_node[0]._d_output->push_back(&_d_input);
+
+	return { Layer_t<NN_Link> { this, &_output, &_d_output } };
+}
+
+vector<Layer_t<NN_Link>> NN_Link::operator()(initializer_list<vector<Layer_t<NN_Link>>> prev_node) {
+	for (vector<Layer_t<NN_Link>> p_prev_node : prev_node) {
+		p_prev_node[0]._link->_next.push_back(this);
+		_prev.push_back(p_prev_node[0]._link);
+		_input.push_back(p_prev_node[0]._output);
+		p_prev_node[0]._d_output->push_back(&_d_input);
 	}
 
-	NN_Coupler<NN_Link> p(this);
-
-	return p;
+	return { Layer_t<NN_Link> { this, &_output, &_d_output } };
 }
 
-void NN_Link::inner_link(NN_Link* m_prev_link) {
-	prev_link.push_back(m_prev_link);
-	m_prev_link->next_link.push_back(this);
-
-	input.push_back(&m_prev_link->output);
-	
-	NN_Tensor_t p_dio = new NN_Tensor;
-	m_prev_link->d_output.push_back(p_dio);
-	d_input.push_back(p_dio);
-
-	in_shape.push_back(&m_prev_link->out_shape);
+void NN_Link::operator()(NN_Link* prev_node) {
+	prev_node->_next.push_back(this);
+	_prev.push_back(prev_node);
+	_input.push_back(&prev_node->_output);
+	prev_node->_d_output.push_back(&_d_input);
 }
 
-NN_Link* NN_Link::get_prev_ptr(NN_Link* p_current) {
-	return this;
-}
+void NN_Link::set_child_link(NN_Link* current_node) {
+	NN_Link* current_child = NULL;
 
-NN_Link* NN_Link::get_current_ptr(NN_Link* p_prev) {
-	return this;
+	for (NN_Link* p_child : current_node->_child) {
+		if (p_child->is_selected) {
+			current_child = p_child;
+			break;
+		}
+	}
+	for (NN_Link* p_prev : current_node->_prev) {
+		for (NN_Link* p_child : p_prev->_child) {
+			if (p_child->is_selected) {
+				(*current_child)(p_child);
+				break;
+			}
+		}
+	}
 }

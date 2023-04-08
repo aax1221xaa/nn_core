@@ -3,19 +3,23 @@
 #include "nn_optimizer.h"
 
 
+/**********************************************/
+/*                                            */
+/*                  NN_Layer                  */
+/*                                            */
+/**********************************************/
+
+typedef vector<vector<int>> shape_type;
+
 class NN_Layer {
 public:
-	const string layer_name;
-	static cudaStream_t stream;
-	static NN_Optimizer* optimizer;
+	const char* _layer_name;
 
-	NN_Layer(const string& _layer_name);
+	NN_Layer(const char* layer_name);
 	virtual ~NN_Layer();
 
-	virtual void calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape) = 0;
-	virtual void build(vector<NN_Shape>& input_shape);
-	virtual void run_forward(vector<NN_Tensor>& input, NN_Tensor& output) = 0;
-	virtual void run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input) = 0;
+	virtual shape_type calculate_output_size(shape_type& input_shape) = 0;
+	virtual void build(shape_type& input_shape);
+	virtual NN_Tensor run_forward(cudaStream_t s, vector<NN_Tensor*>& input) = 0;
+	virtual NN_Tensor run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output) = 0;
 };
-
-typedef NN_Layer* NN_Layer_t;

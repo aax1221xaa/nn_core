@@ -9,9 +9,9 @@ NN_Tensor::NN_Tensor() {
 	bytes = 0;
 }
 
-NN_Tensor::NN_Tensor(const NN_Shape _shape, int _device_type) {
+NN_Tensor::NN_Tensor(const vector<int>& _shape, int _device_type) {
 	try {
-		size_t elem_size = _shape.get_elem_size();
+		size_t elem_size = _shape.size();
 
 		bytes = sizeof(float) * elem_size;
 		device_type = _device_type;
@@ -90,10 +90,10 @@ void NN_Tensor::clear() {
 	id = NULL;
 }
 
-void NN_Tensor::set(const NN_Shape _shape, int _device_type) {
+void NN_Tensor::set(const vector<int>& _shape, int _device_type) {
 	clear();
 
-	size_t elem_size = _shape.get_elem_size();
+	size_t elem_size = _shape.size();
 	bytes = sizeof(float) * elem_size;
 	device_type = _device_type;
 
@@ -126,7 +126,7 @@ void NN_Tensor::copy_to(NN_Tensor& dst, const int _device_type) {
 	}
 }
 
-NN_Tensor NN_Tensor::zeros(const NN_Shape _shape, int _device_type) {
+NN_Tensor NN_Tensor::zeros(const vector<int>& _shape, int _device_type) {
 	NN_Tensor p(_shape, _device_type);
 	
 	if (_device_type == CPU) memset(p.data, 0, p.bytes);

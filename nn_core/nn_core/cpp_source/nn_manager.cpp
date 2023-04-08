@@ -1,62 +1,22 @@
 #include "nn_manager.h"
 
 
-bool NN_Manager::init_flag = false;
-vector<NN_Layer*> NN_Manager::reg_layers;
-vector<NN_Link*> NN_Manager::reg_links;
-vector<NN_Tensor_t> NN_Manager::reg_tensor;
-vector<NN_Tensor_t> NN_Manager::reg_weight;
+cudaStream_t NN_Manager::_stream = NULL;
+vector<NN_Link*> NN_Manager::_nodes;
+vector<NN_Layer*> NN_Manager::_layers;
 
-void NN_Manager::add_layer(NN_Layer* layer) {
-	reg_layers.push_back(layer);
+void NN_Manager::add_node(NN_Link* p_node) {
+	_nodes.push_back(p_node);
 }
 
-void NN_Manager::add_link(NN_Link* link) {
-	reg_links.push_back(link);
-}
-
-void NN_Manager::add_tensor(NN_Tensor_t tensor) {
-	reg_tensor.push_back(tensor);
-}
-
-void NN_Manager::add_weight(NN_Tensor_t weight) {
-	reg_weight.push_back(weight);
-}
-
-void NN_Manager::clear_layers() {
-	for (NN_Layer* p : reg_layers) delete p;
-	reg_layers.clear();
-}
-
-void NN_Manager::clear_links() {
-	for (NN_Link* p : reg_links) {
-		delete p;
-	}
-	reg_links.clear();
-}
-
-void NN_Manager::clear_tensors() {
-	for (NN_Tensor_t p : reg_tensor) delete p;
-	reg_tensor.clear();
-}
-
-void NN_Manager::clear_weights() {
-	for (NN_Tensor_t p : reg_weight) delete p;
-	reg_weight.clear();
-}
-
-vector<NN_Link*> NN_Manager::get_links() {
-	return reg_links;
-}
-
-void NN_Manager::clear_select_flag() {
-	for (NN_Link* p : reg_links) p->is_selected = false;
+void NN_Manager::add_layer(NN_Layer* p_layer) {
+	_layers.push_back(p_layer);
 }
 
 NN_Manager::NN_Manager() {
-	init_flag = true;
 	try {
-		check_cuda(cudaStreamCreate(&NN_Layer::stream));
+		_stream = NULL;
+		check_cuda(cudaStreamCreate(&_stream));
 	}
 	catch (Exception& e) {
 		e.Put();
@@ -65,13 +25,35 @@ NN_Manager::NN_Manager() {
 
 NN_Manager::~NN_Manager() {
 	try {
-		clear_layers();
-		clear_links();
-		clear_tensors();
-		clear_weights();
-		check_cuda(cudaStreamDestroy(NN_Layer::stream));
+		for (NN_Link* p_node : _nodes) {
+			/*
+			vector<NN_Link*> del_list;
+
+			for (NN_Link* p_child : p_node->_child) {
+				del_list.push_back(p_child);
+
+				while (!del_list.empty()) {
+					NN_Link* p_current_child = del_list.front();
+
+					for (NN_Link* p_grand_child : p_current_child->_child) del_list.push_back(p_grand_child);
+
+					delete p_current_child;
+					del_list.erase(del_list.begin());
+				}
+			}
+			*/
+			delete p_node;
+		}
+
+		for (NN_Layer* p_layer : _layers) delete p_layer;
+		
+		check_cuda(cudaStreamDestroy(_stream));
 	}
 	catch (Exception& e) {
 		e.Put();
 	}
+}
+
+void NN_Manager::clear_select_mask() {
+	for (NN_Link* p : _nodes) p->is_selected = false;
 }

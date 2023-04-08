@@ -2,36 +2,45 @@
 #include "nn_manager.h"
 
 
+/**********************************************/
+/*                                            */
+/*                  NN_Input                  */
+/*                                            */
+/**********************************************/
+
 class NN_Input : public NN_Layer {
 public:
-	NN_Shape m_shape;
+	vector<int> _shape;
 
-	NN_Input(const NN_Shape& input_size, int batch, const string _layer_name);
-	virtual ~NN_Input();
+	NN_Input(const vector<int>& input_size, int batch, const char* _layer_name);
+	~NN_Input();
 
-	void calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape);
-	void build(vector<NN_Shape>& input_shape);
-	void run_forward(vector<NN_Tensor>& input, NN_Tensor& output);
-	void run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input);
+	shape_type calculate_output_size(shape_type& input_shape);
+	void build(shape_type& input_shape);
+	NN_Tensor run_forward(cudaStream_t s, vector<NN_Tensor*>& input);
+	NN_Tensor run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output);
 };
 
+vector<Layer_t<NN_Link>> Input(const vector<int>& input_size, int batch, const char* layer_name = "");
 
-NN Input(const NN_Shape& input_size, int batch, const string layer_name = "");
-
+/**********************************************/
+/*                                            */
+/*                   NN_Test                  */
+/*                                            */
+/**********************************************/
 
 class NN_Test : public NN_Layer {
 public:
-	NN_Test(const string name);
+	NN_Test(const char* name);
+	NN_Test(const NN_Test& p);
 	
-	void calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape);
-	void build(vector<NN_Shape>& input_shape);
-	void run_forward(vector<NN_Tensor>& input, NN_Tensor& output);
-	void run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input);
+	shape_type calculate_output_size(shape_type& input_shape);
+	void build(shape_type& input_shape);
+	NN_Tensor run_forward(cudaStream_t s, vector<NN_Tensor*>& input);
+	NN_Tensor run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output);
 };
 
-NN_Link& Test(const string name);
-
-
+/*
 class NN_Dense : public NN_Layer {
 public:
 	NN_Tensor weight;
@@ -40,10 +49,8 @@ public:
 
 	NN_Dense(int _amounts, const string& _layer_name);
 
-	void calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape);
-	void build(vector<NN_Shape>& input_shape);
-	void run_forward(vector<NN_Tensor>& input, NN_Tensor& output);
-	void run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input);
+	vector<int> calculate_output_size(vector<int>& input_shape);
+	void build(vector<int>& input_shape);
+	NN_Tensor run(vector<NN_Tensor>& input);
 };
-
-NN_Link& Dense(int amounts, const string& _layer_name);
+*/
