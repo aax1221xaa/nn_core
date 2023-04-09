@@ -21,7 +21,7 @@ public:
 	NN_Tensor run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output);
 };
 
-vector<Layer_t<NN_Link>> Input(const vector<int>& input_size, int batch, const char* layer_name = "");
+Layer_t Input(const vector<int>& input_size, int batch, const char* layer_name = "");
 
 /**********************************************/
 /*                                            */

@@ -32,24 +32,24 @@ NN_Link* NN_Link::create_child() {
 	return child_node;
 }
 
-vector<Layer_t<NN_Link>> NN_Link::operator()(vector<Layer_t<NN_Link>>& prev_node) {
+Layer_t NN_Link::operator()(Layer_t& prev_node) {
 	prev_node[0]._link->_next.push_back(this);
 	_prev.push_back(prev_node[0]._link);
 	_input.push_back(prev_node[0]._output);
 	prev_node[0]._d_output->push_back(&_d_input);
 
-	return { Layer_t<NN_Link> { this, &_output, &_d_output } };
+	return { Layer_Ptr<NN_Link> { this, &_output, &_d_output } };
 }
 
-vector<Layer_t<NN_Link>> NN_Link::operator()(initializer_list<vector<Layer_t<NN_Link>>> prev_node) {
-	for (vector<Layer_t<NN_Link>> p_prev_node : prev_node) {
+Layer_t NN_Link::operator()(initializer_list<Layer_t> prev_node) {
+	for (Layer_t p_prev_node : prev_node) {
 		p_prev_node[0]._link->_next.push_back(this);
 		_prev.push_back(p_prev_node[0]._link);
 		_input.push_back(p_prev_node[0]._output);
 		p_prev_node[0]._d_output->push_back(&_d_input);
 	}
 
-	return { Layer_t<NN_Link> { this, &_output, &_d_output } };
+	return { Layer_Ptr<NN_Link> { this, &_output, &_d_output } };
 }
 
 void NN_Link::operator()(NN_Link* prev_node) {

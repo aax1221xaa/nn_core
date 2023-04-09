@@ -2,6 +2,8 @@
 #include "nn_base_layer.h"
 
 
+#define Layer_t vector<Layer_Ptr<NN_Link>>
+
 /**********************************************/
 /*                                            */
 /*                  Layer_Ptr                 */
@@ -9,7 +11,7 @@
 /**********************************************/
 
 template <class _T>
-struct Layer_t {
+struct Layer_Ptr {
 public:
 	_T* _link;
 	NN_Tensor* _output;
@@ -46,8 +48,8 @@ public:
 	virtual ~NN_Link();
 
 	virtual NN_Link* create_child();
-	virtual vector<Layer_t<NN_Link>> operator()(vector<Layer_t<NN_Link>>& prev_node);
-	virtual vector<Layer_t<NN_Link>> operator()(initializer_list<vector<Layer_t<NN_Link>>> prev_node);
+	virtual Layer_t operator()(Layer_t& prev_node);
+	virtual Layer_t operator()(initializer_list<Layer_t> prev_node);
 
 	void operator()(NN_Link* prev_node);
 	

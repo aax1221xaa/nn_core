@@ -38,7 +38,7 @@ NN_Tensor NN_Input::run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output) {
 }
 
 
-vector<Layer_t<NN_Link>> Input(const vector<int>& input_size, int batch, const char* layer_name) {
+Layer_t Input(const vector<int>& input_size, int batch, const char* layer_name) {
 	NN_Layer* layer = new NN_Input(input_size, batch, layer_name);
 	NN_Link* node = new NN_Link;
 
@@ -47,7 +47,7 @@ vector<Layer_t<NN_Link>> Input(const vector<int>& input_size, int batch, const c
 	NN_Manager::add_node(node);
 	NN_Manager::add_layer(layer);
 
-	return { Layer_t<NN_Link>{ node, &node->_output, &node->_d_output } };
+	return { Layer_Ptr<NN_Link>{ node, &node->_output, &node->_d_output } };
 }
 
 /**********************************************/
