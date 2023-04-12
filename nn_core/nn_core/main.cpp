@@ -53,5 +53,17 @@ int main() {
 	model.summary();
 	model_2.summary();
 
+	cout << "===========================================" << endl;
+
+	NN_Tensor tensor_1;
+	NN_Tensor tensor_2;
+
+	tensor_1.test_value = 1;
+	tensor_2.test_value = 2;
+
+	vector<NN_Tensor> result = model_2.predict({ tensor_1, tensor_2 });
+
+	for (NN_Tensor p_result : result) cout << p_result.test_value << endl;
+
 	return 0;
 }

@@ -7,10 +7,14 @@ NN_Tensor::NN_Tensor() {
 	id = NULL;
 	device_type = 0;
 	bytes = 0;
+
+	test_value = 0;
 }
 
 NN_Tensor::NN_Tensor(const vector<int>& _shape, int _device_type) {
 	try {
+		test_value = 0;
+
 		size_t elem_size = _shape.size();
 
 		bytes = sizeof(float) * elem_size;
@@ -29,6 +33,8 @@ NN_Tensor::NN_Tensor(const vector<int>& _shape, int _device_type) {
 NN_Tensor::NN_Tensor(const size_t _bytes, int _device_type) {
 	device_type = _device_type;
 	bytes = _bytes;
+
+	test_value = 0;
 
 	try {
 		if (_device_type == GPU) check_cuda(cudaMalloc(&data, bytes));
@@ -49,6 +55,8 @@ NN_Tensor::NN_Tensor(const NN_Tensor& p) {
 	bytes = p.bytes;
 	data = p.data;
 
+	test_value = p.test_value;
+
 	if (id) ++id->ref_cnt;
 }
 
@@ -66,6 +74,8 @@ const NN_Tensor& NN_Tensor::operator=(const NN_Tensor& p) {
 	device_type = p.device_type;
 	bytes = p.bytes;
 	data = p.data;
+
+	test_value = p.test_value;
 
 	if (id) ++id->ref_cnt;
 

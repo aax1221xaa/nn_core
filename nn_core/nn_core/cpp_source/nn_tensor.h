@@ -12,6 +12,8 @@ public:
 	int device_type;
 	float* data;
 	size_t bytes;
+
+	int test_value;
 	
 	NN_Tensor();
 	NN_Tensor(const vector<int>& _shape, int _device_type);
