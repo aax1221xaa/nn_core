@@ -32,9 +32,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="..\nn_core\cpp_source\CudaCheck.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -44,13 +41,8 @@
     <ClInclude Include="..\nn_core\cpp_source\ObjectID.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_kernel.cuh">
+    <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="cuda_kernel.cu">
-      <Filter>소스 파일</Filter>
-    </CudaCompile>
   </ItemGroup>
 </Project>

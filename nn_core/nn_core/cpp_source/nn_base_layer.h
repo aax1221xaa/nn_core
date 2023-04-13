@@ -9,7 +9,7 @@
 /*                                            */
 /**********************************************/
 
-typedef vector<vector<int>> shape_type;
+typedef std::vector<std::vector<int>> shape_type;
 
 class NN_Layer {
 public:
@@ -20,6 +20,6 @@ public:
 
 	virtual shape_type calculate_output_size(shape_type& input_shape) = 0;
 	virtual void build(shape_type& input_shape);
-	virtual NN_Tensor run_forward(cudaStream_t s, vector<NN_Tensor*>& input) = 0;
-	virtual NN_Tensor run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output) = 0;
+	virtual NN_Tensor run_forward(cudaStream_t s, std::vector<NN_Tensor*>& input) = 0;
+	virtual NN_Tensor run_backward(cudaStream_t s, std::vector<NN_Tensor*>& d_output) = 0;
 };

@@ -84,10 +84,6 @@
     <ClInclude Include="..\nn_core\cpp_source\cuda_common.h" />
     <ClInclude Include="..\nn_core\cpp_source\Exception.h" />
     <ClInclude Include="..\nn_core\cpp_source\ObjectID.h" />
-    <ClInclude Include="cuda_kernel.cuh" />
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="cuda_kernel.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

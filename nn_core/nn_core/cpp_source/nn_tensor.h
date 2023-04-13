@@ -16,7 +16,7 @@ public:
 	int test_value;
 	
 	NN_Tensor();
-	NN_Tensor(const vector<int>& _shape, int _device_type);
+	NN_Tensor(const std::vector<int>& _shape, int _device_type);
 	NN_Tensor(const size_t _bytes, int _device_type);
 	NN_Tensor(const NN_Tensor& p);
 	~NN_Tensor();
@@ -24,10 +24,10 @@ public:
 	const NN_Tensor& operator=(const NN_Tensor& p);
 
 	void clear();
-	void set(const vector<int>& _shape, int _device_type);
+	void set(const std::vector<int>& _shape, int _device_type);
 	void copy_to(NN_Tensor& dst, const int _device_type);
 	
-	static NN_Tensor zeros(const vector<int>& _shape, int _device_type);
+	static NN_Tensor zeros(const std::vector<int>& _shape, int _device_type);
 	static NN_Tensor zeros_like(const NN_Tensor& p, int _device_type);
 };
 

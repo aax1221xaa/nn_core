@@ -5,6 +5,6 @@
 
 class NN_Optimizer {
 public:
-	string name;
+	std::string name;
 
 };

@@ -28,9 +28,15 @@ int main() {
 	
 	x = NN_Creater(NN_Test("test_3_1"))(x);
 	x = NN_Creater(NN_Test("test_3_2"))(x);
-	Layer_t y_output = NN_Creater(NN_Test("test_3_3"))(x);
+	Layer_t branch_3 = NN_Creater(NN_Test("test_3_3"))(x);
 
-	Model model({ x_input_1, x_input_2 }, { y_output }, "model_1");
+	x = NN_Creater(NN_Test("test_7_1"))(branch_3);
+	Layer_t y_output_1 = NN_Creater(NN_Test("test_7_2"))(x);
+
+	x = NN_Creater(NN_Test("test_8_1"))(branch_3);
+	Layer_t y_output_2 = NN_Creater(NN_Test("test_8_2"))(x);
+
+	Model model({ x_input_1, x_input_2 }, { y_output_1, y_output_2 }, "model_1");
 	
 	x_input_1 = Input({ 28, 28, 1 }, 32, "input_1_1");
 	x_input_2 = Input({ 28, 28, 1 }, 32, "input_1_2");
@@ -44,16 +50,16 @@ int main() {
 	Layer_t feature_2 = NN_Creater(NN_Test("test_5_3"))(x);
 
 	x = model({ feature_1, feature_2 });
-	x = NN_Creater(NN_Test("test_6_1"))(x);
-	x = NN_Creater(NN_Test("test_6_2"))(x);
-	Layer_t y_output_2 = NN_Creater(NN_Test("test_6_3"))(x);
 
-	Model model_2({ x_input_1, x_input_2 }, { y_output_2 }, "model_2");
+	y_output_1 = NN_Creater(NN_Test("test_6_1"))(x[0]);
+	y_output_2 = NN_Creater(NN_Test("test_6_2"))(x[1]);
+
+	Model model_2({ x_input_1, x_input_2 }, { y_output_1, y_output_2 }, "model_2");
 
 	model.summary();
 	model_2.summary();
 
-	cout << "===========================================" << endl;
+	std::cout << "===========================================" << std::endl;
 
 	NN_Tensor tensor_1;
 	NN_Tensor tensor_2;
@@ -61,9 +67,9 @@ int main() {
 	tensor_1.test_value = 1;
 	tensor_2.test_value = 2;
 
-	vector<NN_Tensor> result = model_2.predict({ tensor_1, tensor_2 });
+	std::vector<NN_Tensor> result = model_2.predict({ tensor_1, tensor_2 });
 
-	for (NN_Tensor p_result : result) cout << p_result.test_value << endl;
+	for (NN_Tensor p_result : result) std::cout << p_result.test_value << std::endl;
 
 	return 0;
 }

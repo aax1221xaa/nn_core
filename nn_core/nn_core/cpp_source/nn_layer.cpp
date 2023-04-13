@@ -50,7 +50,7 @@ Layer_t Input(const vector<int>& input_size, int batch, const char* layer_name) 
 	NN_Manager::add_node(node);
 	NN_Manager::add_layer(layer);
 
-	return { Layer_Ptr<NN_Link>{ node, &node->_output, &node->_d_output } };
+	return { Layer_Ptr<NN_Link>{ node, 0 } };
 }
 
 /**********************************************/
@@ -145,7 +145,7 @@ NN_Link& Dense(int amounts, const string& _layer_name) {
 /*                                            */
 /**********************************************/
 
-NN_Input::NN_Input(const vector<int>& input_size, int batch, const char* _layer_name) :
+NN_Input::NN_Input(const std::vector<int>& input_size, int batch, const char* _layer_name) :
 	NN_Layer(_layer_name)
 {
 	_shape = input_size;
@@ -163,16 +163,16 @@ void NN_Input::build(shape_type& input_shape) {
 
 }
 
-NN_Tensor NN_Input::run_forward(cudaStream_t s, vector<NN_Tensor*>& input) {
+NN_Tensor NN_Input::run_forward(cudaStream_t s, std::vector<NN_Tensor*>& input) {
 	return *(input[0]);
 }
 
-NN_Tensor NN_Input::run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output) {
+NN_Tensor NN_Input::run_backward(cudaStream_t s, std::vector<NN_Tensor*>& d_output) {
 	return NN_Tensor();
 }
 
 
-Layer_t Input(const vector<int>& input_size, int batch, const char* layer_name) {
+Layer_t Input(const std::vector<int>& input_size, int batch, const char* layer_name) {
 	NN_Layer* layer = new NN_Input(input_size, batch, layer_name);
 	NN_Link* node = new NN_Link;
 
@@ -210,7 +210,7 @@ void NN_Test::build(shape_type& input_shape) {
 
 }
 
-NN_Tensor NN_Test::run_forward(cudaStream_t s, vector<NN_Tensor*>& input) {
+NN_Tensor NN_Test::run_forward(cudaStream_t s, std::vector<NN_Tensor*>& input) {
 	NN_Tensor output;
 
 	for (NN_Tensor* p_input : input) output.test_value += p_input->test_value;
@@ -218,7 +218,7 @@ NN_Tensor NN_Test::run_forward(cudaStream_t s, vector<NN_Tensor*>& input) {
 	return output;
 }
 
-NN_Tensor NN_Test::run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output) {
+NN_Tensor NN_Test::run_backward(cudaStream_t s, std::vector<NN_Tensor*>& d_output) {
 	return NN_Tensor();
 }
 

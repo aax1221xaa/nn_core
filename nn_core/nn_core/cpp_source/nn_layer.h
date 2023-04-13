@@ -35,7 +35,7 @@ class NN_Test : public NN_Layer {
 public:
 	NN_Test(const char* name);
 	NN_Test(const NN_Test& p);
-	
+
 	shape_type calculate_output_size(shape_type& input_shape);
 	void build(shape_type& input_shape);
 	NN_Tensor run_forward(cudaStream_t s, vector<NN_Tensor*>& input);
@@ -67,18 +67,18 @@ public:
 
 class NN_Input : public NN_Layer {
 public:
-	vector<int> _shape;
+	std::vector<int> _shape;
 
-	NN_Input(const vector<int>& input_size, int batch, const char* _layer_name);
+	NN_Input(const std::vector<int>& input_size, int batch, const char* _layer_name);
 	~NN_Input();
 
 	shape_type calculate_output_size(shape_type& input_shape);
 	void build(shape_type& input_shape);
-	NN_Tensor run_forward(cudaStream_t s, vector<NN_Tensor*>& input);
-	NN_Tensor run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output);
+	NN_Tensor run_forward(cudaStream_t s, std::vector<NN_Tensor*>& input);
+	NN_Tensor run_backward(cudaStream_t s, std::vector<NN_Tensor*>& d_output);
 };
 
-Layer_t Input(const vector<int>& input_size, int batch, const char* layer_name = "");
+Layer_t Input(const std::vector<int>& input_size, int batch, const char* layer_name = "");
 
 /**********************************************/
 /*                                            */
@@ -93,8 +93,8 @@ public:
 
 	shape_type calculate_output_size(shape_type& input_shape);
 	void build(shape_type& input_shape);
-	NN_Tensor run_forward(cudaStream_t s, vector<NN_Tensor*>& input);
-	NN_Tensor run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output);
+	NN_Tensor run_forward(cudaStream_t s, std::vector<NN_Tensor*>& input);
+	NN_Tensor run_backward(cudaStream_t s, std::vector<NN_Tensor*>& d_output);
 };
 
 /*

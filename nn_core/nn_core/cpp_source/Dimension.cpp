@@ -55,7 +55,7 @@ NN_Shape::NN_Shape(const NN_Shape& p) {
 	if (id) ++id->ref_cnt;
 }
 
-NN_Shape::NN_Shape(const initializer_list<int>& _shape) {
+NN_Shape::NN_Shape(const std::initializer_list<int>& _shape) {
 	len = _shape.size();
 
 	shape = new int[len];
@@ -70,7 +70,7 @@ NN_Shape::~NN_Shape() {
 	clear();
 }
 
-void NN_Shape::set(const initializer_list<int>& _shape) {
+void NN_Shape::set(const std::initializer_list<int>& _shape) {
 	clear();
 
 	len = _shape.size();

@@ -25,10 +25,10 @@ public:
 
 	NN_Shape();
 	NN_Shape(const NN_Shape& p);
-	NN_Shape(const initializer_list<int>& _shape);
+	NN_Shape(const std::initializer_list<int>& _shape);
 	~NN_Shape();
 	
-	void set(const initializer_list<int>& _shape);
+	void set(const std::initializer_list<int>& _shape);
 	void clear();
 	const char* get_str() const;
 

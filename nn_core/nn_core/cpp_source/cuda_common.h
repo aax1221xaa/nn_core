@@ -5,8 +5,6 @@
 #include "ObjectID.h"
 
 
-using namespace std;
-
 typedef const int cint;
 typedef unsigned int uint;
 typedef const unsigned int cuint;
@@ -45,63 +43,131 @@ struct NN_Tensor4D {
 
 const size_t get_elem_size(const NN_Tensor4D& tensor);
 
-
 /**********************************************/
 /*                                            */
-/*                  ListNode                  */
+/*                     List                   */
 /*                                            */
 /**********************************************/
 
 template <class _T>
-class ListNode {
+class List : public NN_Shared_Ptr {
+protected:
+	static List<_T>* create_head();
+	static void clear(List<_T>** head);
+	static void insert_link(List<_T>* current, List<_T>* prev_node);
+	static void clear_link(List<_T>* current);
+
 public:
-	ListNode* _prev;
-	ListNode* _next;
-	ListNode* _nodes;
+	List* _prev;
+	List* _next;
+	List* _head;
 
 	_T _val;
 
-	const char* _label;
+	bool _is_scalar;
 
-	ListNode(const char* label = "ListNode");
-	virtual ~ListNode();
-	
-	virtual cuint get_capacity();
-	virtual void put(ostream& os) const;
+	class Iterator {
+	public:
+		bool scalar_switch;
+		const List<_T>* _this;
+		List<_T>* _current;
 
-	static void insert_link(ListNode* current, ListNode* prev_node);
-	static void clear_link(ListNode* current);
+		Iterator(const List<_T>* p_this, List<_T>* current);
+		Iterator(typename const Iterator& p);
+
+		void operator++();
+		bool operator!=(typename const Iterator& p) const;
+		const List<_T>& operator*() const;
+	};
+
+	List();
+	List(const _T& val);
+	List(const std::initializer_list<_T>& list);
+	List(const std::initializer_list<List>& list);
+	List(const List& p);
+	List(List&& p);
+	~List();
+
+	List& operator=(const List& p);
+	List& operator=(List&& p);
+
+	List<_T>& operator[](const int index);
+
+	const Iterator begin() const;
+	const Iterator end() const;
+
+	_T& get();
+	void push_back(const _T& val);
+	//void put(std::ostream& os) const;
 };
 
 template <class _T>
-ListNode<_T>::ListNode(const char* label) :
-	_prev(NULL),
-	_next(NULL),
-	_nodes(NULL),
-	_label(label)
+List<_T>::Iterator::Iterator(const List<_T>* p_this, List<_T>* current) :
+	_this(p_this),
+	_current(current)
+{
+	scalar_switch = _current == NULL ? true : false;
+}
+
+template <class _T>
+List<_T>::Iterator::Iterator(typename const List<_T>::Iterator& p) :
+	_this(p._this),
+	_current(p._current),
+	scalar_switch(p.scalar_switch)
 {
 }
 
 template <class _T>
-ListNode<_T>::~ListNode() {
-	delete _nodes;
-	_nodes = NULL;
+void List<_T>::Iterator::operator++() {
+	if (_current == NULL) scalar_switch = false;
+	else _current = _current->_next;
 }
 
 template <class _T>
-cuint ListNode<_T>::get_capacity() {
-	return 0;
+bool List<_T>::Iterator::operator!=(typename const List<_T>::Iterator& p) const {
+	if (_current == NULL) return scalar_switch;
+	
+	return _current != p._current;
 }
 
 template <class _T>
-void ListNode<_T>::put(ostream& os) const {
-	os << _val << ", ";
+const List<_T>& List<_T>::Iterator::operator*() const {
+	if (_current == NULL) return *_this;
+
+	return *_current;
 }
 
 template <class _T>
-void ListNode<_T>::insert_link(ListNode* current, ListNode* prev_node) {
-	ListNode<_T>* before = prev_node;
-	ListNode<_T>* after = prev_node->_next;
+List<_T>* List<_T>::create_head() {
+	List<_T>* nodes = new List<_T>();
+
+	nodes->_prev = nodes;
+	nodes->_next = nodes;
+
+	return nodes;
+}
+
+template <class _T>
+void List<_T>::clear(List<_T>** head) {
+	if (*head == NULL) return;
+
+	List<_T>* current = (*head)->_next;
+	List<_T>* tmp = NULL;
+
+	while (current != *head) {
+		tmp = current->_next;
+		delete current;
+		current = tmp;
+	}
+	
+	delete *head;
+	*head = NULL;
+}
+
+template <class _T>
+void List<_T>::insert_link(List<_T>* current, List<_T>* prev_node) {
+	List<_T>* before = prev_node;
+	List<_T>* after = prev_node->_next;
 
 	before->_next = current;
 	after->_prev = current;
@@ -111,9 +177,9 @@ void ListNode<_T>::insert_link(ListNode* current, ListNode* prev_node) {
 }
 
 template <class _T>
-void ListNode<_T>::clear_link(ListNode* current) {
-	ListNode<_T>* before = current->_prev;
-	ListNode<_T>* after = current->_next;
+void List<_T>::clear_link(List<_T>* current) {
+	List<_T>* before = current->_prev;
+	List<_T>* after = current->_next;
 
 	before->_next = after;
 	after->_prev = before;
@@ -122,123 +188,22 @@ void ListNode<_T>::clear_link(ListNode* current) {
 	current->_prev = NULL;
 }
 
-/**********************************************/
-/*                                            */
-/*                ListNodeBlock               */
-/*                                            */
-/**********************************************/
-
-template <class _T>
-class ListNodeBlock : public ListNode<_T> {
-public:
-	uint _capacity;
-
-	ListNodeBlock(cuint capacity = 32);
-	~ListNodeBlock();
-
-	cuint get_capacity();
-	void put(ostream& os) const;
-
-	static ListNode<_T>* find_free_node(ListNode<_T>* block);
-};
-
-template <class _T>
-ListNodeBlock<_T>::ListNodeBlock(cuint capacity) :
-	ListNode<_T>("ListNodeBlock")
-{
-	_capacity = capacity;
-
-	if (capacity > 0) {
-		this->_nodes = new ListNode<_T>[capacity];
-		this->_nodes[0]._next = this->_nodes;
-		this->_nodes[0]._next = this->_nodes;
-	}
-}
-
-template <class _T>
-ListNodeBlock<_T>::~ListNodeBlock() {
-	delete[] this->_nodes;
-	this->_nodes = NULL;
-}
-
-template <class _T>
-cuint ListNodeBlock<_T>::get_capacity() {
-	return _capacity;
-}
-
-template <class _T>
-void ListNodeBlock<_T>::put(ostream& os) const {
-	ListNode<_T>* head_node = this->_nodes;
-	ListNode<_T>* current_node = head_node;
-
-	do {
-		if (current_node->_nodes) current_node->_nodes->put(os);
-		else current_node->put(os);
-		current_node = current_node->_next;
-
-	} while (current_node != head_node);
-}
-
-template <class _T>
-ListNode<_T>* ListNodeBlock<_T>::find_free_node(ListNode<_T>* block) {
-	ListNode<_T>* free_node = NULL;
-	ListNode<_T>* nodes = block->_nodes;
-	cuint capacity = block->get_capacity();
-
-	for (uint i = 0; i < capacity; ++i) {
-		if (nodes[i]._next == NULL) {
-			free_node = nodes[i]._next;
-			break;
-		}
-	}
-
-	return free_node;
-}
-
-/**********************************************/
-/*                                            */
-/*                     List                   */
-/*                                            */
-/**********************************************/
-
-template <class _T>
-class List : public ListNode<_T>, public NN_Shared_Ptr {
-protected:
-	static ListNodeBlock<_T>* create_nodes(cuint capacity);
-
-public:
-	List();
-	List(const _T& val);
-	List(const initializer_list<_T>& list, cuint capacity = 4);
-	List(const initializer_list<List>& list, cuint capacity = 4);
-	List(const List& p);
-	~List();
-
-	List& operator=(const List& p);
-
-	void put(ostream& os) const;
-};
-
-template <class _T>
-ListNodeBlock<_T>* List<_T>::create_nodes(cuint capacity) {
-	ListNodeBlock<_T>* nodes = new ListNodeBlock<_T>(capacity);
-
-	nodes->_prev = nodes;
-	nodes->_next = nodes;
-
-	return nodes;
-}
-
 template <class _T>
 List<_T>::List() :
-	ListNode<_T>("List")
+	_prev(NULL),
+	_next(NULL),
+	_head(NULL),
+	_is_scalar(false)
 {
 	id = NULL;
 }
 
 template <class _T>
 List<_T>::List(const _T& val) :
-	ListNode<_T>("List")
+	_prev(NULL),
+	_next(NULL),
+	_head(NULL),
+	_is_scalar(true)
 {
 	this->_val = val;
 
@@ -246,68 +211,32 @@ List<_T>::List(const _T& val) :
 }
 
 template <class _T>
-List<_T>::List(const initializer_list<_T>& list, cuint capacity) :
-	ListNode<_T>("List")
+List<_T>::List(const std::initializer_list<_T>& list) :
+	_prev(NULL),
+	_next(NULL),
+	_is_scalar(false)
 {
-	this->_nodes = create_nodes(capacity);
-
-	uint i = 0;
-	ListNode<_T>* current_block = NULL;
-	ListNode<_T>* prev_block = this->_nodes;
-	ListNode<_T>* prev_node = NULL;
+	_head = create_head();
 
 	for (const _T& val : list) {
-		if (i == 0) {
-			current_block = current_block == NULL ? this->_nodes : new ListNodeBlock<_T>(capacity);
-			ListNode<_T>::insert_link(current_block, prev_block);
-			prev_block = current_block;
-			prev_node = current_block->_nodes;
-		}
-		
-		ListNode<_T>& current_node = current_block->_nodes[i];
-		
-		current_node._val = val;
-		ListNode<_T>::insert_link(&current_node, prev_node);
-		prev_node = &current_node;
-
-		i = (i + 1) % capacity;
+		List<_T>* current = new List<_T>(val);
+		List<_T>::insert_link(current, _head->_prev);
 	}
 
 	id = linker.Create();
 }
 
 template <class _T>
-List<_T>::List(const initializer_list<List>& list, cuint capacity) :
-	ListNode<_T>("List")
+List<_T>::List(const std::initializer_list<List>& list) :
+	_prev(NULL),
+	_next(NULL),
+	_is_scalar(false)
 {
-	this->_nodes = create_nodes(capacity);
-
-	uint i = 0;
-	ListNode<_T>* new_block = NULL;
-	ListNode<_T>* prev_block = this->_nodes;
-	ListNode<_T>* prev_node = NULL;
+	_head = create_head();
 
 	for (const List<_T>& p_list : list) {
-		if (i == 0) {
-			new_block = new_block == NULL ? this->_nodes : new ListNodeBlock<_T>(capacity);
-			ListNode<_T>::insert_link(new_block, prev_block);
-			prev_block = new_block;
-			prev_node = new_block->_nodes;
-		}
-
-		ListNode<_T>& new_node = new_block->_nodes[i];
-
-		if (p_list._nodes == NULL) {
-			new_node._val = p_list._val;
-		}
-		else {
-		new_node._nodes = new List(p_list);
-		}
-
-		ListNode<_T>::insert_link(&new_node, prev_node);
-		prev_node = &new_node;
-
-		i = (i + 1) % capacity;
+		List<_T>* current = new List<_T>(p_list);
+		List<_T>::insert_link(current, _head->_prev);
 	}
 
 	id = linker.Create();
@@ -315,10 +244,11 @@ List<_T>::List(const initializer_list<List>& list, cuint capacity) :
 
 template <class _T>
 List<_T>::List(const List& p) :
-	ListNode<_T>("List")
+	_prev(NULL),
+	_next(NULL)
 {
-	this->_val = p._val;
-	this->_nodes = p._nodes;
+	_val = p._val;
+	_head = p._head;
 
 	id = p.id;
 
@@ -326,25 +256,30 @@ List<_T>::List(const List& p) :
 }
 
 template <class _T>
+List<_T>::List(List&& p) :
+	_prev(NULL),
+	_next(NULL) 
+{
+	_val = p._val;
+	_head = p._head;
+
+	id = linker.Create();
+
+	p._head = NULL;
+	p.id = NULL;
+}
+
+template <class _T>
 List<_T>::~List() {
 	if (id) {
 		if (id->ref_cnt > 1) --id->ref_cnt;
 		else {
-			ListNode<_T>* current = this->_nodes->_next;
-			ListNode<_T>* tmp = NULL;
-
-			while (current != this->_nodes) {
-				tmp = current->_next;
-				delete current;
-				current = tmp;
-			}
-			delete this->_nodes;
-
+			clear(&_head);
 			linker.Erase(id);
 		}
 	}
 
-	this->_nodes = NULL;
+	_head = NULL;
 	id = NULL;
 }
 
@@ -352,10 +287,12 @@ template <class _T>
 List<_T>& List<_T>::operator=(const List<_T>& p) {
 	if (this == &p) return *this;
 
-	this->_val = p._val;
-	this->_nodes = p._nodes;
+	clear(&_head);
+
+	_val = p._val;
+	_head = p._head;
 	
-	this->id = p.id;
+	id = p.id;
 
 	if (id) ++id->ref_cnt;
 
@@ -363,28 +300,121 @@ List<_T>& List<_T>::operator=(const List<_T>& p) {
 }
 
 template <class _T>
-void List<_T>::put(ostream& os) const {
-	ListNode<_T>* head = this->_nodes;
-	ListNode<_T>* current = head;
+List<_T>& List<_T>::operator=(List&& p) {
+	clear(&_head);
 
-	os << '[';
+	_val = p._val;
+	_head = p._head;
 
-	if (head == NULL) {
-		os << this->_val;
-	}
-	else {
-		do {
-			current->put(os);
-			current = current->_next;
-		} while (current != head);
-	}
+	p._head = NULL;
+	p.id = NULL;
 
-	os << "], ";
+	return *this;
 }
 
 template <class _T>
-ostream& operator<<(ostream& os, const List<_T>& list) {
+List<_T>& List<_T>::operator[](const int index) {
+	List<_T>* p_element = NULL;
+
+	if (_head == NULL) {
+		if (index != 0) {
+			ErrorExcept(
+				"[List::operator[]] this param is scalar"
+			);
+		}
+		p_element = this;
+	}
+	else if (index < 0) {
+		ErrorExcept(
+			"[List::operator[]] invalid index (%d).",
+			index
+		);
+	}
+	else {
+		List<_T>* current = _head->_next;
+		for (int i = 0; i < index; ++i) {
+			current = current->_next;
+
+			if (current == _head) {
+				ErrorExcept(
+					"[List::operator[]] this list size are %d. but index is %d.",
+					i + 1, index
+				);
+			}
+		}
+
+		p_element = current;
+	}
+
+	return *p_element;
+}
+
+template <class _T>
+typename const List<_T>::Iterator List<_T>::begin() const {
+	if (_head == NULL) return List<_T>::Iterator(this, NULL);
+
+	return List<_T>::Iterator(this, _head->_next);
+}
+
+template <class _T>
+typename const List<_T>::Iterator List<_T>::end() const {
+	return List<_T>::Iterator(this, _head);
+}
+
+template <class _T>
+_T& List<_T>::get() {
+	if (_head != NULL) {
+		ErrorExcept("[List::get()] this element is not scalar.");
+	}
+
+	return _val;
+}
+
+template <class _T>
+void List<_T>::push_back(const _T& val) {
+	List<_T>* current = NULL;
+
+	if (_head == NULL) {
+		_head = create_head();
+
+		if (_is_scalar) {
+			current = new List<_T>(this->_val);
+			insert_link(current, _head->_prev);
+			
+			_val = _T();
+			_is_scalar = false;
+		}
+	}
+
+	current = new List<_T>(val);
+	insert_link(current, _head->_prev);
+}
+
+/*
+template <class _T>
+void List<_T>::put(std::ostream& os) const {
+	if (_head == NULL) {
+		os << _val << ", ";
+	}
+	else {
+		os << '[';
+
+		List<_T>* current = _head->_next;
+
+		while (current != _head) {
+			current->put(os);
+			current = current->_next;
+		}
+
+		os << "], ";
+	}
+}
+
+template <class _T>
+std::ostream& operator<<(std::ostream& os, const List<_T>& list) {
 	list.put(os);
+	os << std::endl;
 
 	return os;
 }
+*/

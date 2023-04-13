@@ -11,7 +11,7 @@ NN_Tensor::NN_Tensor() {
 	test_value = 0;
 }
 
-NN_Tensor::NN_Tensor(const vector<int>& _shape, int _device_type) {
+NN_Tensor::NN_Tensor(const std::vector<int>& _shape, int _device_type) {
 	try {
 		test_value = 0;
 
@@ -100,7 +100,7 @@ void NN_Tensor::clear() {
 	id = NULL;
 }
 
-void NN_Tensor::set(const vector<int>& _shape, int _device_type) {
+void NN_Tensor::set(const std::vector<int>& _shape, int _device_type) {
 	clear();
 
 	size_t elem_size = _shape.size();
@@ -136,7 +136,7 @@ void NN_Tensor::copy_to(NN_Tensor& dst, const int _device_type) {
 	}
 }
 
-NN_Tensor NN_Tensor::zeros(const vector<int>& _shape, int _device_type) {
+NN_Tensor NN_Tensor::zeros(const std::vector<int>& _shape, int _device_type) {
 	NN_Tensor p(_shape, _device_type);
 	
 	if (_device_type == CPU) memset(p.data, 0, p.bytes);
@@ -155,9 +155,9 @@ NN_Tensor NN_Tensor::zeros_like(const NN_Tensor& p, int _device_type) {
 }
 
 void set_uniform(NN_Tensor& p) {
-	random_device rd;
-	mt19937 gen(rd());
-	uniform_real_distribution<float> dis(0.f, 1.f);
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<float> dis(0.f, 1.f);
 
 	size_t size = p.bytes / sizeof(float);
 

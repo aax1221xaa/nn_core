@@ -2,8 +2,8 @@
 
 
 cudaStream_t NN_Manager::_stream = NULL;
-vector<NN_Link*> NN_Manager::_nodes;
-vector<NN_Layer*> NN_Manager::_layers;
+std::vector<NN_Link*> NN_Manager::_nodes;
+std::vector<NN_Layer*> NN_Manager::_layers;
 
 void NN_Manager::add_node(NN_Link* p_node) {
 	_nodes.push_back(p_node);
