@@ -98,7 +98,10 @@ public:
 
 	_T& get();
 	void push_back(const _T& val);
-	//void put(std::ostream& os) const;
+
+#ifdef PUT_LIST
+	void put(std::ostream& os) const;
+#endif
 };
 
 template <class _T>
@@ -126,7 +129,7 @@ void List<_T>::Iterator::operator++() {
 template <class _T>
 bool List<_T>::Iterator::operator!=(typename const List<_T>::Iterator& p) const {
 	if (_current == NULL) return scalar_switch;
-	
+
 	return _current != p._current;
 }
 
@@ -159,7 +162,7 @@ void List<_T>::clear(List<_T>** head) {
 		delete current;
 		current = tmp;
 	}
-	
+
 	delete *head;
 	*head = NULL;
 }
@@ -258,7 +261,7 @@ List<_T>::List(const List& p) :
 template <class _T>
 List<_T>::List(List&& p) :
 	_prev(NULL),
-	_next(NULL) 
+	_next(NULL)
 {
 	_val = p._val;
 	_head = p._head;
@@ -291,7 +294,7 @@ List<_T>& List<_T>::operator=(const List<_T>& p) {
 
 	_val = p._val;
 	_head = p._head;
-	
+
 	id = p.id;
 
 	if (id) ++id->ref_cnt;
@@ -372,25 +375,27 @@ _T& List<_T>::get() {
 
 template <class _T>
 void List<_T>::push_back(const _T& val) {
-	List<_T>* current = NULL;
-
 	if (_head == NULL) {
-		_head = create_head();
+		if (!_is_scalar) {
+			_val = val;
+			_is_scalar = true;
+		}
+		else {
+			_head = create_head();
+			insert_link(new List<_T>(_val), _head->_prev);
 
-		if (_is_scalar) {
-			current = new List<_T>(this->_val);
-			insert_link(current, _head->_prev);
-			
 			_val = _T();
 			_is_scalar = false;
+
+			insert_link(new List<_T>(val), _head->_prev);
+
+			id = linker.Create();
 		}
 	}
-
-	current = new List<_T>(val);
-	insert_link(current, _head->_prev);
+	else insert_link(new List<_T>(val), _head->_prev);
 }
 
-/*
+#ifdef PUT_LIST
 template <class _T>
 void List<_T>::put(std::ostream& os) const {
 	if (_head == NULL) {
@@ -398,23 +403,18 @@ void List<_T>::put(std::ostream& os) const {
 	}
 	else {
 		os << '[';
-
 		List<_T>* current = _head->_next;
-
 		while (current != _head) {
 			current->put(os);
 			current = current->_next;
 		}
-
 		os << "], ";
 	}
 }
-
 template <class _T>
 std::ostream& operator<<(std::ostream& os, const List<_T>& list) {
 	list.put(os);
 	os << std::endl;
-
 	return os;
 }
-*/
+#endif

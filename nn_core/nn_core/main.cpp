@@ -7,7 +7,6 @@
 #include "cpp_source/nn_layer.h"
 
 
-
 int main() {
 	
 	NN_Manager nn;
