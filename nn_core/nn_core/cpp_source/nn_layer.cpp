@@ -5,7 +5,7 @@
 #include "../cuda_source/convolution.cuh"
 
 
-#if !(FIX_MODE)
+#ifdef FIX_MODE
 
 /**********************************************/
 /*                                            */
@@ -13,42 +13,84 @@
 /*                                            */
 /**********************************************/
 
-NN_Input::NN_Input(const vector<int>& input_size, int batch, const char* _layer_name) :
-	NN_Layer(_layer_name)
+NN_Input::NN_Input(const nn_shape& input_size, int batch, const char* _layer_name) :
+	NN_Layer(_layer_name),
+	_shape(input_size)
 {
-	_shape = input_size;
+	try {
+		_shape.insert(_shape.begin(), batch);
+
+		for (const int& n : _shape) {
+			if (n < -1 || n == 0) {
+				ErrorExcept(
+					"[NN_Input::NN_Input] can't create input layer by dimension(%s).",
+					dimension_to_str(input_size)
+				);
+			}
+		}
+		
+	}
+	catch (const Exception& e) {
+		NN_Manager::condition = false;
+		e.Put();
+	}
 }
 
 NN_Input::~NN_Input() {
 
 }
 
-shape_type NN_Input::calculate_output_size(shape_type& input_shape) {
-	return input_shape;
+nn_shape NN_Input::calculate_output_size(std::vector<nn_shape*>& input_shape) {
+	if (input_shape.size() == 0) return _shape;
+	else if (input_shape.size() > 1) {
+		ErrorExcept(
+			"[NN_Input::calculate_output_size()] input layer can't receive %d layers.",
+			input_shape.size()
+		);
+	}
+
+	return *input_shape[0];
 }
 
-void NN_Input::build(shape_type& input_shape) {
+void NN_Input::build(std::vector<nn_shape*>& input_shape) {
 
 }
 
-NN_Tensor NN_Input::run_forward(cudaStream_t s, vector<NN_Tensor*>& input) {
-	return *(input[0]);
+NN_Tensor<nn_type> NN_Input::run_forward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& input) {
+	return *input[0];
 }
 
-NN_Tensor NN_Input::run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output) {
-	return NN_Tensor();
+NN_Tensor<nn_type> NN_Input::run_backward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& d_output) {
+	return NN_Tensor<nn_type>();
 }
 
 
-Layer_t Input(const vector<int>& input_size, int batch, const char* layer_name) {
-	NN_Layer* layer = new NN_Input(input_size, batch, layer_name);
-	NN_Link* node = new NN_Link;
+Layer_t Input(const nn_shape& input_size, int batch, const char* layer_name) {
+	NN_Input* layer = NULL;
+	NN_Link* node = NULL;
 
-	node->_forward = layer;
-	//node->_input.push_back(NULL);
+	try {
+		layer = new NN_Input(input_size, batch, layer_name);
+		node = new NN_Link;
 
-	NN_Manager::add_node(node);
-	NN_Manager::add_layer(layer);
+		if (!NN_Manager::condition) {
+			ErrorExcept(
+				"[Input()] can't create %s layer.",
+				layer->_layer_name
+			);
+		}
+
+		node->_forward = layer;
+
+		NN_Manager::add_node(node);
+		NN_Manager::add_layer(layer);
+	}
+	catch (const Exception& e) {
+		delete layer;
+		delete node;
+
+		throw e;
+	}
 
 	return { Layer_Ptr<NN_Link>{ node, 0 } };
 }
@@ -70,74 +112,154 @@ NN_Test::NN_Test(const NN_Test& p) :
 
 }
 
-shape_type NN_Test::calculate_output_size(shape_type& input_shape) {
-	return input_shape;
+nn_shape NN_Test::calculate_output_size(std::vector<nn_shape*>& input_shape) {
+	return *input_shape[0];
 }
 
-void NN_Test::build(shape_type& input_shape) {
+void NN_Test::build(std::vector<nn_shape*>& input_shape) {
 
 }
 
-NN_Tensor NN_Test::run_forward(cudaStream_t s, vector<NN_Tensor*>& input) {
-	NN_Tensor output;
+NN_Tensor<nn_type> NN_Test::run_forward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& input) {
+	return *input[0];
+}
 
-	for (NN_Tensor* p_input : input) output.test_value += p_input->test_value;
+NN_Tensor<nn_type> NN_Test::run_backward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& d_output) {
+	return *d_output[0];
+}
+
+/**********************************************/
+/*                                            */
+/*                   NN_Dense                 */
+/*                                            */
+/**********************************************/
+
+NN_Dense::NN_Dense(const int amounts, const char* name) :
+	NN_Layer(name),
+	_amounts(amounts),
+	_weight(),
+	_bias()
+{
+}
+
+nn_shape NN_Dense::calculate_output_size(std::vector<nn_shape*>& input_shape) {
+	nn_shape& in_shape = *input_shape[0];
+
+	/*
+	[-1, h, w, c]
+
+	input = [n, h * w * c] ( [n, c_in] )
+	weight = [c_in, c_out]
+	output = [n, c_out]
+	*/
+
+	return nn_shape({ in_shape[0], _amounts });
+}
+
+void NN_Dense::build(std::vector<nn_shape*>& input_shape) {
+	nn_shape& in_shape = *input_shape[0];
+
+	int c = 1;
+	for (int i = 1; i < in_shape.size(); ++i) c *= in_shape[i];
+
+	_weight.set({ c, _amounts });
+	set_uniform(_weight);
+	_bias = NN_Tensor<nn_type>::zeros({ _amounts });
+}
+
+NN_Tensor<nn_type> NN_Dense::run_forward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& input) {
+	NN_Tensor<nn_type>& _input = *input[0];
+	NN_Tensor<nn_type> output({ _input._shape[0], _weight._shape[1] });
+
+	CudaTensor m_input(
+		_input._data,
+		_input._shape[0],
+		0,
+		0,
+		_weight._shape[0]
+	);
+	CudaTensor m_weight(
+		_weight._data,
+		_weight._shape[0],
+		0,
+		0,
+		_weight._shape[1]
+	);
+	CudaTensor m_bias(
+		_bias._data,
+		0,
+		0,
+		0,
+		_bias._shape[0]
+	);
+	CudaTensor m_output(
+		output._data,
+		output._shape[0],
+		0,
+		0,
+		output._shape[1]
+	);
+
+	dens(s, m_input, m_weight, m_output);
+	add_bias(s, m_output, m_bias, m_output);
 
 	return output;
 }
 
-NN_Tensor NN_Test::run_backward(cudaStream_t s, vector<NN_Tensor*>& d_output) {
-	return NN_Tensor();
+NN_Tensor<nn_type> NN_Dense::run_backward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& d_output) {
+	return *d_output[0];
 }
 
-/*
-NN_Dense::NN_Dense(int _amounts, const string& _layer_name) :
-	NN_Layer(_layer_name)
+/**********************************************/
+/*                                            */
+/*                   NN_ReLU                  */
+/*                                            */
+/**********************************************/
+
+NN_ReLU::NN_ReLU(const char* name) :
+	NN_Layer(name)
 {
-	amounts = _amounts;
 }
 
-void NN_Dense::calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape) {
-	NN_Shape& in_shape = input_shape[0];
-
-	output_shape.set({ in_shape[0], amounts });
+nn_shape NN_ReLU::calculate_output_size(std::vector<nn_shape*>& input_shape) {
+	return *input_shape[0];
 }
 
-void NN_Dense::build(vector<NN_Shape>& input_shape) {
-	const NN_Shape& shape = input_shape[0];
-	// [batch, 784]
-	// [784, amounts] + [amounts]
-	// [batch, amounts]
-
-	weight.set({ shape[1], amounts }, GPU);
-	bias.set({ amounts }, GPU);
-
-	set_uniform(weight);
-	check_cuda(cudaMemset(bias.data, 0, bias.bytes));
-}
-
-void NN_Dense::run_forward(vector<NN_Tensor>& input, NN_Tensor& output) {
+void NN_ReLU::build(std::vector<nn_shape*>& input_shape) {
 
 }
 
-void NN_Dense::run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input) {
+NN_Tensor<nn_type> NN_ReLU::run_forward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& input) {
+	float* data = input[0]->_data;
+	NN_Tensor<nn_type> output(input[0]->_shape);
 
+	CudaTensor m_input(
+		data,
+		input[0]->_shape[0],
+		input[0]->_shape[1],
+		input[0]->_shape[2],
+		input[0]->_shape[3]
+	);
+	CudaTensor m_output(
+		output._data,
+		output._shape[0],
+		output._shape[1],
+		output._shape[2],
+		output._shape[3]
+	);
+
+	relu(s, m_input, m_output);
+
+	return output;
 }
 
-NN_Link& Dense(int amounts, const string& _layer_name) {
-	NN_Layer* layer = new NN_Dense(amounts, _layer_name);
-	NN_Link* link = new NN_Link;
-
-	link->op_layer = layer;
-
-	NN_Manager::add_layer(layer);
-	NN_Manager::add_link(link);
-
-	return *link;
+NN_Tensor<nn_type> NN_ReLU::run_backward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& d_output) {
+	return NN_Tensor<nn_type>();
 }
-*/
 
-#else
+#endif
+
+#ifndef FIX_MODE
 
 /**********************************************/
 /*                                            */
@@ -145,39 +267,50 @@ NN_Link& Dense(int amounts, const string& _layer_name) {
 /*                                            */
 /**********************************************/
 
-NN_Input::NN_Input(const std::vector<int>& input_size, int batch, const char* _layer_name) :
+NN_Input::NN_Input(const nn_shape& input_size, const char* _layer_name) :
 	NN_Layer(_layer_name)
 {
 	_shape = input_size;
+	_shape.insert(_shape.begin(), -1);
 }
 
 NN_Input::~NN_Input() {
 
 }
 
-shape_type NN_Input::calculate_output_size(shape_type& input_shape) {
-	return input_shape;
+nn_shape NN_Input::calculate_output_size(std::vector<nn_shape*>& input_shape) {
+	if (input_shape.size() != 1) {
+		ErrorExcept(
+			"[NN_Input::calculate_output_size()] input node can only one input. but %d recieved.",
+			input_shape.size()
+		);
+	}
+
+	return _shape;
 }
 
-void NN_Input::build(shape_type& input_shape) {
+void NN_Input::build(std::vector<nn_shape*>& input_shape) {
 
 }
 
 NN_Tensor NN_Input::run_forward(cudaStream_t s, std::vector<NN_Tensor*>& input) {
-	return *(input[0]);
+	NN_Tensor output(device_t::GPU);
+
+	input[0]->copy_to(output);
+
+	return output;
 }
 
 NN_Tensor NN_Input::run_backward(cudaStream_t s, std::vector<NN_Tensor*>& d_output) {
-	return NN_Tensor();
+	return NN_Tensor(device_t::GPU);
 }
 
 
-Layer_t Input(const std::vector<int>& input_size, int batch, const char* layer_name) {
-	NN_Layer* layer = new NN_Input(input_size, batch, layer_name);
+Layer_t Input(const std::vector<int>& input_size, const char* layer_name) {
+	NN_Layer* layer = new NN_Input(input_size, layer_name);
 	NN_Link* node = new NN_Link;
 
 	node->_forward = layer;
-	//node->_input.push_back(NULL);
 
 	NN_Manager::add_node(node);
 	NN_Manager::add_layer(layer);
@@ -190,7 +323,7 @@ Layer_t Input(const std::vector<int>& input_size, int batch, const char* layer_n
 /*                   NN_Test                  */
 /*                                            */
 /**********************************************/
-
+/*
 NN_Test::NN_Test(const char* name) :
 	NN_Layer(name)
 {
@@ -202,11 +335,11 @@ NN_Test::NN_Test(const NN_Test& p) :
 
 }
 
-shape_type NN_Test::calculate_output_size(shape_type& input_shape) {
+nn_shape NN_Test::calculate_output_size(std::vector<nn_shape*>& input_shape) {
 	return input_shape;
 }
 
-void NN_Test::build(shape_type& input_shape) {
+void NN_Test::build(std::vector<nn_shape*>& input_shape) {
 
 }
 
@@ -221,52 +354,89 @@ NN_Tensor NN_Test::run_forward(cudaStream_t s, std::vector<NN_Tensor*>& input) {
 NN_Tensor NN_Test::run_backward(cudaStream_t s, std::vector<NN_Tensor*>& d_output) {
 	return NN_Tensor();
 }
-
-/*
-NN_Dense::NN_Dense(int _amounts, const string& _layer_name) :
-	NN_Layer(_layer_name)
-{
-	amounts = _amounts;
-}
-
-void NN_Dense::calculate_output_size(vector<NN_Shape>& input_shape, NN_Shape& output_shape) {
-	NN_Shape& in_shape = input_shape[0];
-
-	output_shape.set({ in_shape[0], amounts });
-}
-
-void NN_Dense::build(vector<NN_Shape>& input_shape) {
-	const NN_Shape& shape = input_shape[0];
-	// [batch, 784]
-	// [784, amounts] + [amounts]
-	// [batch, amounts]
-
-	weight.set({ shape[1], amounts }, GPU);
-	bias.set({ amounts }, GPU);
-
-	set_uniform(weight);
-	check_cuda(cudaMemset(bias.data, 0, bias.bytes));
-}
-
-void NN_Dense::run_forward(vector<NN_Tensor>& input, NN_Tensor& output) {
-
-}
-
-void NN_Dense::run_backward(vector<NN_Tensor>& input, NN_Tensor& output, NN_Tensor& d_output, vector<NN_Tensor>& d_input) {
-
-}
-
-NN_Link& Dense(int amounts, const string& _layer_name) {
-	NN_Layer* layer = new NN_Dense(amounts, _layer_name);
-	NN_Link* link = new NN_Link;
-
-	link->op_layer = layer;
-
-	NN_Manager::add_layer(layer);
-	NN_Manager::add_link(link);
-
-	return *link;
-}
 */
+/**********************************************/
+/*                                            */
+/*                   NN_Dense                 */
+/*                                            */
+/**********************************************/
+
+NN_Dense::NN_Dense(const int amounts, const char* name) :
+	NN_Layer(name),
+	_amounts(amounts),
+	_weight(device_t::GPU),
+	_bias(device_t::GPU)
+{
+}
+
+nn_shape NN_Dense::calculate_output_size(std::vector<nn_shape*>& input_shape) {
+	nn_shape& in_shape = *input_shape[0];
+
+	/*
+	[-1, h, w, c]
+
+	input = [n, h * w * c] ( [n, c_in] )
+	weight = [c_in, c_out]
+	output = [n, c_out]
+	*/
+
+	return nn_shape({ in_shape[0], _amounts });
+}
+
+void NN_Dense::build(std::vector<nn_shape*>& input_shape) {
+	nn_shape& in_shape = *input_shape[0];
+
+	int c = 1;
+	for (int i = 1; i < in_shape.size(); ++i) c *= in_shape[i];
+
+	_weight.set(nn_shape({ c, _amounts }));
+	set_uniform(_weight);
+	_bias = NN_Tensor::zeros(nn_shape({ _amounts }), device_t::GPU);
+}
+
+NN_Tensor NN_Dense::run_forward(cudaStream_t s, std::vector<NN_Tensor*>& input) {
+	NN_Tensor& _input = *input[0];
+	nn_shape out_shape({ _input._shape[0], _weight._shape[1] });
+	NN_Tensor output(out_shape, device_t::GPU);
+
+	NN_Tensor4D m_input(
+		_input._data,
+		_input._shape[0],
+		0,
+		0,
+		_weight._shape[0]
+	);
+	NN_Tensor4D m_weight(
+		_weight._data,
+		_weight._shape[0],
+		0,
+		0,
+		_weight._shape[1]
+	);
+	NN_Tensor4D m_bias(
+		_bias._data,
+		0,
+		0,
+		0,
+		_bias._shape[0]
+	);
+	NN_Tensor4D m_output(
+		output._data,
+		output._shape[0],
+		0,
+		0,
+		output._shape[1]
+	);
+
+	dens(s, m_input, m_weight, m_output);
+	add_bias(s, m_output, m_bias, m_output);
+
+	return output;
+}
+
+NN_Tensor NN_Dense::run_backward(cudaStream_t s, std::vector<NN_Tensor*>& d_output) {
+	return *d_output[0];
+}
+
 
 #endif

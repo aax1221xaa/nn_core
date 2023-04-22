@@ -16,6 +16,6 @@ NN_Layer::~NN_Layer() {
 
 }
 
-void NN_Layer::build(shape_type& input_shape) {
+void NN_Layer::build(std::vector<nn_shape*>& input_shape) {
 
 }

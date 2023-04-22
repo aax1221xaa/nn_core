@@ -36,9 +36,6 @@
     <ClCompile Include="cpp_source\Exception.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\Dimension.cpp">
-      <Filter>소스 파일\cpp</Filter>
-    </ClCompile>
     <ClCompile Include="cpp_source\CudaCheck.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
@@ -72,15 +69,15 @@
     <ClCompile Include="cpp_source\nn_link.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
+    <ClCompile Include="cpp_source\mnist.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpp_source\cuda_common.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\CudaCheck.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
-    <ClInclude Include="cpp_source\Dimension.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\Exception.h">
@@ -128,14 +125,17 @@
     <ClInclude Include="cpp_source\nn_base_layer.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
-    <ClInclude Include="cpp_source\nn_ptr.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
     <ClInclude Include="cpp_source\nn_manager.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_link.h">
       <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\mnist.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\cast.cuh">
+      <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -155,6 +155,9 @@
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_source\optimizer.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\cast.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
   </ItemGroup>

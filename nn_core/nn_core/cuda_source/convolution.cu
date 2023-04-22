@@ -322,9 +322,9 @@ void check_conv_2d(
 
 void conv_2d(
 	cudaStream_t stream,
-	const NN_Tensor4D d_input,
-	const NN_Tensor4D d_kernel,
-	NN_Tensor4D d_output,
+	const CudaTensor d_input,
+	const CudaTensor d_kernel,
+	CudaTensor d_output,
 	int st_w,
 	int st_h
 ) {
@@ -400,9 +400,9 @@ void conv_2d(
 
 void correl_2d(
 	cudaStream_t stream,
-	const NN_Tensor4D d_doutput,
-	const NN_Tensor4D d_kernel,
-	NN_Tensor4D d_dinput
+	const CudaTensor d_doutput,
+	const CudaTensor d_kernel,
+	CudaTensor d_dinput
 ) {
 	//check_correl_2d(
 	//	d_doutput,
@@ -471,8 +471,8 @@ void correl_2d(
 
 void transpose(
 	cudaStream_t stream,
-	const NN_Tensor4D d_input,
-	NN_Tensor4D d_output
+	const CudaTensor d_input,
+	CudaTensor d_output
 ) {
 	//check_transpose(d_input, d_output);
 
@@ -516,8 +516,8 @@ void transpose(
 
 void dilation_2d(
 	cudaStream_t stream,
-	const NN_Tensor4D d_input,
-	NN_Tensor4D d_output,
+	const CudaTensor d_input,
+	CudaTensor d_output,
 	uint scale,
 	int offset_x,
 	int offset_y
@@ -584,9 +584,9 @@ void dilation_2d(
 
 void kernel_conv_2d(
 	cudaStream_t stream,
-	const NN_Tensor4D d_doutput,
-	const NN_Tensor4D d_input,
-	NN_Tensor4D d_gradient
+	const CudaTensor d_doutput,
+	const CudaTensor d_input,
+	CudaTensor d_gradient
 ) {
 	//check_kernel_conv_2d(
 	//	d_doutput,

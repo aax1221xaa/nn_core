@@ -11,8 +11,8 @@ int calc_output_size(
 
 void maxpool_2d(
 	cudaStream_t stream,
-	NN_Tensor4D input,
-	NN_Tensor4D output,
+	CudaTensor input,
+	CudaTensor output,
 	int kernel_w,
 	int kernel_h,
 	int stride_w,

@@ -61,9 +61,9 @@ __global__ void __add_bias(
 
 void add_bias(
 	cudaStream_t stream,
-	const NN_Tensor4D input,
-	const NN_Tensor4D bias,
-	NN_Tensor4D output
+	const CudaTensor input,
+	const CudaTensor bias,
+	CudaTensor output
 ) {
 	//check_add_bias(input, bias, output);
 

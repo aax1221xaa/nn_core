@@ -4,6 +4,7 @@
 cudaStream_t NN_Manager::_stream = NULL;
 std::vector<NN_Link*> NN_Manager::_nodes;
 std::vector<NN_Layer*> NN_Manager::_layers;
+bool NN_Manager::condition = false;
 
 void NN_Manager::add_node(NN_Link* p_node) {
 	_nodes.push_back(p_node);
@@ -17,8 +18,12 @@ NN_Manager::NN_Manager() {
 	try {
 		_stream = NULL;
 		check_cuda(cudaStreamCreate(&_stream));
+		condition = true;
 	}
-	catch (Exception& e) {
+	catch (const Exception& e) {
+		condition = false;
+		_stream = NULL;
+
 		e.Put();
 	}
 }
@@ -52,6 +57,9 @@ NN_Manager::~NN_Manager() {
 	catch (Exception& e) {
 		e.Put();
 	}
+
+	condition = false;
+	_stream = NULL;
 }
 
 void NN_Manager::clear_select_mask() {

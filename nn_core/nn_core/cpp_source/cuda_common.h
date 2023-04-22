@@ -18,9 +18,12 @@ typedef const unsigned int cuint;
 
 #define EPSILON					1e-8
 
-#define FIX_MODE				true
+#define FIX_MODE
+
+typedef std::vector<int> nn_shape;
 
 
+const char* dimension_to_str(const nn_shape& shape);
 dim3 get_grid_size(const dim3 block, uint x = 1, uint y = 1, uint z = 1);
 
 class NN_Shared_Ptr {
@@ -32,16 +35,38 @@ public:
 	NN_Shared_Ptr();
 };
 
-struct NN_Tensor4D {
-	float* data;
+/**********************************************/
+/*                                            */
+/*                   nn_type                  */
+/*                                            */
+/**********************************************/
+
+typedef float nn_type;
+
+/**********************************************/
+/*                                            */
+/*                  CudaTensor                */
+/*                                            */
+/**********************************************/
+
+struct CudaTensor {
+	nn_type* data;
 
 	int n;
 	int c;
 	int h;
 	int w;
+
+	CudaTensor(float* _data, int _n, int _h, int _w, int _c) {
+		data = _data;
+		n = _n;
+		c = _c;
+		h = _h;
+		w = _w;
+	}
 };
 
-const size_t get_elem_size(const NN_Tensor4D& tensor);
+const size_t get_elem_size(const CudaTensor& tensor);
 
 /**********************************************/
 /*                                            */
@@ -53,7 +78,7 @@ template <class _T>
 class List : public NN_Shared_Ptr {
 protected:
 	static List<_T>* create_head();
-	static void clear(List<_T>** head);
+	static void clear_head(List<_T>** head);
 	static void insert_link(List<_T>* current, List<_T>* prev_node);
 	static void clear_link(List<_T>* current);
 
@@ -65,6 +90,7 @@ public:
 	_T _val;
 
 	bool _is_scalar;
+	size_t _size;
 
 	class Iterator {
 	public:
@@ -98,6 +124,7 @@ public:
 
 	_T& get();
 	void push_back(const _T& val);
+	size_t size();
 
 #ifdef PUT_LIST
 	void put(std::ostream& os) const;
@@ -151,7 +178,7 @@ List<_T>* List<_T>::create_head() {
 }
 
 template <class _T>
-void List<_T>::clear(List<_T>** head) {
+void List<_T>::clear_head(List<_T>** head) {
 	if (*head == NULL) return;
 
 	List<_T>* current = (*head)->_next;
@@ -196,7 +223,8 @@ List<_T>::List() :
 	_prev(NULL),
 	_next(NULL),
 	_head(NULL),
-	_is_scalar(false)
+	_is_scalar(false),
+	_size(0)
 {
 	id = NULL;
 }
@@ -206,7 +234,8 @@ List<_T>::List(const _T& val) :
 	_prev(NULL),
 	_next(NULL),
 	_head(NULL),
-	_is_scalar(true)
+	_is_scalar(true),
+	_size(1)
 {
 	this->_val = val;
 
@@ -217,13 +246,15 @@ template <class _T>
 List<_T>::List(const std::initializer_list<_T>& list) :
 	_prev(NULL),
 	_next(NULL),
-	_is_scalar(false)
+	_is_scalar(false),
+	_size(0)
 {
 	_head = create_head();
 
 	for (const _T& val : list) {
 		List<_T>* current = new List<_T>(val);
 		List<_T>::insert_link(current, _head->_prev);
+		++_size;
 	}
 
 	id = linker.Create();
@@ -233,13 +264,15 @@ template <class _T>
 List<_T>::List(const std::initializer_list<List>& list) :
 	_prev(NULL),
 	_next(NULL),
-	_is_scalar(false)
+	_is_scalar(false),
+	_size(0)
 {
 	_head = create_head();
 
 	for (const List<_T>& p_list : list) {
 		List<_T>* current = new List<_T>(p_list);
 		List<_T>::insert_link(current, _head->_prev);
+		++_size;
 	}
 
 	id = linker.Create();
@@ -248,11 +281,12 @@ List<_T>::List(const std::initializer_list<List>& list) :
 template <class _T>
 List<_T>::List(const List& p) :
 	_prev(NULL),
-	_next(NULL)
+	_next(NULL),
+	_val(p._val),
+	_head(p._head),
+	_is_scalar(p._is_scalar),
+	_size(p._size)
 {
-	_val = p._val;
-	_head = p._head;
-
 	id = p.id;
 
 	if (id) ++id->ref_cnt;
@@ -261,12 +295,13 @@ List<_T>::List(const List& p) :
 template <class _T>
 List<_T>::List(List&& p) :
 	_prev(NULL),
-	_next(NULL)
+	_next(NULL),
+	_val(p._val),
+	_head(p._head),
+	_is_scalar(p._is_scalar),
+	_size(p._size)
 {
-	_val = p._val;
-	_head = p._head;
-
-	id = linker.Create();
+	id = p.id;
 
 	p._head = NULL;
 	p.id = NULL;
@@ -277,11 +312,14 @@ List<_T>::~List() {
 	if (id) {
 		if (id->ref_cnt > 1) --id->ref_cnt;
 		else {
-			clear(&_head);
+			clear_head(&_head);
 			linker.Erase(id);
 		}
 	}
 
+	_val = _T();
+	_is_scalar = false;
+	_size = 0;
 	_head = NULL;
 	id = NULL;
 }
@@ -290,10 +328,12 @@ template <class _T>
 List<_T>& List<_T>::operator=(const List<_T>& p) {
 	if (this == &p) return *this;
 
-	clear(&_head);
+	clear_head(&_head);
 
 	_val = p._val;
 	_head = p._head;
+	_is_scalar = p._is_scalar;
+	_size = p._size;
 
 	id = p.id;
 
@@ -304,10 +344,14 @@ List<_T>& List<_T>::operator=(const List<_T>& p) {
 
 template <class _T>
 List<_T>& List<_T>::operator=(List&& p) {
-	clear(&_head);
+	clear_head(&_head);
 
 	_val = p._val;
 	_head = p._head;
+	_is_scalar = p._is_scalar;
+	_size = p._size;
+
+	id = p.id;
 
 	p._head = NULL;
 	p.id = NULL;
@@ -393,6 +437,12 @@ void List<_T>::push_back(const _T& val) {
 		}
 	}
 	else insert_link(new List<_T>(val), _head->_prev);
+	++_size;
+}
+
+template <class _T>
+size_t List<_T>::size() {
+	return _size;
 }
 
 #ifdef PUT_LIST

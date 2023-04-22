@@ -11,7 +11,7 @@ protected:
 
 public:
 	Exception(const char* message_, const char* file_, int line_);
-	void Put();
+	void Put() const;
 };
 
 

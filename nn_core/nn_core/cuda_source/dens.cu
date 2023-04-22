@@ -74,9 +74,9 @@ __global__ void __matmul(
 
 void dens(
 	const cudaStream_t st,
-	const NN_Tensor4D input,
-	const NN_Tensor4D weight,
-	NN_Tensor4D output
+	const CudaTensor input,
+	const CudaTensor weight,
+	CudaTensor output
 ) {
 	//check_dens(input, weight, output);
 

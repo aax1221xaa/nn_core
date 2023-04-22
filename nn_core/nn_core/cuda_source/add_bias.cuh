@@ -6,9 +6,9 @@
 
 void add_bias(
 	cudaStream_t stream,
-	const NN_Tensor4D input,
-	const NN_Tensor4D bias,
-	NN_Tensor4D output
+	const CudaTensor input,
+	const CudaTensor bias,
+	CudaTensor output
 );
 
 #endif // !ADD_BIAS_CUH

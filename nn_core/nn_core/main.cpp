@@ -5,8 +5,43 @@
 
 #include "cpp_source/nn_model.h"
 #include "cpp_source/nn_layer.h"
+#include "cpp_source/mnist.h"
 
+#ifdef FIX_MODE
+int main() {
+	try {
+		/*
+		NN_Manager nn;
 
+		Layer_t x_input = Input({ 784 }, -1, "input");
+		
+		Layer_t x = NN_Creater(NN_Dense(256, "Dens_1"))(x_input);
+		x = NN_Creater(NN_ReLU("ReLU_1"))(x);
+		x = NN_Creater(NN_Dense(128, "Dens_2"))(x);
+		x = NN_Creater(NN_ReLU("ReLU_2"))(x);
+		x = NN_Creater(NN_Dense(64, "Dens_3"))(x);
+		x = NN_Creater(NN_ReLU("ReLU_3"))(x);
+		x = NN_Creater(NN_Dense(32, "Dens_4"))(x);
+		x = NN_Creater(NN_ReLU("ReLU_4"))(x);
+		x = NN_Creater(NN_Dense(10, "Dens_5"))(x);
+		x = NN_Creater(NN_ReLU("ReLU_5"))(x);
+
+		Model model = Model(x_input, x, "model_1");
+
+		model.summary();
+		*/
+		MNIST mnis("E:\\data_set\\mnist", 64);
+	}
+	catch (const Exception& e) {
+		e.Put();
+	}
+
+	return 0;
+}
+
+#endif
+
+#ifndef FIX_MODE
 int main() {
 	
 	NN_Manager nn;
@@ -58,17 +93,6 @@ int main() {
 	model.summary();
 	model_2.summary();
 
-	std::cout << "===========================================" << std::endl;
-
-	NN_Tensor tensor_1;
-	NN_Tensor tensor_2;
-
-	tensor_1.test_value = 1;
-	tensor_2.test_value = 2;
-
-	std::vector<NN_Tensor> result = model_2.predict({ tensor_1, tensor_2 });
-
-	for (NN_Tensor p_result : result) std::cout << p_result.test_value << std::endl;
-
 	return 0;
 }
+#endif

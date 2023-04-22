@@ -36,8 +36,8 @@ __global__ void __relu(
 
 void relu(
 	cudaStream_t stream,
-	const NN_Tensor4D input,
-	NN_Tensor4D output
+	const CudaTensor input,
+	CudaTensor output
 ) {
 	uint input_size = get_elem_size(input);
 	uint output_size = get_elem_size(output);

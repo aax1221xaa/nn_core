@@ -9,7 +9,7 @@ Exception::Exception(const char* message_, const char* file_, int line_) :
 {
 }
 
-void Exception::Put() {
+void Exception::Put() const {
 	printf("================================================================\n");
 	printf("오류 내용: %s\n", message);
 	printf("파일명: %s\n", file);

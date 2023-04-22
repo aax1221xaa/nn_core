@@ -40,11 +40,13 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\CUDA_11_DEBUG.props" />
     <Import Project="..\TBB_DEBUG.props" />
+    <Import Project="..\..\..\..\..\..\OpenCV_Debug.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\CUDA_11_RELEASE.props" />
     <Import Project="..\TBB.props" />
+    <Import Project="..\..\..\..\..\..\OpenCV_Release.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
@@ -78,8 +80,8 @@
     <ClCompile Include="cpp_source\convolution_host.cpp" />
     <ClCompile Include="cpp_source\CudaCheck.cpp" />
     <ClCompile Include="cpp_source\cuda_common.cpp" />
-    <ClCompile Include="cpp_source\Dimension.cpp" />
     <ClCompile Include="cpp_source\Exception.cpp" />
+    <ClCompile Include="cpp_source\mnist.cpp" />
     <ClCompile Include="cpp_source\nn_layer.cpp" />
     <ClCompile Include="cpp_source\nn_link.cpp" />
     <ClCompile Include="cpp_source\nn_manager.cpp" />
@@ -95,19 +97,19 @@
     <ClInclude Include="cpp_source\convolution_host.h" />
     <ClInclude Include="cpp_source\CudaCheck.h" />
     <ClInclude Include="cpp_source\cuda_common.h" />
-    <ClInclude Include="cpp_source\Dimension.h" />
     <ClInclude Include="cpp_source\Exception.h" />
+    <ClInclude Include="cpp_source\mnist.h" />
     <ClInclude Include="cpp_source\nn_layer.h" />
     <ClInclude Include="cpp_source\nn_link.h" />
     <ClInclude Include="cpp_source\nn_manager.h" />
     <ClInclude Include="cpp_source\nn_base_layer.h" />
     <ClInclude Include="cpp_source\nn_loss.h" />
-    <ClInclude Include="cpp_source\nn_ptr.h" />
     <ClInclude Include="cpp_source\nn_model.h" />
     <ClInclude Include="cpp_source\nn_optimizer.h" />
     <ClInclude Include="cpp_source\nn_tensor.h" />
     <ClInclude Include="cpp_source\ObjectID.h" />
     <ClInclude Include="cuda_source\add_bias.cuh" />
+    <ClInclude Include="cuda_source\cast.cuh" />
     <ClInclude Include="cuda_source\convolution.cuh" />
     <ClInclude Include="cuda_source\dens.cuh" />
     <ClInclude Include="cuda_source\maxpool.cuh" />
@@ -116,6 +118,7 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_source\add_bias.cu" />
+    <CudaCompile Include="cuda_source\cast.cu" />
     <CudaCompile Include="cuda_source\convolution.cu" />
     <CudaCompile Include="cuda_source\dens.cu" />
     <CudaCompile Include="cuda_source\maxpool.cu" />

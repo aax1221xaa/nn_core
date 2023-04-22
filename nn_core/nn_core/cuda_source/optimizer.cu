@@ -85,9 +85,9 @@ __global__ void __adam(
 /**********************************************/
 
 void check_sgd(
-	const NN_Tensor4D gradient,
-	const NN_Tensor4D momentum,
-	const NN_Tensor4D weight
+	const CudaTensor gradient,
+	const CudaTensor momentum,
+	const CudaTensor weight
 ) {
 	uint g_size = get_elem_size(gradient);
 	uint m_size = get_elem_size(momentum);
@@ -103,9 +103,9 @@ void check_sgd(
 }
 
 void check_rms_prop(
-	const NN_Tensor4D gradient,
-	const NN_Tensor4D g,
-	const NN_Tensor4D weight
+	const CudaTensor gradient,
+	const CudaTensor g,
+	const CudaTensor weight
 ) {
 	uint g_size = get_elem_size(gradient);
 	uint m_size = get_elem_size(g);
@@ -121,10 +121,10 @@ void check_rms_prop(
 }
 
 void check_adam(
-	const NN_Tensor4D gradient,
-	const NN_Tensor4D square_g,
-	const NN_Tensor4D decay_avg,
-	const NN_Tensor4D weight
+	const CudaTensor gradient,
+	const CudaTensor square_g,
+	const CudaTensor decay_avg,
+	const CudaTensor weight
 ) {
 	uint g_size = get_elem_size(gradient);
 	uint sqg_size = get_elem_size(square_g);
@@ -145,9 +145,9 @@ void check_adam(
 
 void sgd(
 	cudaStream_t stream,
-	const NN_Tensor4D gradient,
-	NN_Tensor4D momentum,
-	NN_Tensor4D weight,
+	const CudaTensor gradient,
+	CudaTensor momentum,
+	CudaTensor weight,
 	float learn_rate,
 	float momentum_rate
 ) {
@@ -170,9 +170,9 @@ void sgd(
 
 void rms_prop(
 	cudaStream_t stream,
-	const NN_Tensor4D gradient,
-	NN_Tensor4D square_g,
-	NN_Tensor4D weight,
+	const CudaTensor gradient,
+	CudaTensor square_g,
+	CudaTensor weight,
 	float decay_rate,
 	float learn_rate
 ) {
@@ -195,10 +195,10 @@ void rms_prop(
 
 void adam(
 	cudaStream_t stream,
-	const NN_Tensor4D gradient,
-	NN_Tensor4D square_g,
-	NN_Tensor4D decay_g,
-	NN_Tensor4D weight,
+	const CudaTensor gradient,
+	CudaTensor square_g,
+	CudaTensor decay_g,
+	CudaTensor weight,
 	float learn_rate,
 	float beta_1,
 	float beta_2
