@@ -84,7 +84,7 @@ public:
 	);
 
 	template <typename d_type>
-	std::vector<Tensor<nn_type>> predict(std::vector<Tensor<d_type>>& x);
+	std::vector<Tensor<nn_type>> predict(const std::initializer_list<Tensor<d_type>>& x);
 	void summary();
 
 	static void check_dimension(const nn_shape& ref_shape, const nn_shape& real_shape);
@@ -106,8 +106,8 @@ std::vector<Tensor<nn_type>> Model::fit(
 }
 
 template <typename d_type>
-std::vector<Tensor<nn_type>> Model::predict(std::vector<Tensor<d_type>>& x) {
-	/*
+std::vector<Tensor<nn_type>> Model::predict(const std::initializer_list<Tensor<d_type>>& x) {
+
 	if (x.size() != _input_nodes.size()) {
 		ErrorExcept(
 			"[Model::predict()] %d input layers are different %d samples.",
@@ -115,24 +115,32 @@ std::vector<Tensor<nn_type>> Model::predict(std::vector<Tensor<d_type>>& x) {
 		);
 	}
 
-	for (int i = 0; i < x.size(); ++i) {
-		_input_nodes[i]->_input.push_back(&x[i]);
+	int i = 0;
+	for (const Tensor<d_type>& x_input : x) {
+		NN_Tensor<d_type> p_input(x_input._shape);
+		copy_to_nn_tensor(x_input, p_input);
+		NN_Tensor<nn_type> *nn_input = new NN_Tensor<nn_type>(p_input.cast<nn_type>());
+
+		_input_nodes[i]->_input.push_back(nn_input);
+		++i;
 	}
 	for (NN_Link* node : _forward_list) {
 		node->_output = node->_forward->run_forward(NN_Manager::_stream, node->_input);
 	}
-	for (NN_Link* p_input : _input_nodes) p_input->_input.clear();
+	for (NN_Link* p_input : _input_nodes) {
+		delete p_input->_input[0];
+		p_input->_input.clear();
+	}
 
-	std::vector<NN_Tensor> output;
+	std::vector<Tensor<nn_type>> output;
 
 	for (NN_Link* node : _output_nodes) {
-		NN_Tensor h_output(device_t::CPU);
-
-		node->_output.copy_to(h_output);
-		output.push_back(h_output);
+		Tensor<nn_type> p_output(node->_output._shape);
+		copy_to_tensor(node->_output, p_output);
+		output.push_back(p_output);
 	}
-	*/
-	return std::vector<Tensor<nn_type>>();
+	
+	return output;
 }
 
 #endif

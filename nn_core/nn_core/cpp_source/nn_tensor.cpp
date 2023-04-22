@@ -4,7 +4,7 @@
 void set_uniform(NN_Tensor<nn_type>& p) {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_real_distribution<float> dis(0.f, 1.f);
+	std::uniform_real_distribution<float> dis(-0.1f, 0.1f);
 
 	size_t size = p._len;
 

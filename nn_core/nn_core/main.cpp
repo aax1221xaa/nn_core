@@ -10,7 +10,7 @@
 #ifdef FIX_MODE
 int main() {
 	try {
-		/*
+		MNIST mnist("E:\\data_set\\mnist", 64);
 		NN_Manager nn;
 
 		Layer_t x_input = Input({ 784 }, -1, "input");
@@ -27,10 +27,24 @@ int main() {
 		x = NN_Creater(NN_ReLU("ReLU_5"))(x);
 
 		Model model = Model(x_input, x, "model_1");
-
 		model.summary();
-		*/
-		MNIST mnis("E:\\data_set\\mnist", 64);
+
+		Tensor<nn_type> sample({ 128, 784 });
+		for (int i = 0; i < 128; ++i) {
+			for (int j = 0; j < 784; ++j) {
+				sample._data[i * 784 + j] = ((float)mnist.train_x._data[i * 784 + j]) / 255.f;
+			}
+		}
+
+		clock_t start = clock();
+		std::vector<Tensor<nn_type>> output = model.predict({ sample });
+		clock_t end = clock();
+
+		//for (Tensor<nn_type>& p_tensor : output) {
+		//	std::cout << p_tensor;
+		//}
+
+		printf("elapse time: %ld ms.\n", end - start);
 	}
 	catch (const Exception& e) {
 		e.Put();

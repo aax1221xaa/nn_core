@@ -6,8 +6,9 @@
 
 void relu(
 	cudaStream_t stream,
-	const CudaTensor input,
-	CudaTensor output
+	const float* input,
+	float* output,
+	cuint len
 );
 
 

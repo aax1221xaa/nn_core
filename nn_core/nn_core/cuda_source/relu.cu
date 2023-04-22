@@ -15,7 +15,7 @@
 /**********************************************/
 
 __global__ void __relu(
-	float* a,
+	const float* a,
 	float* b,
 	const uint length
 ) {
@@ -36,29 +36,18 @@ __global__ void __relu(
 
 void relu(
 	cudaStream_t stream,
-	const CudaTensor input,
-	CudaTensor output
+	const float* input,
+	float* output,
+	cuint len
 ) {
-	uint input_size = get_elem_size(input);
-	uint output_size = get_elem_size(output);
-
-	if (input_size != output_size) {
-		ErrorExcept("[relu] invalid input and output size. %d != %d", input_size, output_size);
-	}
-
-	uint length = input.h * input.w * input.c;
 	dim3 threads(SQR_BLOCK_SIZE);
-	dim3 blocks(get_grid_size(threads, length));
+	dim3 blocks(get_grid_size(threads, len));
 
-	for (int i = 0; i < input.n; ++i) {
-		float* d_in = input.data + (i * length);
-		float* d_out = output.data + (i * length);
-
-		__relu<<<blocks, threads, 0, stream>>>(
-			d_in,
-			d_out,
-			length
+	__relu << <blocks, threads, 0, stream >> > (
+		input,
+		output,
+		len
 		);
-	}
+
 	check_cuda(cudaStreamSynchronize(stream));
 }

@@ -233,22 +233,7 @@ NN_Tensor<nn_type> NN_ReLU::run_forward(cudaStream_t s, std::vector<NN_Tensor<nn
 	float* data = input[0]->_data;
 	NN_Tensor<nn_type> output(input[0]->_shape);
 
-	CudaTensor m_input(
-		data,
-		input[0]->_shape[0],
-		input[0]->_shape[1],
-		input[0]->_shape[2],
-		input[0]->_shape[3]
-	);
-	CudaTensor m_output(
-		output._data,
-		output._shape[0],
-		output._shape[1],
-		output._shape[2],
-		output._shape[3]
-	);
-
-	relu(s, m_input, m_output);
+	relu(s, data, output._data, output._len);
 
 	return output;
 }
