@@ -37,8 +37,9 @@ public:
 	std::vector<NN_Tensor<nn_type>*> _input;
 	NN_Tensor<nn_type> _output;
 
-	std::vector<NN_Tensor<nn_type>*> _d_output;
-	NN_Tensor<nn_type> _d_input;
+	std::vector<NN_Tensor<nn_type>*> _d_inputs;
+	NN_Tensor<nn_type> _d_output;
+	std::vector<NN_Tensor<nn_type>*> _d_outputs;
 
 	std::vector<nn_shape*> _in_shape;
 	nn_shape _out_shape;

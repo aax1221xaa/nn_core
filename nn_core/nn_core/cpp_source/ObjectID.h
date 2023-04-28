@@ -17,6 +17,8 @@ class Object_Linker{
 	Object_ID *head;
 
 public:
+	//static int counts;
+
 	Object_Linker();
 	Object_ID* Create();
 	void Erase(Object_ID *currObj_ID);

@@ -4,7 +4,7 @@
 #define __CUDACC__
 #endif
 
-#include <device_functions.h>
+//#include <device_functions.h>
 #include <device_launch_parameters.h>
 
 
@@ -17,7 +17,7 @@
 __global__ void __relu(
 	const float* a,
 	float* b,
-	const uint length
+	cuint length
 ) {
 	uint cx = blockIdx.x * blockDim.x + threadIdx.x;
 	
@@ -41,7 +41,7 @@ void relu(
 	cuint len
 ) {
 	dim3 threads(SQR_BLOCK_SIZE);
-	dim3 blocks(get_grid_size(threads, len));
+	dim3 blocks = get_grid_size(threads, len);
 
 	__relu << <blocks, threads, 0, stream >> > (
 		input,
@@ -49,5 +49,6 @@ void relu(
 		len
 		);
 
-	check_cuda(cudaStreamSynchronize(stream));
+	//check_cuda(cudaStreamSynchronize(stream));
+	//check_cuda(cudaGetLastError());
 }

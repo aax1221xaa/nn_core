@@ -1,7 +1,10 @@
 #pragma once
+
 #include "cuda_common.h"
 #include "../cuda_source/cast.cuh"
 
+
+#ifdef FIX_MODE
 
 /**********************************************/
 /*                                            */
@@ -17,7 +20,7 @@ protected:
 	static uint calc_addr(
 		const nn_shape& start,
 		const nn_shape& shape,
-		const std::vector<uint>& steps, 
+		const std::vector<uint>& steps,
 		const nn_shape& indices
 	);
 
@@ -249,7 +252,7 @@ void Tensor<_T>::put(std::ostream& os) const {
 		os << _data[i] << ", ";
 		++i;
 
-		for (const uint& n :indicator) {
+		for (const uint& n : indicator) {
 			if (i % n == 0) {
 				os << "], ";
 				end_flag = true;
@@ -336,7 +339,7 @@ Tensor<_T>& Tensor<_T>::slice(nn_shape&& start, nn_shape&& end) {
 	// origin: [64, 28, 28, 3]
 	// slice: [-1. 9, 9, -1] ~ [-1, 19, 19, -1]
 	// out: [64, 10, 10, 3]
-	
+
 	return *this;
 }
 
@@ -455,7 +458,7 @@ NN_Tensor<_T>::NN_Tensor() :
 }
 
 template <typename _T>
-NN_Tensor<_T>::NN_Tensor( const nn_shape& shape) :
+NN_Tensor<_T>::NN_Tensor(const nn_shape& shape) :
 	_data(NULL),
 	_elem_size(sizeof(_T)),
 	_len(0),
@@ -465,7 +468,7 @@ NN_Tensor<_T>::NN_Tensor( const nn_shape& shape) :
 	try {
 		_len = calc_len_size(_shape);
 		_steps = calc_steps(_shape);
-		
+
 		check_cuda(cudaMalloc(&_data, sizeof(_T) * _len));
 
 		if (_data == NULL) {
@@ -478,6 +481,7 @@ NN_Tensor<_T>::NN_Tensor( const nn_shape& shape) :
 		id = linker.Create();
 	}
 	catch (const Exception& e) {
+		cudaFree(_data);
 		_data = NULL;
 		_len = 0;
 		_shape.clear();
@@ -588,7 +592,7 @@ void NN_Tensor<_T>::set(const nn_shape& shape) {
 		_len = calc_len_size(_shape);
 		_steps = calc_steps(_shape);
 		_start = nn_shape(shape.size(), 0);
-		
+
 		check_cuda(cudaMalloc(&_data, sizeof(_T) * _len));
 
 		if (_data == NULL) {
@@ -660,7 +664,6 @@ void copy_to_nn_tensor(const Tensor<_T>& src, NN_Tensor<_T>& dst) {
 			src._len, dst._len
 		);
 	}
-
 	check_cuda(cudaMemcpy(dst._data, src._data, sizeof(_T) * src._len, cudaMemcpyHostToDevice));
 }
 
@@ -674,8 +677,119 @@ void copy_to_tensor(const NN_Tensor<_T>& src, Tensor<_T>& dst) {
 			src._len, dst._len
 		);
 	}
-
 	check_cuda(cudaMemcpy(dst._data, src._data, sizeof(_T) * src._len, cudaMemcpyDeviceToHost));
 }
 
 void set_uniform(NN_Tensor<nn_type>& p);
+
+#endif
+
+#ifndef FIX_MODE
+/**********************************************/
+/*                                            */
+/*                 TensorBase                 */
+/*                                            */
+/**********************************************/
+
+enum class DType { none, boolean, int8, uint8, int16, uint16, int32, uint32, float32, float64 };
+
+class TensorBase {
+protected:
+	static DType get_type(bool* data);
+	static DType get_type(char* data);
+	static DType get_type(uchar* data);
+	static DType get_type(short* data);
+	static DType get_type(ushort* data);
+	static DType get_type(int* data);
+	static DType get_type(uint* data);
+	static DType get_type(float* data);
+	static DType get_type(double* data);
+
+	static size_t get_bytes(DType dtype);
+	static uint calc_len_size(const nn_shape& shape);
+	static std::vector<uint> calc_steps(const nn_shape& shape);
+
+public:
+	DType _dtype;
+	
+	size_t _elem_size;
+	uint _len;
+
+	nn_shape _shape;
+	std::vector<uint> _start;
+	std::vector<uint> _steps;
+	uint _offset;
+	
+
+	TensorBase();
+	TensorBase(const TensorBase& p);
+	TensorBase(const nn_shape& shape, DType dtype);
+	virtual ~TensorBase();
+};
+
+/**********************************************/
+/*                                            */
+/*                 CPU_Tensor                 */
+/*                                            */
+/**********************************************/
+
+class CPU_Tensor : public TensorBase, public NN_Shared_Ptr {
+protected:
+	static void left_cast(CPU_Tensor& dst, const CPU_Tensor& src);
+	
+	template <typename LT>
+	static void right_cast(
+		void* dst, 
+		void* src, 
+		const uint* dst_indice, 
+		const uint* src_indice, 
+		DType src_type, 
+		uint len
+	);
+
+	template <typename LT, typename RT>
+	static void trans_cast(void* dst, void* src, const uint* dst_indice, const uint* src_indice, uint len);
+	
+	static void put_boolean(std::ostream& os,  void* data);
+	static void put_int8(std::ostream& os, void* data);
+	static void put_uint8(std::ostream& os, void* data);
+	static void put_int16(std::ostream& os, void* data);
+	static void put_uint16(std::ostream& os, void* data);
+	static void put_int32(std::ostream& os, void* data);
+	static void put_uint32(std::ostream& os, void* data);
+	static void put_float32(std::ostream& os, void* data);
+	static void put_float64(std::ostream& os, void* data);
+
+public:
+	void* _data;
+
+	CPU_Tensor();
+	CPU_Tensor(const nn_shape& shape, DType dtype);
+	CPU_Tensor(const CPU_Tensor& p);
+	CPU_Tensor(CPU_Tensor&& p);
+	~CPU_Tensor();
+
+	const CPU_Tensor& operator=(const CPU_Tensor&p);
+	const CPU_Tensor& operator=(CPU_Tensor&& p);
+
+	CPU_Tensor cast(DType dtype);
+	void clear();
+	void set(const nn_shape& shape, DType dtype);
+
+	CPU_Tensor slice(const nn_shape& begin, const nn_shape& end, bool keep_dims = false);
+
+	void put(std::ostream& os) const;
+
+	static CPU_Tensor zeros(const nn_shape& shape, DType dtype);
+	static CPU_Tensor zeros_like(const CPU_Tensor tensor, DType dtype);
+};
+
+std::ostream& operator<<(std::ostream& os, const CPU_Tensor& tensor);
+
+/**********************************************/
+/*                                            */
+/*                  NN_Tensor                 */
+/*                                            */
+/**********************************************/
+
+#endif

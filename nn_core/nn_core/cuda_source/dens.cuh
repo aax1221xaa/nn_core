@@ -12,7 +12,7 @@
 /**********************************************/
 
 void dens(
-	const cudaStream_t st,
+	cudaStream_t st,
 	const CudaTensor input,
 	const CudaTensor weight,
 	CudaTensor output

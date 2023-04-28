@@ -1,7 +1,14 @@
 #include "mnist.h"
 
 
-MNIST::MNIST(const char* dir, int batch) {
+MNIST::MNIST(const char* dir, int batch, bool do_shuffle) :
+	_do_shuffle(do_shuffle),
+	_batch(batch),
+	_train_max_iter(0),
+	_test_max_iter(0),
+	_train_iter_cnt(0),
+	_test_iter_cnt(0)
+{
 	try {
 		char train_image[128] = { '\0', };
 		char train_label[128] = { '\0', };
@@ -23,6 +30,8 @@ MNIST::MNIST(const char* dir, int batch) {
 		load_file(train_image, train_label, train_x, train_y);
 		load_file(test_image, test_label, test_x, test_y);
 
+		_train_max_iter =  (int)ceil((float)train_x._shape[0] / _batch);
+		_test_max_iter = (int)ceil((float)test_x._shape[0] / _batch);
 	}
 	catch (const Exception& e) {
 		e.Put();
@@ -98,3 +107,13 @@ void MNIST::load_file(const char* image_file, const char* label_file, Tensor<uch
 		throw e;
 	}
 }
+
+/*
+std::vector<Tensor<uchar>> MNIST::train_iter() {
+	
+}
+
+std::vector<Tensor<uchar>> MNIST::test_iter() {
+
+}
+*/

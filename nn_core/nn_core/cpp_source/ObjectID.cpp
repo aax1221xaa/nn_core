@@ -1,6 +1,8 @@
 #include "ObjectID.h"
 
 
+//int Object_Linker::counts = 0;
+
 Object_Linker::Object_Linker(){
 	head = new Object_ID;
 
@@ -24,6 +26,8 @@ Object_ID* Object_Linker::Create(){
 
 	current->ref_cnt = 1;
 
+	//++counts;
+
 	return current;
 }
 
@@ -35,6 +39,8 @@ void Object_Linker::Erase(Object_ID *currObj_ID){
 
 	before->next = after;
 	after->prev = before;
+
+	//--counts;
 
 	delete currObj_ID;
 }

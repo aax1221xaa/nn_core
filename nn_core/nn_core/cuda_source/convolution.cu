@@ -87,7 +87,7 @@ __global__ void __correl_2d(
 	cuint x0 = cx % din_w;
 	cuint y0 = cx / din_w;
 
-	cuint n = dk_w * dk_h * dk_c;
+	//cuint n = dk_w * dk_h * dk_c;
 	cuint tn = dk_w * dk_h * dk_n;
 	cuint k = din_w * din_h;
 

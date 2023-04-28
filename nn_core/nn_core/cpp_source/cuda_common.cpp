@@ -36,12 +36,12 @@ const char* dimension_to_str(const nn_shape& shape) {
 	return p_buff;
 }
 
-dim3 get_grid_size(const dim3 block, uint x, uint y, uint z) {
-	dim3 grid = {
+dim3 get_grid_size(const dim3 block, unsigned int x, unsigned int y, unsigned int z) {
+	dim3 grid(
 		(x + block.x - 1) / block.x,
 		(y + block.y - 1) / block.y,
 		(z + block.z - 1) / block.z
-	};
+	);
 
 	return grid;
 }
@@ -53,6 +53,6 @@ NN_Shared_Ptr::NN_Shared_Ptr() :
 {
 }
 
-const size_t get_elem_size(const CudaTensor& tensor) {
-	return size_t(tensor.h * tensor.c * tensor.h * tensor.w);
+uint get_elem_size(const CudaTensor& tensor) {
+	return uint(tensor.h * tensor.c * tensor.h * tensor.w);
 }

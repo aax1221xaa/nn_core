@@ -115,7 +115,7 @@ Model::Model(const Layer_t& inputs, const Layer_t& outputs, const char* model_na
 
 		/*   first calculate output size   */
 		for (NN_Link* p_child : _forward_list) {
-			p_child->_out_shape = p_child->_forward->calculate_output_size(p_child->_in_shape);
+			 p_child->_forward->calculate_output_size(p_child->_in_shape, p_child->_out_shape);
 
 			for (const int& n : p_child->_out_shape) {
 				if (n < -1 || n == 0) {
@@ -139,8 +139,7 @@ Model::Model(const Layer_t& inputs, const Layer_t& outputs, const char* model_na
 }
 
 Model::~Model() {
-	//for (NN_Link* p : _forward_list) delete p;
-	//for (NN_Link* p : _backward_list) delete p;
+	for (NN_Tensor<nn_type>* p : _d_outputs) delete p;
 }
 
 NN_Link* Model::create_child() {
@@ -231,7 +230,7 @@ NN_Tensor<nn_type>& Model::get_output(int node_index) {
 }
 
 std::vector<NN_Tensor<nn_type>*>& Model::get_d_output(int node_index) {
-	return _output_nodes[node_index]->_d_output;
+	return _output_nodes[node_index]->_d_outputs;
 }
 
 nn_shape& Model::get_out_shape(int node_index) {
@@ -250,19 +249,21 @@ void Model::link_prev_child() {
 			_prev.push_back(p_prev_child);
 			_input_nodes[i]->_input.push_back(&p_prev_child->get_output(n_prev_child));
 			_input_nodes[i]->_in_shape.push_back(&p_prev_child->get_out_shape(n_prev_child));
-			p_prev_child->get_d_output(n_prev_child).push_back(&_input_nodes[i]->_d_input);
+
+			NN_Tensor<nn_type>* pd_input = new NN_Tensor<nn_type>();
+
+			_input_nodes[i]->_d_inputs.push_back(pd_input);
+			p_prev_child->get_d_output(n_prev_child).push_back(pd_input);
 
 			++i;
 		}
 	}
 }
 
-nn_shape Model::calculate_output_size(std::vector<nn_shape*>& input_shape) {
+void Model::calculate_output_size(std::vector<nn_shape*>& input_shape, nn_shape& out_shape) {
 	for (NN_Link* p_link : _forward_list) {
-		p_link->_out_shape = p_link->_forward->calculate_output_size(p_link->_in_shape);
+		p_link->_forward->calculate_output_size(p_link->_in_shape, p_link->_out_shape);
 	}
-
-	return nn_shape();
 }
 
 void Model::build(std::vector<nn_shape*>& input_shape) {
@@ -271,19 +272,14 @@ void Model::build(std::vector<nn_shape*>& input_shape) {
 	}
 }
 
-NN_Tensor<nn_type> Model::run_forward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& input) {
+void Model::run_forward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output) {
 	for (NN_Link* p_node : _forward_list) {
-		std::vector<NN_Tensor<nn_type>*>& input = p_node->_input;
-		NN_Tensor<nn_type>& output = p_node->_output;
-
-		output = p_node->_forward->run_forward(s, input);
+		p_node->_forward->run_forward(s, p_node->_input, p_node->_output);
 	}
-
-	return NN_Tensor<nn_type>();
 }
 
-NN_Tensor<nn_type> Model::run_backward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& d_output) {
-	return NN_Tensor<nn_type>();
+void Model::run_backward(cudaStream_t s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input) {
+	
 }
 
 void Model::compile(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer) {

@@ -18,6 +18,12 @@
     <CudaLink>
       <Optimization>O2</Optimization>
     </CudaLink>
+    <ClCompile>
+      <Optimization>Full</Optimization>
+    </ClCompile>
+    <ClCompile>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

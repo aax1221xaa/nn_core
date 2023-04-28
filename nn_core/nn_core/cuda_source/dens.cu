@@ -39,6 +39,7 @@ __global__ void __matmul(
 
 		__syncthreads();
 
+#pragma unroll
 		for (int e = 0; e < BLOCK_SIZE; ++e) {
 			val += sm_a[threadIdx.y * BLOCK_SIZE + e] * sm_b[e * BLOCK_SIZE + threadIdx.x];
 		}
@@ -73,7 +74,7 @@ __global__ void __matmul(
 //}
 
 void dens(
-	const cudaStream_t st,
+	cudaStream_t st,
 	const CudaTensor input,
 	const CudaTensor weight,
 	CudaTensor output
@@ -92,5 +93,6 @@ void dens(
 		output.c
 	);
 
-	check_cuda(cudaStreamSynchronize(st));
+	//check_cuda(cudaStreamSynchronize(st));
+	//check_cuda(cudaGetLastError());
 }

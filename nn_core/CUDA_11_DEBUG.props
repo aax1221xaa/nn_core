@@ -12,6 +12,12 @@
     <Link>
       <AdditionalDependencies>cuda.lib;cudart.lib;cudnn.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <ClCompile>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

@@ -16,11 +16,12 @@ NN_Link::NN_Link() :
 	_backward(NULL),
 	_parent(NULL),
 	_output(),
-	_d_input()
+	_d_output()
 {
 }
 
 NN_Link::~NN_Link() {
+	for (NN_Tensor<nn_type>* p : _d_outputs) delete p;
 
 }
 
@@ -64,7 +65,7 @@ NN_Tensor<nn_type>& NN_Link::get_output(int node_index) {
 }
 
 std::vector<NN_Tensor<nn_type>*>& NN_Link::get_d_output(int node_index) {
-	return _d_output;
+	return _d_outputs;
 }
 
 nn_shape& NN_Link::get_out_shape(int node_index) {
@@ -82,7 +83,11 @@ void NN_Link::link_prev_child() {
 			_prev.push_back(p_prev_child);
 			_input.push_back(&p_prev_child->get_output(n_prev_child));
 			_in_shape.push_back(&p_prev_child->get_out_shape(n_prev_child));
-			p_prev_child->get_d_output(n_prev_child).push_back(&_d_input);
+
+			NN_Tensor<nn_type>* pd_input = new NN_Tensor<nn_type>();
+
+			_d_inputs.push_back(pd_input);
+			p_prev_child->get_d_output(n_prev_child).push_back(pd_input);
 		}
 	}
 }

@@ -15,36 +15,43 @@ int main() {
 
 		Layer_t x_input = Input({ 784 }, -1, "input");
 		
-		Layer_t x = NN_Creater(NN_Dense(256, "Dens_1"))(x_input);
+		Layer_t x = NN_Creater(NN_Dens(512, "Dense_7"))(x_input);
+		x = NN_Creater(NN_ReLU("ReLU_7"))(x);
+		x = NN_Creater(NN_Dens(256, "Dens_1"))(x);
 		x = NN_Creater(NN_ReLU("ReLU_1"))(x);
-		x = NN_Creater(NN_Dense(128, "Dens_2"))(x);
+		x = NN_Creater(NN_Dens(128, "Dens_2"))(x);
+		x = NN_Creater(NN_ReLU("ReLU_8"))(x);
+		x = NN_Creater(NN_Dens(64, "Dens_6"))(x);
 		x = NN_Creater(NN_ReLU("ReLU_2"))(x);
-		x = NN_Creater(NN_Dense(64, "Dens_3"))(x);
-		x = NN_Creater(NN_ReLU("ReLU_3"))(x);
-		x = NN_Creater(NN_Dense(32, "Dens_4"))(x);
-		x = NN_Creater(NN_ReLU("ReLU_4"))(x);
-		x = NN_Creater(NN_Dense(10, "Dens_5"))(x);
+		x = NN_Creater(NN_Dens(10, "Dens_5"))(x);
 		x = NN_Creater(NN_ReLU("ReLU_5"))(x);
 
 		Model model = Model(x_input, x, "model_1");
 		model.summary();
 
-		Tensor<nn_type> sample({ 128, 784 });
-		for (int i = 0; i < 128; ++i) {
-			for (int j = 0; j < 784; ++j) {
+		Tensor<nn_type> x_tensor({ 60000, 784 });
+
+		for (uint i = 0; i < x_tensor._len; ++i) x_tensor._data[i] = mnist.train_x._data[i] / 255.f;
+		
+		clock_t start = clock();
+		std::vector<Tensor<nn_type>> output = model.predict<nn_type>(x_tensor, 128, 60000 / 128);
+		clock_t end = clock();
+
+		printf("elapsed time: %ld ms.\n", end - start);
+		
+
+		/*
+		for (uint i = 0; i < 128; ++i) {
+			for (uint j = 0; j < 784; ++j) {
 				sample._data[i * 784 + j] = ((float)mnist.train_x._data[i * 784 + j]) / 255.f;
 			}
 		}
-
 		clock_t start = clock();
 		std::vector<Tensor<nn_type>> output = model.predict({ sample });
 		clock_t end = clock();
 
-		//for (Tensor<nn_type>& p_tensor : output) {
-		//	std::cout << p_tensor;
-		//}
-
-		printf("elapse time: %ld ms.\n", end - start);
+		printf("\n\nelapsed time: %ld ms.\n", end - start);
+		*/
 	}
 	catch (const Exception& e) {
 		e.Put();
