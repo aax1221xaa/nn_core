@@ -8,6 +8,7 @@ void __checkCUDA(cudaError_t status, const char *file, int line) {
 	}
 }
 
+/*
 void __checkCUDNN(cudnnStatus_t status, const char *file, int line) {
 	char message[200] = { '\0', };
 
@@ -15,3 +16,4 @@ void __checkCUDNN(cudnnStatus_t status, const char *file, int line) {
 		__ErrorException(file, line, "[CUDNN ERROR] script=%s", cudnnGetErrorString(status));
 	}
 }
+*/

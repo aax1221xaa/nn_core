@@ -1,7 +1,7 @@
 #include "nn_manager.h"
 
 
-cudaStream_t NN_Manager::_stream = NULL;
+cudaStream_t NN_Manager::_stream[STREAMS] = { NULL, };
 std::vector<NN_Link*> NN_Manager::_nodes;
 std::vector<NN_Layer*> NN_Manager::_layers;
 bool NN_Manager::condition = false;
@@ -16,14 +16,17 @@ void NN_Manager::add_layer(NN_Layer* p_layer) {
 
 NN_Manager::NN_Manager() {
 	try {
-		_stream = NULL;
-		check_cuda(cudaStreamCreate(&_stream));
+		for (int i = 0; i < STREAMS; ++i) check_cuda(cudaStreamCreate(&_stream[i]));
+		
 		condition = true;
 	}
 	catch (const Exception& e) {
 		condition = false;
-		_stream = NULL;
-
+		
+		for (int i = 0; i < STREAMS; ++i) {
+			cudaStreamDestroy(_stream[i]);
+			_stream[i] = NULL;
+		}
 		e.Put();
 	}
 }
@@ -51,15 +54,16 @@ NN_Manager::~NN_Manager() {
 		}
 
 		for (NN_Layer* p_layer : _layers) delete p_layer;
-		
-		check_cuda(cudaStreamDestroy(_stream));
+		for (int i = 0; i < STREAMS; ++i) {
+			check_cuda(cudaStreamDestroy(_stream[i]));
+			_stream[i] = NULL;
+		}
 	}
 	catch (Exception& e) {
 		e.Put();
 	}
 
 	condition = false;
-	_stream = NULL;
 }
 
 void NN_Manager::clear_select_mask() {

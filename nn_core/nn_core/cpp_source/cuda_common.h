@@ -17,6 +17,8 @@
 
 #define EPSILON					1e-8
 
+#define STREAMS					32
+
 #define FIX_MODE
 
 typedef const int cint;
@@ -59,7 +61,7 @@ struct CudaTensor {
 	int h;
 	int w;
 
-	CudaTensor(float* _data, int _n, int _h, int _w, int _c) {
+	CudaTensor(float* _data, int _n, int _c, int _h, int _w) {
 		data = _data;
 		n = _n;
 		c = _c;

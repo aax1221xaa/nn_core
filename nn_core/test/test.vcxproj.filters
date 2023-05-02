@@ -53,7 +53,7 @@
     <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\nn_core\cuda_source\cast.cuh">
+    <ClInclude Include="..\nn_core\cuda_source\convolution.cuh">
       <Filter>cuda헤더</Filter>
     </ClInclude>
     <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h">
@@ -61,7 +61,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="..\nn_core\cuda_source\cast.cu">
+    <CudaCompile Include="..\nn_core\cuda_source\convolution.cu">
       <Filter>cuda소스</Filter>
     </CudaCompile>
   </ItemGroup>

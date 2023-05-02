@@ -85,7 +85,7 @@ void MNIST::load_file(const char* image_file, const char* label_file, Tensor<uch
 			ErrorExcept("[MNIST::MNIST()] mismatched image and label amounts. image: %d, label: %d", sample_cnt, label_param[1].buff32);
 		}
 
-		nn_shape shape({ sample_cnt, height, width, 1 });
+		nn_shape shape({ sample_cnt, 1, height, width });
 		image.set(shape);
 		truth.set({ sample_cnt, 1 });
 

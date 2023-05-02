@@ -12,7 +12,7 @@ class NN_Manager {
 public:
 	typedef float nn_type;
 
-	static cudaStream_t _stream;
+	static cudaStream_t _stream[STREAMS];
 	static std::vector<NN_Link*> _nodes;
 	static std::vector<NN_Layer*> _layers;
 

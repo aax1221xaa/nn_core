@@ -4,7 +4,7 @@
 #define __CUDACC__
 #endif
 
-//#include <device_functions.h>
+#include <device_functions.h>
 #include <device_launch_parameters.h>
 
 
@@ -97,7 +97,7 @@ int calc_shared_mem_size(
 //}
 
 void maxpool_2d(
-	cudaStream_t stream,
+	cudaStream_t* stream,
 	CudaTensor input,
 	CudaTensor output,
 	int kernel_w,
@@ -127,7 +127,7 @@ void maxpool_2d(
 		float* d_in = input.data + (i * input.h * input.w * input.c);
 		float* d_out = output.data + (i * output.h * output.w * output.c);
 
-		__maxpool_2d << <blocks, threads, smem_size, stream >> > (
+		__maxpool_2d << <blocks, threads, smem_size, stream[i % STREAMS] >> > (
 			d_in,
 			d_out,
 			input.w,
@@ -143,6 +143,4 @@ void maxpool_2d(
 			share_h
 			);
 	}
-
-	check_cuda(cudaStreamSynchronize(stream));
 }

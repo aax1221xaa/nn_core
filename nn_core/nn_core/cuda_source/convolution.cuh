@@ -4,7 +4,6 @@
 #include "../cpp_source/nn_tensor.h"
 
 
-
 /**********************************************/
 /*											  */
 /*				  host function 			  */
@@ -19,7 +18,7 @@
 //);
 
 void conv_2d(
-	cudaStream_t stream,
+	cudaStream_t* streams,
 	const CudaTensor d_input,
 	const CudaTensor d_kernel,
 	CudaTensor d_output,
@@ -49,11 +48,22 @@ void dilation_2d(
 	int offset_y
 );
 
+void padding_conv_2d(
+	cudaStream_t* s,
+	const CudaTensor d_input,
+	CudaTensor d_pad,
+	const CudaTensor d_kernel,
+	CudaTensor d_output,
+	int st_w,
+	int st_h
+);
+
 void kernel_conv_2d(
 	cudaStream_t stream,
 	const CudaTensor d_doutput,
 	const CudaTensor d_input,
 	CudaTensor d_gradient
 );
+
 
 #endif // !_CONVOLUTION_CUH_

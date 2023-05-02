@@ -11,7 +11,7 @@
 /*										      */
 /**********************************************/
 
-void dens(
+void dense(
 	cudaStream_t st,
 	const CudaTensor input,
 	const CudaTensor weight,
