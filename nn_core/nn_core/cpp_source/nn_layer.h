@@ -56,6 +56,7 @@ public:
 
 	void calculate_output_size(std::vector<nn_shape*>& input_shape, nn_shape& out_shape);
 	void build(std::vector<nn_shape*>& input_shape);
+	void set_io(nn_shape& out_shape, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output);
 	void run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output);
 	void run_backward(cudaStream_t* s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input);
 };
@@ -124,7 +125,12 @@ public:
 enum class Pad{VALID, SAME};
 
 class NN_Conv2D : public NN_Layer {
+protected:
+	static size_t const_offset_cnt;
+
 public:
+	size_t const_offset;
+
 	NN_Tensor<nn_type> pad;
 
 	NN_Tensor<nn_type> _kernel;
@@ -158,6 +164,7 @@ public:
 
 	void calculate_output_size(std::vector<nn_shape*>& input_shape, nn_shape& out_shape);
 	void build(std::vector<nn_shape*>& input_shape);
+	void set_io(nn_shape& out_shape, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output);
 	void run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output);
 	void run_backward(cudaStream_t* s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input);
 };

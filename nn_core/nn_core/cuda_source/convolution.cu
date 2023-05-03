@@ -30,7 +30,8 @@ __global__ void __conv_2d(
 	cuint out_w,
 	cuint out_h,
 	cuint st_w,
-	cuint st_h
+	cuint st_h,
+	cuint indice_offset
 ) {
 	cuint cx = blockIdx.x * blockDim.x + threadIdx.x;
 	cuint cy = blockIdx.y * blockDim.y + threadIdx.y;
@@ -61,7 +62,7 @@ __global__ void __conv_2d(
 		th_x = i + threadIdx.x;
 		th_y = i + threadIdx.y;
 		in_ch_start = (th_y / khw) * in_wh;
-		in_k_index = th_y % khw;
+		in_k_index = th_y % khw + indice_offset;
 
 		__syncthreads();
 
@@ -311,6 +312,14 @@ __global__ void __padding_2d(
 /*										      */
 /**********************************************/
 
+void copy_to_indice(
+	const uint* indice,
+	const size_t size,
+	const size_t offset
+) {
+	check_cuda(cudaMemcpyToSymbol(__indice, indice, size, offset));
+}
+
 /*                convolution_2d              */
 
 void conv_2d(
@@ -319,7 +328,8 @@ void conv_2d(
 	const CudaTensor d_kernel,
 	CudaTensor d_output,
 	int st_w,
-	int st_h
+	int st_h,
+	int indice_offset
 ) {
 	//check_conv_2d(
 	//	d_input,
@@ -328,23 +338,6 @@ void conv_2d(
 	//	st_w,
 	//	st_h
 	//);
-
-	uint* indice = new uint[d_kernel.h * d_kernel.w];
-
-	for (uint h = 0; h < d_kernel.h; ++h) {
-		for (uint w = 0; w < d_kernel.w; ++w) {
-			indice[h * d_kernel.w + w] = (h * d_input.w) + w;
-		}
-	}
-
-	check_cuda(cudaMemcpyToSymbol(
-		__indice, 
-		indice, 
-		sizeof(uint) * d_kernel.h * d_kernel.w, 
-		0
-	));
-
-	delete[] indice;
 
 	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, d_output.w * d_output.h, d_output.c);
@@ -366,7 +359,8 @@ void conv_2d(
 			d_output.w,
 			d_output.h,
 			st_w,
-			st_h
+			st_h,
+			indice_offset
 			);
 	}
 }
@@ -498,7 +492,8 @@ void padding_conv_2d(
 	const CudaTensor d_kernel,
 	CudaTensor d_output,
 	int st_w,
-	int st_h
+	int st_h,
+	int indice_offset
 ) {
 	cuint off_x = (d_pad.w - d_input.w) / 2;
 	cuint off_y = (d_pad.h - d_input.h) / 2;
@@ -555,7 +550,8 @@ void padding_conv_2d(
 			d_output.w,
 			d_output.w,
 			st_w,
-			st_h
+			st_h,
+			indice_offset
 		);
 	}
 }

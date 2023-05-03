@@ -73,6 +73,13 @@ void NN_Input::build(std::vector<nn_shape*>& input_shape) {
 
 }
 
+void NN_Input::set_io(nn_shape& out_shape, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output) {
+	NN_Tensor<nn_type>& _input = *input[0];
+
+	output = _input;
+	output._shape = out_shape;
+}
+
 void NN_Input::run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output) {
 	//check_cuda(cudaMemcpy(output._data, input[0]->_data, output._elem_size * output._len, cudaMemcpyDeviceToDevice));
 }
@@ -260,13 +267,16 @@ void NN_ReLU::run_backward(cudaStream_t* s, NN_Tensor<nn_type>& d_output, std::v
 /*                                            */
 /**********************************************/
 
+size_t NN_Conv2D::const_offset_cnt = 0;
+
 NN_Conv2D::NN_Conv2D(int amounts, const nn_shape& kernel_size, const nn_shape& strides, Pad pad, const char* name) :
 	NN_Layer(name),
 	_amounts(amounts),
 	_kernel_size(kernel_size),
 	_strides(strides),
 	_pad(pad),
-	_do_padding(false)
+	_do_padding(false),
+	const_offset(0)
 {
 }
 
@@ -323,8 +333,23 @@ void NN_Conv2D::calculate_output_size(std::vector<nn_shape*>& input_shape, nn_sh
 void NN_Conv2D::build(std::vector<nn_shape*>& input_shape) {
 	nn_shape& shape = *input_shape[0];
 
-	_kernel.set({ _amounts, shape[3], _kernel_size[1], _kernel_size[0] });
+	_kernel.set({ _amounts, shape[1], _kernel_size[1], _kernel_size[0] });
 	_bias.set({ _amounts });
+
+	size_t indice_size = (size_t)(_kernel_size[1] * _kernel_size[0]);
+	uint* indice = new uint[indice_size];
+
+	for (int y = 0; y < _kernel_size[1]; ++y) {
+		for (int x = 0; x < _kernel_size[0]; ++x) {
+			indice[y * _kernel_size[0] + x] = uint(y * shape[3] + x);
+		}
+	}
+
+	copy_to_indice(indice, sizeof(uint) * indice_size, sizeof(uint) * const_offset_cnt);
+	const_offset = const_offset_cnt;
+	const_offset_cnt += indice_size;
+
+	delete[] indice;
 }
 
 void NN_Conv2D::run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output) {
@@ -356,7 +381,8 @@ void NN_Conv2D::run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& i
 			d_kernel,
 			d_output,
 			_strides[0],
-			_strides[1]
+			_strides[1],
+			const_offset
 		);
 	}
 	else {
@@ -366,7 +392,8 @@ void NN_Conv2D::run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& i
 			d_kernel,
 			d_output,
 			_strides[0],
-			_strides[1]
+			_strides[1],
+			const_offset
 		);
 	}
 }
@@ -399,8 +426,15 @@ void NN_Flatten::build(std::vector<nn_shape*>& input_shape) {
 
 }
 
+void NN_Flatten::set_io(nn_shape& out_shape, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output) {
+	NN_Tensor<nn_type>& _input = *input[0];
+
+	output = _input;
+	output._shape = out_shape;
+}
+
 void NN_Flatten::run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output) {
-	check_cuda(cudaMemcpy(output._data, input[0]->_data, output._elem_size * output._len, cudaMemcpyDeviceToDevice));
+	//check_cuda(cudaMemcpy(output._data, input[0]->_data, output._elem_size * output._len, cudaMemcpyDeviceToDevice));
 }
 
 void NN_Flatten::run_backward(cudaStream_t* s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input) {

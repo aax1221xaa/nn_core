@@ -128,19 +128,12 @@ std::vector<Tensor<nn_type>> Model::predict(
 		for (int j = 1; j < x[i].get()._shape.size(); ++j) x_shape->push_back(x[i].get()._shape[j]);
 
 		_input_nodes[i]->_in_shape.push_back(x_shape);
+		_input_nodes[i]->_input.push_back(new NN_Tensor<nn_type>(*x_shape));
 	}
 
-	//printf("%s\n", dimension_to_str(*_input_nodes[0]->_in_shape[0]));
-	
-
 	for (NN_Link* node : _forward_list) {
-		//printf("name= %s, input dimension= %s\n", node->_forward->_layer_name, dimension_to_str(*node->_in_shape[0]));
 		node->_forward->calculate_output_size(node->_in_shape, node->_out_shape);
-	}
-
-	for (NN_Link* node : _forward_list) {
-		//printf("name= %s, dimension= %s\n", node->_forward->_layer_name, dimension_to_str(node->_out_shape));
-		node->_output = NN_Tensor<nn_type>::zeros(node->_out_shape);
+		node->_forward->set_io(node->_out_shape, node->_input, node->_output);
 	}
 
 	std::vector<Tensor<nn_type>> output;
@@ -161,11 +154,11 @@ std::vector<Tensor<nn_type>> Model::predict(
 				nn_type* p_data = new nn_type[data_size];
 
 				for (uint k = 0; k < data_size; ++k) p_data[k] = (nn_type)(x[j].get()._data[data_size * i + k]);
-				check_cuda(cudaMemcpy(_input_nodes[j]->_output._data, p_data, sizeof(nn_type) * data_size, cudaMemcpyHostToDevice));
+				check_cuda(cudaMemcpy(_input_nodes[j]->_input[0]->_data, p_data, sizeof(nn_type) * data_size, cudaMemcpyHostToDevice));
 
 				delete[] p_data;
 			}
-			else check_cuda(cudaMemcpy(_input_nodes[j]->_output._data, x[j].get()._data + (data_size * i), sizeof(nn_type) * data_size, cudaMemcpyHostToDevice));
+			else check_cuda(cudaMemcpy(_input_nodes[j]->_input[0]->_data, x[j].get()._data + (data_size * i), sizeof(nn_type) * data_size, cudaMemcpyHostToDevice));
 		}
 
 		for (NN_Link* node : _forward_list) node->_forward->run_forward(NN_Manager::_stream, node->_input, node->_output);
@@ -180,9 +173,10 @@ std::vector<Tensor<nn_type>> Model::predict(
 	}
 
 	for (NN_Link* node : _input_nodes) {
-		for (nn_shape* shape : node->_in_shape) {
-			delete shape;
-		}
+		for (NN_Tensor<nn_type>* tensor : node->_input) delete tensor;
+		for (nn_shape* shape : node->_in_shape) delete shape;
+
+		node->_input.clear();
 		node->_in_shape.clear();
 	}
 	

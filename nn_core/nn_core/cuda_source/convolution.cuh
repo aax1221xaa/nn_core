@@ -10,12 +10,11 @@
 /*										      */
 /**********************************************/
 
-//int get_output_size(
-//	int input_size,
-//	int kernel_size,
-//	int pad_size,
-//	int stride
-//);
+void copy_to_indice(
+	const uint* indice,
+	const size_t size,
+	const size_t offset
+);
 
 void conv_2d(
 	cudaStream_t* streams,
@@ -23,7 +22,8 @@ void conv_2d(
 	const CudaTensor d_kernel,
 	CudaTensor d_output,
 	int st_w,
-	int st_h
+	int st_h,
+	int indice_offset
 );
 
 void correl_2d(
@@ -55,7 +55,8 @@ void padding_conv_2d(
 	const CudaTensor d_kernel,
 	CudaTensor d_output,
 	int st_w,
-	int st_h
+	int st_h,
+	int indice_offset
 );
 
 void kernel_conv_2d(
