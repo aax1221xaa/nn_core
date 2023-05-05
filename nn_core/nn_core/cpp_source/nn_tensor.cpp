@@ -11,10 +11,10 @@ void set_uniform(NN_Tensor<nn_type>& p) {
 
 	size_t size = p._len;
 
-	float* tmp = new float[size];
+	float* tmp = new nn_type[size];
 
 	for (size_t i = 0; i < size; ++i) tmp[i] = dis(gen);
-	check_cuda(cudaMemcpy(p._data, tmp, sizeof(float) * size, cudaMemcpyHostToDevice));
+	check_cuda(cudaMemcpy(p._data, tmp, sizeof(nn_type) * size, cudaMemcpyHostToDevice));
 
 	delete[] tmp;
 }

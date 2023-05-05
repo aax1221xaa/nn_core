@@ -125,7 +125,7 @@ public:
 enum class Pad{VALID, SAME};
 
 class NN_Conv2D : public NN_Layer {
-protected:
+public:
 	static size_t const_offset_cnt;
 
 public:

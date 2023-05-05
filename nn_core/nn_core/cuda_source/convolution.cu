@@ -320,6 +320,14 @@ void copy_to_indice(
 	check_cuda(cudaMemcpyToSymbol(__indice, indice, size, offset));
 }
 
+void get_indice(
+	uint* indice,
+	size_t size,
+	size_t offset
+) {
+	check_cuda(cudaMemcpyFromSymbol(indice, __indice, size, offset));
+}
+
 /*                convolution_2d              */
 
 void conv_2d(
@@ -341,7 +349,7 @@ void conv_2d(
 
 	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 blocks = get_grid_size(threads, d_output.w * d_output.h, d_output.c);
-
+	
 	for (int i = 0; i < d_input.n; ++i) {
 		float* d_in = d_input.data + (i * d_input.w * d_input.h * d_input.c);
 		float* d_out = d_output.data + (i * d_output.w * d_output.h * d_output.c);
@@ -362,6 +370,7 @@ void conv_2d(
 			st_h,
 			indice_offset
 			);
+		
 	}
 }
 

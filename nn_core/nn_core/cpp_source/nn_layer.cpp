@@ -308,7 +308,7 @@ void NN_Conv2D::calculate_output_size(std::vector<nn_shape*>& input_shape, nn_sh
 		int h = (shape[2] - 1) * _strides[1] + _kernel_size[1];
 		int w = (shape[3] - 1) * _strides[0] + _kernel_size[0];
 
-		pad.set({ n, c, h, w });
+		pad = NN_Tensor<nn_type>::zeros({ n, c, h, w });
 
 		out_shape = { shape[0], _amounts, shape[2], shape[3] };
 	}
@@ -324,7 +324,7 @@ void NN_Conv2D::calculate_output_size(std::vector<nn_shape*>& input_shape, nn_sh
 		if (shape[2] != h || shape[3] != w) {
 			//printf("pad= %d, %d, %d, %d\n", n, c, h, w);
 			_do_padding = true;
-			pad.set({ n, c, h, w });
+			pad = NN_Tensor<nn_type>::zeros({ n, c, h, w });
 		}
 		out_shape = { shape[0], _amounts, out_h, out_w };
 	}
@@ -334,7 +334,9 @@ void NN_Conv2D::build(std::vector<nn_shape*>& input_shape) {
 	nn_shape& shape = *input_shape[0];
 
 	_kernel.set({ _amounts, shape[1], _kernel_size[1], _kernel_size[0] });
-	_bias.set({ _amounts });
+	_bias = NN_Tensor<nn_type>::zeros({ _amounts });
+
+	set_uniform(_kernel);
 
 	size_t indice_size = (size_t)(_kernel_size[1] * _kernel_size[0]);
 	uint* indice = new uint[indice_size];
@@ -367,6 +369,12 @@ void NN_Conv2D::run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& i
 	CudaTensor d_input(in_data, in_shape[0], in_shape[1], in_shape[2], in_shape[3]);
 	CudaTensor d_kernel(k_data, k_shape[0], k_shape[1], k_shape[2], k_shape[3]);
 	CudaTensor d_output(out_data, out_shape[0], out_shape[1], out_shape[2], out_shape[3]);
+
+	//printf("================================\n");
+	//printf("layer name= %s\n", _layer_name);
+	//printf("d_input= %s\n", dimension_to_str(m_input._shape));
+	//printf("d_kernel= %s\n", dimension_to_str(k_shape));
+	//printf("d_output = %s\n", dimension_to_str(out_shape));
 
 	if (_do_padding) {
 		float* pad_data = pad._data;

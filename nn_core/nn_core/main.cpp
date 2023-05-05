@@ -6,6 +6,7 @@
 #include "cpp_source/nn_model.h"
 #include "cpp_source/nn_layer.h"
 #include "cpp_source/mnist.h"
+#include "cuda_source/convolution.cuh"
 
 #ifdef FIX_MODE
 int main() {
@@ -13,15 +14,15 @@ int main() {
 		MNIST mnist("E:\\data_set\\mnist", 64);
 		NN_Manager nn;
 
-		Layer_t x_input = Input({ 1, 28, 28 }, -1, "input");
+		Layer_t x_input = Input({1, 28, 28 }, -1, "input");
 		
 		Layer_t x = NN_Creater(NN_Conv2D(32, { 5, 5 }, { 1, 1 }, Pad::VALID, "conv2d_1"))(x_input);
 		x = NN_Creater(NN_ReLU("ReLU_1"))(x);
 		x = NN_Creater(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, "maxpool2d_1"))(x);				// [none, 12, 12, 32]
 		x = NN_Creater(NN_Conv2D(64, { 5, 5 }, { 1, 1 }, Pad::VALID, "conv2d_2"))(x);
 		x = NN_Creater(NN_ReLU("ReLU_2"))(x);
-		x = NN_Creater(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, "maxpool2d_2"))(x);				// [none, 4, 4, 64]
-		x = NN_Creater(NN_Flatten("Flatten"))(x);										// [none, 1024]
+		x = NN_Creater(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, "maxpool2d_2"))(x);				// [none, 4, 4, 16]
+		x = NN_Creater(NN_Flatten("Flatten"))(x);										// [none, 512]
 		x = NN_Creater(NN_Dense(512, "Dense_1"))(x);
 		x = NN_Creater(NN_ReLU("ReLU_3"))(x);
 		x = NN_Creater(NN_Dense(256, "Dense_2"))(x);
@@ -41,8 +42,7 @@ int main() {
 		clock_t end = clock();
 
 		printf("elapsed time: %ld ms.\n", end - start);
-		
-
+	
 		/*
 		for (uint i = 0; i < 128; ++i) {
 			for (uint j = 0; j < 784; ++j) {
@@ -57,8 +57,11 @@ int main() {
 		*/
 	}
 	catch (const Exception& e) {
+		cudaDeviceReset();
 		e.Put();
 	}
+
+	cudaDeviceReset();
 
 	return 0;
 }

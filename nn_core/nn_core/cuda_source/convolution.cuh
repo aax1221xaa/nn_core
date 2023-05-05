@@ -16,6 +16,12 @@ void copy_to_indice(
 	const size_t offset
 );
 
+void get_indice(
+	uint* indice,
+	size_t size,
+	size_t offset
+);
+
 void conv_2d(
 	cudaStream_t* streams,
 	const CudaTensor d_input,

@@ -140,9 +140,9 @@ std::vector<Tensor<nn_type>> Model::predict(
 	for (NN_Link* node : _output_nodes) {
 		nn_shape out_shape;
 
-		out_shape.push_back(x[0].get()._shape[0]);
+		out_shape.push_back(batch * steps);
 		for (int i = 1; i < node->_out_shape.size(); ++i) out_shape.push_back(node->_out_shape[i]);
-
+		
 		output.push_back(Tensor<nn_type>(out_shape));
 	}
 
@@ -161,10 +161,9 @@ std::vector<Tensor<nn_type>> Model::predict(
 			else check_cuda(cudaMemcpy(_input_nodes[j]->_input[0]->_data, x[j].get()._data + (data_size * i), sizeof(nn_type) * data_size, cudaMemcpyHostToDevice));
 		}
 
-		for (NN_Link* node : _forward_list) node->_forward->run_forward(NN_Manager::_stream, node->_input, node->_output);
-
-		//check_cuda(cudaStreamSynchronize(NN_Manager::_stream));
-		//check_cuda(cudaGetLastError());
+		for (NN_Link* node : _forward_list) {
+			node->_forward->run_forward(NN_Manager::_stream, node->_input, node->_output);
+		}
 
 		for (int j = 0; j < _output_nodes.size(); ++j) {
 			cuint output_size = _output_nodes[j]->_output._len;
