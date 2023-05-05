@@ -13,6 +13,9 @@ My environment is:
 6. ram 16G
 
 Thank you!!
+================= fourteen ==================
+
+Optimized the latency of kernel functions.
 
 ================= jindallae =================
 
