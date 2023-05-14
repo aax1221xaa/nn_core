@@ -46,13 +46,9 @@ dim3 get_grid_size(const dim3 block, unsigned int x, unsigned int y, unsigned in
 	return grid;
 }
 
-Object_Linker NN_Shared_Ptr::linker;
+ptrManager NN_Shared_Ptr::linker;
 
 NN_Shared_Ptr::NN_Shared_Ptr() :
 	id(NULL)
 {
-}
-
-uint get_elem_size(const CudaTensor& tensor) {
-	return uint(tensor.h * tensor.c * tensor.h * tensor.w);
 }

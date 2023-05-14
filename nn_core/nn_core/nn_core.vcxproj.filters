@@ -30,9 +30,6 @@
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\ObjectID.cpp">
-      <Filter>소스 파일\cpp</Filter>
-    </ClCompile>
     <ClCompile Include="cpp_source\Exception.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
@@ -72,6 +69,12 @@
     <ClCompile Include="cpp_source\mnist.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
+    <ClCompile Include="cpp_source\ptrManager.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\cuda_misc.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpp_source\cuda_common.h">
@@ -81,9 +84,6 @@
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\Exception.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
-    <ClInclude Include="cpp_source\ObjectID.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cuda_source\relu.cuh">
@@ -137,6 +137,15 @@
     <ClInclude Include="cuda_source\cast.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
+    <ClInclude Include="cpp_source\ptrManager.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\cuda_misc.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\cuda_indice.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_source\add_bias.cu">
@@ -158,6 +167,9 @@
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_source\cast.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\cuda_indice.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
   </ItemGroup>

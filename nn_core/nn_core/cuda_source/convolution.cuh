@@ -1,76 +1,74 @@
 ﻿#ifndef _CONVOLUTION_CUH_
 #define _CONVULUTION_CUH_
 
-#include "../cpp_source/nn_tensor.h"
+#include "../cuda_source/cuda_indice.cuh"
+#include "../cpp_source/cuda_misc.h"
 
+/**********************************************
+											  
+				 conv2dSolution 			  
 
-/**********************************************/
-/*											  */
-/*				  host function 			  */
-/*										      */
-/**********************************************/
+**********************************************/
 
-void copy_to_indice(
-	const uint* indice,
-	const size_t size,
-	const size_t offset
-);
+enum class Pad { VALID, SAME };
 
-void get_indice(
-	uint* indice,
-	size_t size,
-	size_t offset
-);
+class conv2dSolution {
+public:
+	tensor4d _input;
+	tensor4d _pad;
+	tensor4d _kernel;
+	tensor4d _output;
+	
+	int _w_stride;
+	int _h_stride;
 
-void conv_2d(
-	cudaStream_t* streams,
-	const CudaTensor d_input,
-	const CudaTensor d_kernel,
-	CudaTensor d_output,
-	int st_w,
-	int st_h,
-	int indice_offset
-);
+	bool _is_calculated;
+	Pad _mode;
 
-void correl_2d(
-	cudaStream_t stream,
-	const CudaTensor d_doutput,
-	const CudaTensor d_kernel,
-	CudaTensor d_dinput
-);
+	conv2dSolution();
+	tensor4d calculate_size(const tensor4d& input, const tensor4d& kernel, int w_stride, int h_stride, Pad mode);
+	size_t get_work_size();
+	void operator()(cudaStream_t* s, const nn_type* input, nn_type* pad, const nn_type* kernel, nn_type* output);
+};
 
-void transpose(
-	cudaStream_t stream,
-	const CudaTensor d_input,
-	CudaTensor d_output
-);
+/**********************************************
 
-void dilation_2d(
-	cudaStream_t stream,
-	const CudaTensor d_input,
-	CudaTensor d_output,
-	uint scale,
-	int offset_x,
-	int offset_y
-);
+				 dConv2dSolution
 
-void padding_conv_2d(
-	cudaStream_t* s,
-	const CudaTensor d_input,
-	CudaTensor d_pad,
-	const CudaTensor d_kernel,
-	CudaTensor d_output,
-	int st_w,
-	int st_h,
-	int indice_offset
-);
+**********************************************/
 
-void kernel_conv_2d(
-	cudaStream_t stream,
-	const CudaTensor d_doutput,
-	const CudaTensor d_input,
-	CudaTensor d_gradient
-);
+class dConv2dSolution {
+public:
+	tensor4d _d_output;
+	tensor4d _d_pad;
+	tensor4d _d_input;
+
+	conv2dSolution _conv;
+
+	bool _is_calculated;
+
+	dConv2dSolution();
+	tensor4d calculate_size(const tensor4d& d_output, conv2dSolution& conv);
+	size_t get_work_size();
+	void operator()(cudaStream_t* s, const nn_type* d_output, const nn_type* kernel, nn_type* d_input, nn_type* workspace);
+};
+
+/**********************************************
+
+		      kernelConv2dSolution
+
+**********************************************/
+
+class kernelConv2dSolution {
+public:
+	const dConv2dSolution& _d_conv;
+
+	bool _is_calculated;
+
+	kernelConv2dSolution(const dConv2dSolution& d_conv);
+	size_t get_work_size();
+	void operator()(const nn_type* d_output, nn_type* gradient, const nn_type* input, void* workspace);
+};
 
 
 #endif // !_CONVOLUTION_CUH_

@@ -67,7 +67,7 @@ public:
 	void run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output);
 	void run_backward(cudaStream_t* s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input);
 
-	void compile(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer);
+	void standby(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer);
 
 	template <typename sample_type, typename truth_type>
 	std::vector<Tensor<nn_type>> train_on_batch(const std::vector<Tensor<sample_type>>& samples, const std::vector<Tensor<truth_type>>& truth);
@@ -121,6 +121,7 @@ std::vector<Tensor<nn_type>> Model::predict(
 		);
 	}
 	
+	/*         set inputs         */
 	for (int i = 0; i < _input_nodes.size(); ++i) {
 		nn_shape* x_shape = new nn_shape;
 
@@ -131,11 +132,13 @@ std::vector<Tensor<nn_type>> Model::predict(
 		_input_nodes[i]->_input.push_back(new NN_Tensor<nn_type>(*x_shape));
 	}
 
+	/*         set nodes outputs        */
 	for (NN_Link* node : _forward_list) {
 		node->_forward->calculate_output_size(node->_in_shape, node->_out_shape);
 		node->_forward->set_io(node->_out_shape, node->_input, node->_output);
 	}
 
+	/*            set outputs           */
 	std::vector<Tensor<nn_type>> output;
 	for (NN_Link* node : _output_nodes) {
 		nn_shape out_shape;
@@ -146,7 +149,9 @@ std::vector<Tensor<nn_type>> Model::predict(
 		output.push_back(Tensor<nn_type>(out_shape));
 	}
 
+	/*           run forward          */
 	for (int i = 0; i < steps; ++i) {
+		/*        copy samples       */
 		for (int j = 0; j < _input_nodes.size(); ++j) {
 			cuint data_size = _input_nodes[j]->_output._len;
 
@@ -161,16 +166,19 @@ std::vector<Tensor<nn_type>> Model::predict(
 			else check_cuda(cudaMemcpy(_input_nodes[j]->_input[0]->_data, x[j].get()._data + (data_size * i), sizeof(nn_type) * data_size, cudaMemcpyHostToDevice));
 		}
 
+		/*       run forward nodes      */
 		for (NN_Link* node : _forward_list) {
 			node->_forward->run_forward(NN_Manager::_stream, node->_input, node->_output);
 		}
 
+		/*        copy to outputs      */
 		for (int j = 0; j < _output_nodes.size(); ++j) {
 			cuint output_size = _output_nodes[j]->_output._len;
 			check_cuda(cudaMemcpy(output[j]._data + (output_size * i), _output_nodes[j]->_output._data, sizeof(nn_type) * output_size, cudaMemcpyDeviceToHost));
 		}
 	}
 
+	/*        release inputs        */
 	for (NN_Link* node : _input_nodes) {
 		for (NN_Tensor<nn_type>* tensor : node->_input) delete tensor;
 		for (nn_shape* shape : node->_in_shape) delete shape;
@@ -244,10 +252,10 @@ public:
 
 	void calculate_output_size(std::vector<nn_shape*>& input_shape, nn_shape& out_shape);
 	void build(std::vector<nn_shape*>& input_shape);
-	void run_forward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output);
-	void run_backward(cudaStream_t s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input);
+	void run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output);
+	void run_backward(cudaStream_t* s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input);
 
-	void compile(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer);
+	void standby(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer);
 
 	template <typename sample_type, typename truth_type>
 	std::vector<Tensor<nn_type>> train_on_batch(const std::vector<Tensor<sample_type>>& samples, const std::vector<Tensor<truth_type>>& truth);
@@ -301,6 +309,7 @@ std::vector<Tensor<nn_type>> Model::predict(
 		);
 	}
 
+	/*         set inputs         */
 	for (int i = 0; i < _input_nodes.size(); ++i) {
 		nn_shape* x_shape = new nn_shape;
 
@@ -308,28 +317,29 @@ std::vector<Tensor<nn_type>> Model::predict(
 		for (int j = 1; j < x[i].get()._shape.size(); ++j) x_shape->push_back(x[i].get()._shape[j]);
 
 		_input_nodes[i]->_in_shape.push_back(x_shape);
+		_input_nodes[i]->_input.push_back(new NN_Tensor<nn_type>(*x_shape));
 	}
 
-
+	/*         set nodes outputs        */
 	for (NN_Link* node : _forward_list) {
 		node->_forward->calculate_output_size(node->_in_shape, node->_out_shape);
+		node->_forward->set_io(node->_out_shape, node->_input, node->_output);
 	}
 
-	for (NN_Link* node : _forward_list) {
-		node->_output = NN_Tensor<nn_type>::zeros(node->_out_shape);
-	}
-
+	/*            set outputs           */
 	std::vector<Tensor<nn_type>> output;
 	for (NN_Link* node : _output_nodes) {
 		nn_shape out_shape;
 
-		out_shape.push_back(x[0].get()._shape[0]);
+		out_shape.push_back(batch * steps);
 		for (int i = 1; i < node->_out_shape.size(); ++i) out_shape.push_back(node->_out_shape[i]);
 
 		output.push_back(Tensor<nn_type>(out_shape));
 	}
 
+	/*           run forward          */
 	for (int i = 0; i < steps; ++i) {
+		/*        copy samples       */
 		for (int j = 0; j < _input_nodes.size(); ++j) {
 			cuint data_size = _input_nodes[j]->_output._len;
 
@@ -337,28 +347,31 @@ std::vector<Tensor<nn_type>> Model::predict(
 				nn_type* p_data = new nn_type[data_size];
 
 				for (uint k = 0; k < data_size; ++k) p_data[k] = (nn_type)(x[j].get()._data[data_size * i + k]);
-				check_cuda(cudaMemcpy(_input_nodes[j]->_output._data, p_data, sizeof(nn_type) * data_size, cudaMemcpyHostToDevice));
+				check_cuda(cudaMemcpy(_input_nodes[j]->_input[0]->_data, p_data, sizeof(nn_type) * data_size, cudaMemcpyHostToDevice));
 
 				delete[] p_data;
 			}
-			else check_cuda(cudaMemcpy(_input_nodes[j]->_output._data, x[j].get()._data + (data_size * i), sizeof(nn_type) * data_size, cudaMemcpyHostToDevice));
+			else check_cuda(cudaMemcpy(_input_nodes[j]->_input[0]->_data, x[j].get()._data + (data_size * i), sizeof(nn_type) * data_size, cudaMemcpyHostToDevice));
 		}
 
-		for (NN_Link* node : _forward_list) node->_forward->run_forward(NN_Manager::_stream, node->_input, node->_output);
+		/*       run forward nodes      */
+		for (NN_Link* node : _forward_list) {
+			node->_forward->run_forward(NN_Manager::_stream, node->_input, node->_output);
+		}
 
-		//check_cuda(cudaStreamSynchronize(NN_Manager::_stream));
-		//check_cuda(cudaGetLastError());
-
+		/*        copy to outputs      */
 		for (int j = 0; j < _output_nodes.size(); ++j) {
 			cuint output_size = _output_nodes[j]->_output._len;
 			check_cuda(cudaMemcpy(output[j]._data + (output_size * i), _output_nodes[j]->_output._data, sizeof(nn_type) * output_size, cudaMemcpyDeviceToHost));
 		}
 	}
 
+	/*        release inputs        */
 	for (NN_Link* node : _input_nodes) {
-		for (nn_shape* shape : node->_in_shape) {
-			delete shape;
-		}
+		for (NN_Tensor<nn_type>* tensor : node->_input) delete tensor;
+		for (nn_shape* shape : node->_in_shape) delete shape;
+
+		node->_input.clear();
 		node->_in_shape.clear();
 	}
 

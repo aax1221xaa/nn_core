@@ -147,7 +147,7 @@ Tensor<_T>::Tensor(const nn_shape& shape) :
 			);
 		}
 
-		id = linker.Create();
+		id = linker.create();
 	}
 	catch (const Exception& e) {
 		_data = NULL;
@@ -271,7 +271,7 @@ void Tensor<_T>::clear() {
 		if (id->ref_cnt > 1) --id->ref_cnt;
 		else {
 			delete[] _data;
-			linker.Erase(id);
+			linker.erase(&id);
 		}
 	}
 
@@ -280,8 +280,6 @@ void Tensor<_T>::clear() {
 	_steps.clear();
 	_shape.clear();
 	_start.clear();
-
-	id = NULL;
 }
 
 template <typename _T>
@@ -303,7 +301,7 @@ void Tensor<_T>::set(const nn_shape& shape) {
 			);
 		}
 
-		id = linker.Create();
+		id = linker.create();
 	}
 	catch (const Exception& e) {
 		free(_data);

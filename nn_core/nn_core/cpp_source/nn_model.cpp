@@ -282,7 +282,7 @@ void Model::run_backward(cudaStream_t* s, NN_Tensor<nn_type>& d_output, std::vec
 	
 }
 
-void Model::compile(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer) {
+void Model::standby(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer) {
 
 }
 
@@ -588,17 +588,17 @@ void Model::build(std::vector<nn_shape*>& input_shape) {
 	}
 }
 
-void Model::run_forward(cudaStream_t s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output) {
+void Model::run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output) {
 	for (NN_Link* p_node : _forward_list) {
 		p_node->_forward->run_forward(s, p_node->_input, p_node->_output);
 	}
 }
 
-void Model::run_backward(cudaStream_t s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input) {
+void Model::run_backward(cudaStream_t* s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input) {
 
 }
 
-void Model::compile(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer) {
+void Model::standby(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer) {
 
 }
 

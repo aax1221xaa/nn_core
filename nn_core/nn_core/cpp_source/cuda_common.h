@@ -3,7 +3,7 @@
 #include <iostream>
 //#include <opencv2/opencv.hpp>
 #include "CudaCheck.h"
-#include "ObjectID.h"
+#include "ptrManager.h"
 
 
 #define STR_MAX			1024
@@ -12,8 +12,7 @@
 #define SMALL_Z					4
 #define BLOCK_SIZE				32
 #define SQR_BLOCK_SIZE			BLOCK_SIZE * BLOCK_SIZE
-#define CONST_ELEM_SIZE			16384
-#define CONST_MEM_SIZE			65536
+#define CONST_ELEM_SIZE			(65536 / sizeof(uint))
 
 #define EPSILON					1e-8
 
@@ -32,8 +31,8 @@ dim3 get_grid_size(const dim3 block, unsigned int x = 1, unsigned int y = 1, uns
 
 class NN_Shared_Ptr {
 protected:
-	Object_ID* id;
-	static Object_Linker linker;
+	ptrRef* id;
+	static ptrManager linker;
 
 public:
 	NN_Shared_Ptr();
@@ -46,31 +45,6 @@ public:
 /**********************************************/
 
 typedef float nn_type;
-
-/**********************************************/
-/*                                            */
-/*                  CudaTensor                */
-/*                                            */
-/**********************************************/
-
-struct CudaTensor {
-	nn_type* data;
-
-	int n;
-	int c;
-	int h;
-	int w;
-
-	CudaTensor(float* _data, int _n, int _c, int _h, int _w) {
-		data = _data;
-		n = _n;
-		c = _c;
-		h = _h;
-		w = _w;
-	}
-};
-
-uint get_elem_size(const CudaTensor& tensor);
 
 /**********************************************/
 /*                                            */
@@ -261,7 +235,7 @@ List<_T>::List(const std::initializer_list<_T>& list) :
 		++_size;
 	}
 
-	id = linker.Create();
+	id = linker.create();
 }
 
 template <class _T>
@@ -279,7 +253,7 @@ List<_T>::List(const std::initializer_list<List>& list) :
 		++_size;
 	}
 
-	id = linker.Create();
+	id = linker.create();
 }
 
 template <class _T>
@@ -317,7 +291,7 @@ List<_T>::~List() {
 		if (id->ref_cnt > 1) --id->ref_cnt;
 		else {
 			clear_head(&_head);
-			linker.Erase(id);
+			linker.erase(&id);
 		}
 	}
 
@@ -325,7 +299,6 @@ List<_T>::~List() {
 	_is_scalar = false;
 	_size = 0;
 	_head = NULL;
-	id = NULL;
 }
 
 template <class _T>
@@ -437,7 +410,7 @@ void List<_T>::push_back(const _T& val) {
 
 			insert_link(new List<_T>(val), _head->_prev);
 
-			id = linker.Create();
+			id = linker.create();
 		}
 	}
 	else insert_link(new List<_T>(val), _head->_prev);

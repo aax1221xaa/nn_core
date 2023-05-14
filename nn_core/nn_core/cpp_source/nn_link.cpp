@@ -14,9 +14,7 @@ NN_Link::NN_Link() :
 	trainable(true),
 	_forward(NULL),
 	_backward(NULL),
-	_parent(NULL),
-	_output(),
-	_d_output()
+	_parent(NULL)
 {
 }
 

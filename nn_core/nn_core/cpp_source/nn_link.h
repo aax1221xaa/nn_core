@@ -38,7 +38,7 @@ public:
 	NN_Tensor<nn_type> _output;
 
 	std::vector<NN_Tensor<nn_type>*> _d_inputs;
-	NN_Tensor<nn_type> _d_output;
+	//NN_Tensor<nn_type> _d_output;
 	std::vector<NN_Tensor<nn_type>*> _d_outputs;
 
 	std::vector<nn_shape*> _in_shape;
@@ -48,7 +48,7 @@ public:
 	bool trainable;
 
 	NN_Layer* _forward;
-	NN_Layer* _backward;
+	NN_Backward* _backward;
 
 	NN_Link();
 	virtual ~NN_Link();
