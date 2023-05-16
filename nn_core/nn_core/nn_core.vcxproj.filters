@@ -72,7 +72,7 @@
     <ClCompile Include="cpp_source\ptrManager.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\cuda_misc.cpp">
+    <ClCompile Include="cpp_source\misc.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
   </ItemGroup>
@@ -140,10 +140,13 @@
     <ClInclude Include="cpp_source\ptrManager.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
-    <ClInclude Include="cpp_source\cuda_misc.h">
+    <ClInclude Include="cuda_source\cuda_indice.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\misc.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_source\cuda_indice.cuh">
+    <ClInclude Include="cuda_source\cuda_misc.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
   </ItemGroup>
@@ -170,6 +173,9 @@
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_source\cuda_indice.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\cuda_misc.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
   </ItemGroup>

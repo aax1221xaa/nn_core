@@ -1,4 +1,6 @@
 ﻿#include "convolution.cuh"
+#include "cuda_misc.cuh"
+
 
 #ifndef __CUDACC__
 #define __CUDACC__
@@ -128,28 +130,6 @@ __global__ void __kernel_conv_2d(
 	}
 }
 
-__global__ void __transpose(
-	const float* input,
-	float* output,
-	cuint n,
-	cuint c,
-	cuint h,
-	cuint w
-) {
-	cuint tidx = blockIdx.x * blockDim.x + threadIdx.x;
-	cuint k_idx = tidx % (w * h);
-	cuint k_count = tidx / (w * h);
-
-	cuint row = k_count % c;
-	cuint col = k_count / c;
-
-	float* p_out = output + (row * (w * h * n) + col * (w * h));
-
-	if (tidx < (n * h * w * c)) {
-		p_out[k_idx] = input[tidx];
-	}
-}
-
 __global__ void __padding_dilation_2d(
 	const float* input,
 	float* output,
@@ -177,85 +157,112 @@ __global__ void __padding_dilation_2d(
 
 /**********************************************
 
-				 conv2dSolution
+				  conv2dParam
 
 **********************************************/
 
-conv2dSolution::conv2dSolution() :
-	_is_calculated(false),
+conv2dParam::conv2dParam() :
+	_w_stride(1),
+	_h_stride(1),
 	_mode(Pad::VALID)
 {
 }
 
-tensor4d conv2dSolution::calculate_size(const tensor4d& input, const tensor4d& kernel, int w_stride, int h_stride, Pad mode) {
+conv2dParam::conv2dParam(int w_stride, int h_stride, Pad mode) :
+	_w_stride(w_stride),
+	_h_stride(h_stride),
+	_mode(mode)
+{
+}
+
+void conv2dParam::set(int w_stride, int h_stride, Pad mode) {
+	_w_stride = w_stride;
+	_h_stride = h_stride;
+	_mode = mode;
+}
+
+const bool conv2dParam::is_valid() const {
+	return (_w_stride > 0 || _h_stride > 0);
+}
+
+/**********************************************
+
+				 conv2dSolution
+
+**********************************************/
+
+conv2dSolution::conv2dSolution(const tensor4d& input, const tensor4d& kernel, const conv2dParam& param) :
+	_input(input),
+	_kernel(kernel),
+	_param(param)
+{
+}
+
+const tensor4d conv2dSolution::calculate_size() {
 	_is_calculated = false;
 
-	if (!input._is_valid || !kernel._is_valid || input._c != kernel._c) {
+	if (!_input.is_valid() || !_kernel.is_valid() || _input._c != _kernel._c) {
 		ErrorExcept(
 			"[conv2dSolution::calculate_size()] invalid input, kernel arguments. input: %s, kernel: %s",
-			tensor4d::shape_to_str(input),
-			tensor4d::shape_to_str(kernel)
+			tensor4d::shape_to_str(_input),
+			tensor4d::shape_to_str(_kernel)
 		);
 	}
 
-	if (mode == Pad::SAME) {
-		int out_n = input._n;
-		int out_c = kernel._n;
-		int out_h = input._h;
-		int out_w = input._w;
+	if (_param._mode == Pad::SAME) {
+		int out_n = _input._n;
+		int out_c = _kernel._n;
+		int out_h = _input._h;
+		int out_w = _input._w;
 
 		_output.set(out_n, out_c, out_h, out_w);
 
 		int pad_n = __min(STREAMS, _input._n);
-		int pad_c = input._c;
-		int pad_h = (input._h - 1) * h_stride + kernel._h;
-		int pad_w = (input._w - 1) * w_stride + kernel._w;
+		int pad_c = _input._c;
+		int pad_h = (_input._h - 1) * _param._h_stride + _kernel._h;
+		int pad_w = (_input._w - 1) * _param._w_stride + _kernel._w;
 
 		_pad.set(pad_n, pad_c, pad_h, pad_w);
 	}
 	else {
-		int out_n = input._n;
-		int out_c = kernel._n;
-		int out_h = (input._h - kernel._h) / h_stride + 1;
-		int out_w = (input._w - kernel._w) / w_stride + 1;
+		int out_n = _input._n;
+		int out_c = _kernel._n;
+		int out_h = (_input._h - _kernel._h) / _param._h_stride + 1;
+		int out_w = (_input._w - _kernel._w) / _param._w_stride + 1;
 
 		_output.set(out_n, out_c, out_h, out_w);
 		_pad = tensor4d();
 	}
 
-	if (!_output._is_valid) {
+	if (!_output.is_valid()) {
 		ErrorExcept(
 			"[conv2dSolution::calculate_size()] calculated invalid output size. output: %s",
 			tensor4d::shape_to_str(_output)
 		);
 	}
-	else if (mode == Pad::VALID && _pad._is_valid) {
+	else if (_param._mode == Pad::VALID && _pad.is_valid()) {
 		ErrorExcept(
 			"[conv2dSolution::calculate_size()] calculated invalid pad size. pad: %s",
 			tensor4d::shape_to_str(_pad)
 		);
 	}
 
-	_input = input;
-	_kernel = kernel;
-	_w_stride = w_stride;
-	_h_stride = h_stride;
-	_mode = mode;
-
 	_is_calculated = true;
+
+	return _output;
 }
 
-size_t conv2dSolution::get_work_size() {
+const size_t conv2dSolution::get_workspace_size() {
 	if (!_is_calculated) {
 		ErrorExcept(
-			"[cudaConv2d::get_output_param()] not calculated convolution sizes."
+			"[conv2dSolution::get_workspace()] not calculated sizes."
 		);
 	}
 
 	return _pad.get_size();
 }
 
-void conv2dSolution::operator()(cudaStream_t* s, const nn_type* input, nn_type* pad, const nn_type* kernel, nn_type* output) {
+void conv2dSolution::operator()(cudaStream_t* s, const nn_type* input, const nn_type* kernel, nn_type* output, void* workspace) {
 	if (!_is_calculated) {
 		ErrorExcept(
 			"[cudaConv2d::get_output_param()] not calculated convolution sizes."
@@ -265,7 +272,7 @@ void conv2dSolution::operator()(cudaStream_t* s, const nn_type* input, nn_type* 
 	uint* indice = (uint*)malloc(_kernel.get_size());
 	const uint* c_indice = get_indice_ptr();
 
-	if (_mode == Pad::SAME) {
+	if (_param._mode == Pad::SAME) {
 		for (int c = 0; c < _kernel._c; ++c) {
 			for (int h = 0; h < _kernel._h; ++h) {
 				for (int w = 0; w < _kernel._w; ++w) {
@@ -276,12 +283,12 @@ void conv2dSolution::operator()(cudaStream_t* s, const nn_type* input, nn_type* 
 		set_indice(indice, _kernel.get_size(), 0);
 		free(indice);
 
-		check_cuda(cudaMemset(pad, 0, _pad.get_size()));
+		check_cuda(cudaMemset(workspace, 0, _pad.get_size()));
 
 		for (int n = 0; n < _input._n; ++n) {
 			const nn_type* d_input = input + (n * _input._c * _input._h * _input._w);
 			nn_type* d_output = output + (n * _output._c * _output._h * _output._w);
-			nn_type* d_pad = pad + ((n % STREAMS) * _pad._c * _pad._h * _pad._w);
+			nn_type* d_pad = (nn_type*)workspace + ((n % STREAMS) * _pad._c * _pad._h * _pad._w);
 
 			dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 			dim3 blocks = get_grid_size(threads, _input._w, _input._h, _input._c);
@@ -363,25 +370,24 @@ void conv2dSolution::operator()(cudaStream_t* s, const nn_type* input, nn_type* 
 
 **********************************************/
 
-dConv2dSolution::dConv2dSolution() :
-	_is_calculated(false)
+dConv2dSolution::dConv2dSolution(const tensor4d& d_output, const conv2dSolution& conv) :
+	_d_output(d_output),
+	_conv(conv)
 {
 }
 
-tensor4d dConv2dSolution::calculate_size(const tensor4d& d_output, conv2dSolution& conv) {
+const tensor4d dConv2dSolution::calculate_size() {
 	_is_calculated = false;
 
-	if (d_output._n != _conv._output._n ||
-		d_output._c != _conv._output._c ||
-		d_output._h != _conv._output._h ||
-		d_output._w != _conv._output._w) {
+	if (_d_output._n != _conv._output._n ||
+		_d_output._c != _conv._output._c ||
+		_d_output._h != _conv._output._h ||
+		_d_output._w != _conv._output._w) {
 		ErrorExcept(
 			"[dConv2dSolution::calculate_size()] invalid d_output size. %s",
-			tensor4d::shape_to_str(d_output)
+			tensor4d::shape_to_str(_d_output)
 		);
 	}
-
-	_d_output = d_output;
 
 	int in_n = _conv._input._n;
 	int in_c = _conv._input._c;
@@ -392,12 +398,12 @@ tensor4d dConv2dSolution::calculate_size(const tensor4d& d_output, conv2dSolutio
 
 	int pad_n = __min(STREAMS, in_n);
 	int pad_c = in_c;
-	int pad_h = (d_output._h * conv._h_stride) + conv._kernel._h - 1;
-	int pad_w = (d_output._w * conv._w_stride) + conv._kernel._w - 1;
+	int pad_h = (_d_output._h * _conv._param._h_stride) + _conv._kernel._h - 1;
+	int pad_w = (_d_output._w * _conv._param._w_stride) + _conv._kernel._w - 1;
 
 	_d_pad.set(pad_n, pad_c, pad_h, pad_w);
 
-	if (!_d_output._is_valid || !_d_input._is_valid || !_d_pad._is_valid) {
+	if (!_d_output.is_valid() || !_d_input.is_valid() || !_d_pad.is_valid()) {
 		ErrorExcept(
 			"[dConv2dSolution::calculate_size()] mismatched calcute sizes. d_output: %s, d_pad: %s, d_input: %s",
 			tensor4d::shape_to_str(_d_output),
@@ -407,26 +413,29 @@ tensor4d dConv2dSolution::calculate_size(const tensor4d& d_output, conv2dSolutio
 	}
 
 	_is_calculated = true;
+
+	return _d_input;
 }
 
-size_t dConv2dSolution::get_work_size() {
+const size_t dConv2dSolution::get_workspace_size() {
 	if (!_is_calculated) {
 		ErrorExcept(
-			"[dConv2dSolution::get_workspace()] not calculated size."
+			"[dConv2dSolution::get_workspace()] not calculated sizes."
 		);
 	}
 
-	return _d_pad.get_size() + _conv._kernel.get_size();
+	return _conv._kernel.get_size() + _d_pad.get_size();
 }
 
-void dConv2dSolution::operator()(cudaStream_t* s, const nn_type* d_output, const nn_type* kernel, nn_type* d_input, nn_type* workspace) {
+void dConv2dSolution::operator()(cudaStream_t* s, const nn_type* d_output, const nn_type* kernel, nn_type* d_input, void* workspace) {
 	if (!_is_calculated) {
 		ErrorExcept(
-			"[dConv2dSolution::operator()] not calculated size."
+			"[dConv2dSolution::operator()] not calculated sizes."
 		);
 	}
 
-	tensor4d& _kernel = _conv._kernel;
+	const tensor4d& _kernel = _conv._kernel;
+
 	uint* indice = (uint*)malloc(sizeof(uint) * _kernel._n * _kernel._h * _kernel._w);
 	const uint* c_indice = get_indice_ptr();
 
@@ -440,30 +449,20 @@ void dConv2dSolution::operator()(cudaStream_t* s, const nn_type* d_output, const
 	set_indice(indice, sizeof(uint) * _kernel._n * _kernel._h * _kernel._w, 0);
 	free(indice);
 
-	nn_type* p_kernel = workspace;
+	nn_type* p_kernel = (nn_type*)workspace;
 	nn_type* p_pad = (nn_type*)((char*)workspace + _kernel.get_size());
 
 	check_cuda(cudaMemset(p_pad, 0, _d_pad.get_size()));
 
-	dim3 threads(SQR_BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, _kernel._n * _kernel._c * _kernel._h * _kernel._w);
-
-	__transpose<<<blocks, threads>>>(
-		kernel,
-		p_kernel,
-		_kernel._n,
-		_kernel._c,
-		_kernel._h,
-		_kernel._w
-	);
+	transpose(_kernel, kernel, p_kernel);
 
 	for (uint n = 0; n < (uint)_d_output._n; ++n) {
 		const nn_type* d_out = d_output + (n * _d_output._c * _d_output._h * _d_output._w);
 		nn_type* d_pad = p_pad + ((n % STREAMS) * _d_pad._c * _d_pad._h * _d_pad._w);
 		nn_type* d_in = d_input + (n * _d_input._c * _d_input._h * _d_input._w);
 
-		threads = dim3(BLOCK_SIZE, BLOCK_SIZE);
-		blocks = get_grid_size(threads, _d_output._w, _d_output._h, _d_output._c);
+		dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+		dim3 blocks = get_grid_size(threads, _d_output._w, _d_output._h, _d_output._c);
 
 		__padding_dilation_2d<<<blocks, threads, 0, s[n % STREAMS]>>>(
 			d_out,
@@ -506,12 +505,11 @@ void dConv2dSolution::operator()(cudaStream_t* s, const nn_type* d_output, const
 **********************************************/
 
 kernelConv2dSolution::kernelConv2dSolution(const dConv2dSolution& d_conv) :
-	_d_conv(d_conv),
-	_is_calculated(false)
+	_d_conv(d_conv)
 {
 }
 
-size_t kernelConv2dSolution::get_work_size() {
+const size_t kernelConv2dSolution::get_workspace_size() {
 	size_t size = 0;
 
 	if ((_d_conv._d_output._h * _d_conv._d_output._w) > CONST_ELEM_SIZE)
