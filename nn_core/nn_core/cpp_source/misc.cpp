@@ -6,8 +6,8 @@
 
 *******************************************/
 
-char str_buffer[STR_MAX] = { '\0', };
-int str_idx = 0;
+extern char str_buffer[STR_MAX];
+extern int str_idx;
 
 tensor4d::tensor4d() :
 	_n(1),

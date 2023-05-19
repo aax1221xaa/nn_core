@@ -81,5 +81,4 @@ public:
 	void operator()(const nn_type* d_output, nn_type* gradient, const nn_type* input, void* workspace);
 };
 
-
 #endif // !_CONVOLUTION_CUH_

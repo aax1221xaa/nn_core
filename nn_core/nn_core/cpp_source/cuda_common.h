@@ -8,8 +8,8 @@
 
 #define STR_MAX			1024
 
-#define SMALL_XY				16
-#define SMALL_Z					4
+#define HARF_BLOCK				16
+#define BLOCK_Z					4
 #define BLOCK_SIZE				32
 #define SQR_BLOCK_SIZE			BLOCK_SIZE * BLOCK_SIZE
 #define CONST_ELEM_SIZE			(65536 / sizeof(uint))

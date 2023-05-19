@@ -10,8 +10,6 @@
 #include <device_launch_parameters.h>
 
 
-
-
 /**********************************************/
 /*											  */
 /*				 kernel function			  */
@@ -263,6 +261,7 @@ const size_t conv2dSolution::get_workspace_size() {
 }
 
 void conv2dSolution::operator()(cudaStream_t* s, const nn_type* input, const nn_type* kernel, nn_type* output, void* workspace) {
+	
 	if (!_is_calculated) {
 		ErrorExcept(
 			"[cudaConv2d::get_output_param()] not calculated convolution sizes."
@@ -321,8 +320,8 @@ void conv2dSolution::operator()(cudaStream_t* s, const nn_type* input, const nn_
 				_kernel._w,
 				_output._h,
 				_output._w,
-				_conv._h_st,
-				_conv._w_st
+				_param._h_stride,
+				_param._w_stride
 			);
 		}
 	}
@@ -357,8 +356,8 @@ void conv2dSolution::operator()(cudaStream_t* s, const nn_type* input, const nn_
 				_kernel._w,
 				_output._h,
 				_output._w,
-				_h_stride,
-				_w_stride
+				_param._h_stride,
+				_param._w_stride
 			);
 		}
 	}
@@ -472,8 +471,8 @@ void dConv2dSolution::operator()(cudaStream_t* s, const nn_type* d_output, const
 			_d_output._c,
 			_d_pad._w,
 			_d_pad._h,
-			_conv._w_stride,
-			_conv._h_stride,
+			_conv._param._w_stride,
+			_conv._param._h_stride,
 			(_d_pad._w - _d_output._w) / 2,
 			(_d_pad._h - _d_output._h) / 2
 		);

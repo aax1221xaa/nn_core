@@ -476,7 +476,7 @@ NN_Tensor<_T>::NN_Tensor(const nn_shape& shape) :
 			);
 		}
 
-		id = linker.Create();
+		id = linker.create();
 	}
 	catch (const Exception& e) {
 		cudaFree(_data);
@@ -567,7 +567,7 @@ void NN_Tensor<_T>::clear() {
 		if (id->ref_cnt > 1) --id->ref_cnt;
 		else {
 			check_cuda(cudaFree(_data));
-			linker.Erase(id);
+			linker.erase(id);
 		}
 	}
 
@@ -600,7 +600,7 @@ void NN_Tensor<_T>::set(const nn_shape& shape) {
 			);
 		}
 
-		id = linker.Create();
+		id = linker.create();
 	}
 	catch (const Exception& e) {
 		free(_data);

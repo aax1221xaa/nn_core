@@ -39,7 +39,7 @@
     <ClCompile Include="..\nn_core\cpp_source\ptrManager.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="..\nn_core\cpp_source\cuda_misc.cpp">
+    <ClCompile Include="..\nn_core\cpp_source\misc.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -59,15 +59,33 @@
     <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\cuda_misc.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="..\nn_core\cpp_source\ptrManager.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\nn_core\cuda_source\cuda_indice.cuh">
+      <Filter>cuda헤더</Filter>
+    </ClInclude>
+    <ClInclude Include="..\nn_core\cpp_source\misc.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\nn_core\cuda_source\cuda_misc.cuh">
+      <Filter>cuda헤더</Filter>
+    </ClInclude>
+    <ClInclude Include="..\nn_core\cuda_source\maxpool.cuh">
+      <Filter>cuda헤더</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="..\nn_core\cuda_source\convolution.cu">
+      <Filter>cuda소스</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\nn_core\cuda_source\cuda_indice.cu">
+      <Filter>cuda소스</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\nn_core\cuda_source\cuda_misc.cu">
+      <Filter>cuda소스</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\nn_core\cuda_source\maxpool.cu">
       <Filter>cuda소스</Filter>
     </CudaCompile>
   </ItemGroup>
