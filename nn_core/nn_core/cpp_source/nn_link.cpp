@@ -19,7 +19,7 @@ NN_Link::NN_Link() :
 }
 
 NN_Link::~NN_Link() {
-	for (NN_Tensor<nn_type>* p : _d_outputs) delete p;
+	for (DeviceTensor<nn_type>* p : _d_outputs) delete p;
 
 }
 
@@ -58,11 +58,11 @@ void NN_Link::set_next_node(NN_Link* next_node, int node_index) {
 	_next.push_back(next_node);
 }
 
-NN_Tensor<nn_type>& NN_Link::get_output(int node_index) {
+DeviceTensor<nn_type>& NN_Link::get_output(int node_index) {
 	return _output;
 }
 
-std::vector<NN_Tensor<nn_type>*>& NN_Link::get_d_output(int node_index) {
+std::vector<DeviceTensor<nn_type>*>& NN_Link::get_d_output(int node_index) {
 	return _d_outputs;
 }
 
@@ -82,7 +82,7 @@ void NN_Link::link_prev_child() {
 			_input.push_back(&p_prev_child->get_output(n_prev_child));
 			_in_shape.push_back(&p_prev_child->get_out_shape(n_prev_child));
 
-			NN_Tensor<nn_type>* pd_input = new NN_Tensor<nn_type>();
+			DeviceTensor<nn_type>* pd_input = new DeviceTensor<nn_type>();
 
 			_d_inputs.push_back(pd_input);
 			p_prev_child->get_d_output(n_prev_child).push_back(pd_input);

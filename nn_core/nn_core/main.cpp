@@ -34,7 +34,7 @@ int main() {
 		Model model = Model(x_input, x, "model_1");
 		model.summary();
 
-		Tensor<nn_type> x_tensor({ 60000, 1, 28, 28 });
+		HostTensor<nn_type> x_tensor({ 60000, 1, 28, 28 });
 
 		tbb::parallel_for(tbb::blocked_range<uint>(0, x_tensor._len),
 			[&](const tbb::blocked_range<uint>& e){
@@ -42,7 +42,7 @@ int main() {
 		});
 		
 		clock_t start = clock();
-		std::vector<Tensor<nn_type>> output = model.predict<nn_type>(x_tensor, 128, 60000 / 128);
+		std::vector<HostTensor<nn_type>> output = model.predict<nn_type>(x_tensor, 128, 60000 / 128);
 		clock_t end = clock();
 
 		printf("elapsed time: %ld ms.\n", end - start);

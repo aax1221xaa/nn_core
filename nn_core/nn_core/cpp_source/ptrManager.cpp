@@ -2,7 +2,7 @@
 
 
 ptrManager::ptrManager(){
-	head = (ptrRef*)malloc(sizeof(ptrRef));
+	head = new ptrRef;
 
 	head->prev = head;
 	head->next = head;
@@ -12,7 +12,7 @@ ptrManager::ptrManager(){
 
 
 ptrRef* ptrManager::create(){
-	ptrRef *current = (ptrRef*)malloc(sizeof(ptrRef));
+	ptrRef *current = new ptrRef;
 
 	ptrRef *before = head;
 	ptrRef *after = head->next;
@@ -27,17 +27,16 @@ ptrRef* ptrManager::create(){
 	return current;
 }
 
-void ptrManager::erase(ptrRef **node){
-	if(*node == head) return;
+void ptrManager::erase(ptrRef *node){
+	if(node == head) return;
 
-	ptrRef *before = (*node)->prev;
-	ptrRef *after = (*node)->next;
+	ptrRef *before = node->prev;
+	ptrRef *after = node->next;
 
 	before->next = after;
 	after->prev = before;
 
-	free(*node);
-	*node = NULL;
+	delete node;
 }
 
 
@@ -50,5 +49,5 @@ ptrManager::~ptrManager(){
 		free(current);
 		current = tmp;
 	}
-	free(head);
+	delete head;
 }

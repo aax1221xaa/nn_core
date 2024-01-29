@@ -18,7 +18,7 @@ class ptrManager{
 public:
 	ptrManager();
 	ptrRef* create();
-	void erase(ptrRef **node);
+	void erase(ptrRef *node);
 	~ptrManager();
 };
 

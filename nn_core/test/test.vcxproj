@@ -79,29 +79,17 @@
   <ItemGroup>
     <ClCompile Include="..\nn_core\cpp_source\CudaCheck.cpp" />
     <ClCompile Include="..\nn_core\cpp_source\cuda_common.cpp" />
+    <ClCompile Include="..\nn_core\cpp_source\dimension.cpp" />
     <ClCompile Include="..\nn_core\cpp_source\Exception.cpp" />
-    <ClCompile Include="..\nn_core\cpp_source\misc.cpp" />
-    <ClCompile Include="..\nn_core\cpp_source\nn_tensor.cpp" />
     <ClCompile Include="..\nn_core\cpp_source\ptrManager.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\nn_core\cpp_source\CudaCheck.h" />
     <ClInclude Include="..\nn_core\cpp_source\cuda_common.h" />
+    <ClInclude Include="..\nn_core\cpp_source\dimension.h" />
     <ClInclude Include="..\nn_core\cpp_source\Exception.h" />
-    <ClInclude Include="..\nn_core\cpp_source\misc.h" />
-    <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h" />
     <ClInclude Include="..\nn_core\cpp_source\ptrManager.h" />
-    <ClInclude Include="..\nn_core\cuda_source\convolution.cuh" />
-    <ClInclude Include="..\nn_core\cuda_source\cuda_indice.cuh" />
-    <ClInclude Include="..\nn_core\cuda_source\cuda_misc.cuh" />
-    <ClInclude Include="..\nn_core\cuda_source\maxpool.cuh" />
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="..\nn_core\cuda_source\convolution.cu" />
-    <CudaCompile Include="..\nn_core\cuda_source\cuda_indice.cu" />
-    <CudaCompile Include="..\nn_core\cuda_source\cuda_misc.cu" />
-    <CudaCompile Include="..\nn_core\cuda_source\maxpool.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

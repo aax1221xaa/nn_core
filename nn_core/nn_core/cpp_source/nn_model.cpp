@@ -121,7 +121,7 @@ Model::Model(const Layer_t& inputs, const Layer_t& outputs, const char* model_na
 				if (n < -1 || n == 0) {
 					ErrorExcept(
 						"[Model::Model()] can't create model. invalid %s layer's dimension %s.",
-						p_child->_forward->_layer_name, dimension_to_str(p_child->_out_shape)
+						p_child->_forward->_layer_name, put_shape(p_child->_out_shape)
 					);
 				}
 			}
@@ -139,7 +139,7 @@ Model::Model(const Layer_t& inputs, const Layer_t& outputs, const char* model_na
 }
 
 Model::~Model() {
-	for (NN_Tensor<nn_type>* p : _d_outputs) delete p;
+	for (DeviceTensor<nn_type>* p : _d_outputs) delete p;
 }
 
 NN_Link* Model::create_child() {
@@ -225,11 +225,11 @@ void Model::set_next_node(NN_Link* next_node, int node_index) {
 	_output_indices.push_back(node_index);
 }
 
-NN_Tensor<nn_type>& Model::get_output(int node_index) {
+DeviceTensor<nn_type>& Model::get_output(int node_index) {
 	return _output_nodes[node_index]->_output;
 }
 
-std::vector<NN_Tensor<nn_type>*>& Model::get_d_output(int node_index) {
+std::vector<DeviceTensor<nn_type>*>& Model::get_d_output(int node_index) {
 	return _output_nodes[node_index]->_d_outputs;
 }
 
@@ -250,7 +250,7 @@ void Model::link_prev_child() {
 			_input_nodes[i]->_input.push_back(&p_prev_child->get_output(n_prev_child));
 			_input_nodes[i]->_in_shape.push_back(&p_prev_child->get_out_shape(n_prev_child));
 
-			NN_Tensor<nn_type>* pd_input = new NN_Tensor<nn_type>();
+			DeviceTensor<nn_type>* pd_input = new DeviceTensor<nn_type>();
 
 			_input_nodes[i]->_d_inputs.push_back(pd_input);
 			p_prev_child->get_d_output(n_prev_child).push_back(pd_input);
@@ -272,13 +272,13 @@ void Model::build(std::vector<nn_shape*>& input_shape) {
 	}
 }
 
-void Model::run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output) {
+void Model::run_forward(cudaStream_t* s, std::vector<DeviceTensor<nn_type>*>& input, DeviceTensor<nn_type>& output) {
 	for (NN_Link* p_node : _forward_list) {
 		p_node->_forward->run_forward(s, p_node->_input, p_node->_output);
 	}
 }
 
-void Model::run_backward(cudaStream_t* s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input) {
+void Model::run_backward(cudaStream_t* s, DeviceTensor<nn_type>& d_output, std::vector<DeviceTensor<nn_type>*>& d_input) {
 	
 }
 
@@ -293,25 +293,7 @@ void Model::summary() {
 
 	for (NN_Link* p_node : _forward_list) {
 		std::cout << ++i << " : layer_name = " << p_node->_forward->_layer_name
-			<< " output size: " << dimension_to_str(p_node->_out_shape) << std::endl;
-	}
-}
-
-void Model::check_dimension(const nn_shape& ref_shape, const nn_shape& real_shape) {
-	if (ref_shape.size() != real_shape.size()) {
-		ErrorExcept(
-			"[Model::check_dimension()] mismatched shape. ref_shape: %s, real_shape: %s.",
-			dimension_to_str(ref_shape), dimension_to_str(real_shape)
-		);
-	}
-
-	for (int i = 0; i < ref_shape.size(); ++i) {
-		if ((ref_shape[i] > 0 && ref_shape[i] != real_shape[i]) || ref_shape[i] == 0 || real_shape[i] == 0) {
-			ErrorExcept(
-				"[Model::check_dimension()] mismatched shape. ref_shape: %s, real_shape: %s.",
-				dimension_to_str(ref_shape), dimension_to_str(real_shape)
-			);
-		}
+			<< " output size: " << put_shape(p_node->_out_shape) << std::endl;
 	}
 }
 

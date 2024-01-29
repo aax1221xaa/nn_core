@@ -5,13 +5,13 @@
 
 
 class MNIST {
-	static void load_file(const char* image_file, const char* label_file, Tensor<uchar>& image, Tensor<uchar>& truth);
+	static void load_file(const char* image_file, const char* label_file, HostTensor<uchar>& image, HostTensor<uchar>& truth);
 
 public:
-	Tensor<uchar> train_x;
-	Tensor<uchar> train_y;
-	Tensor<uchar> test_x;
-	Tensor<uchar> test_y;
+	HostTensor<uchar> train_x;
+	HostTensor<uchar> train_y;
+	HostTensor<uchar> test_x;
+	HostTensor<uchar> test_y;
 
 	bool _do_shuffle;
 

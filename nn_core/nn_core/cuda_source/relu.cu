@@ -26,29 +26,60 @@ __global__ void __relu(
 	}
 }
 
-
-
-/**********************************************/
-/*											  */
-/*				  host function 			  */
-/*										      */
-/**********************************************/
-
-void relu(
-	cudaStream_t stream,
-	const float* input,
-	float* output,
+__global__ void __d_relu(
+	const float* a,
+	const float* b,
+	float* c,
 	cuint len
 ) {
-	dim3 threads(SQR_BLOCK_SIZE);
+	cuint cx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (cx < len && b[cx] > 0) c[cx] = a[cx];
+}
+
+
+/**********************************************
+
+					  ReLU
+
+**********************************************/
+
+void relu(
+	const nn_type* input,
+	nn_type* output,
+	const nn_shape& in_shape
+) {
+	cuint len = in_shape[0] * in_shape[1] * in_shape[2] * in_shape[3];
+	dim3 threads(BLOCK_1024);
 	dim3 blocks = get_grid_size(threads, len);
 
-	__relu << <blocks, threads, 0, stream >> > (
+	__relu<<<blocks, threads>>>(
 		input,
 		output,
 		len
-		);
+	);
+}
 
-	//check_cuda(cudaStreamSynchronize(stream));
-	//check_cuda(cudaGetLastError());
+/**********************************************
+
+					 D_ReLU
+
+**********************************************/
+
+void d_relu(
+	const nn_type* d_output,
+	const nn_type* input,
+	nn_type* d_input,
+	const nn_shape& in_shape
+) {
+	cuint len = in_shape[0] * in_shape[1] * in_shape[2] * in_shape[3];
+	dim3 threads(BLOCK_1024);
+	dim3 blocks = get_grid_size(threads, len);
+
+	__d_relu<<<blocks, threads>>>(
+		d_output,
+		input,
+		d_input,
+		len
+	);
 }

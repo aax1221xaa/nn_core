@@ -34,12 +34,12 @@ public:
 	NN_Link* _parent;
 	std::vector<NN_Link*> _child;
 
-	std::vector<NN_Tensor<nn_type>*> _input;
-	NN_Tensor<nn_type> _output;
+	std::vector<DeviceTensor<nn_type>*> _input;
+	DeviceTensor<nn_type> _output;
 
-	std::vector<NN_Tensor<nn_type>*> _d_inputs;
+	std::vector<DeviceTensor<nn_type>*> _d_inputs;
 	//NN_Tensor<nn_type> _d_output;
-	std::vector<NN_Tensor<nn_type>*> _d_outputs;
+	std::vector<DeviceTensor<nn_type>*> _d_outputs;
 
 	std::vector<nn_shape*> _in_shape;
 	nn_shape _out_shape;
@@ -58,8 +58,8 @@ public:
 
 	virtual int get_node_index(NN_Link* next_node);
 	virtual void set_next_node(NN_Link* next_node, int node_index);
-	virtual NN_Tensor<nn_type>& get_output(int node_index);
-	virtual std::vector<NN_Tensor<nn_type>*>& get_d_output(int node_index);
+	virtual DeviceTensor<nn_type>& get_output(int node_index);
+	virtual std::vector<DeviceTensor<nn_type>*>& get_d_output(int node_index);
 	virtual nn_shape& get_out_shape(int node_index);
 	virtual void link_prev_child();
 

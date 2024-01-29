@@ -5,10 +5,10 @@
 
 class NN_Loss {
 public:
-	std::string name;
+	const char* name;
 
-	NN_Tensor<nn_type>* output;
-	NN_Tensor<nn_type> d_output;
+	DeviceTensor<nn_type>* output;
+	DeviceTensor<nn_type> d_output;
 
 	NN_Loss();
 };

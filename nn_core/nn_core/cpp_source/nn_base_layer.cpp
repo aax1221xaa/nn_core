@@ -9,20 +9,24 @@
 
 #ifdef FIX_MODE
 
+NN_Backward::~NN_Backward() {
+
+}
+
 void NN_Backward::set_dio(
 	std::vector<nn_shape*>& in_shape,
-	std::vector<NN_Tensor<nn_type>*>& d_outputs,
-	std::vector<NN_Tensor<nn_type>*>& d_inputs
+	std::vector<DeviceTensor<nn_type>*>& d_outputs,
+	std::vector<DeviceTensor<nn_type>*>& d_inputs
 ) {
-	for (NN_Tensor<nn_type>* p_dinput : d_inputs) *p_dinput = NN_Tensor<nn_type>::zeros(*in_shape[0]);
+	for (DeviceTensor<nn_type>* p_dinput : d_inputs) *p_dinput = DeviceTensor<nn_type>::zeros(*in_shape[0]);
 }
 
 void NN_Backward::run_backward(
 	cudaStream_t* s,
-	std::vector<NN_Tensor<nn_type>*>& inputs,
-	NN_Tensor<nn_type>& outputs,
-	NN_Tensor<nn_type>& d_output,
-	std::vector<NN_Tensor<nn_type>*>& d_input
+	std::vector<DeviceTensor<nn_type>*>& inputs,
+	DeviceTensor<nn_type>& outputs,
+	DeviceTensor<nn_type>& d_output,
+	std::vector<DeviceTensor<nn_type>*>& d_input
 ) {
 
 }
@@ -40,7 +44,7 @@ void NN_Layer::build(std::vector<nn_shape*>& input_shape) {
 
 }
 
-void NN_Layer::set_io(nn_shape& out_shape, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output) {
+void NN_Layer::set_io(nn_shape& out_shape, std::vector<DeviceTensor<nn_type>*>& input, DeviceTensor<nn_type>& output) {
 	output.set(out_shape);
 }
 

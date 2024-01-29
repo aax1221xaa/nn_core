@@ -80,7 +80,6 @@
     <ClCompile Include="cpp_source\convolution_host.cpp" />
     <ClCompile Include="cpp_source\CudaCheck.cpp" />
     <ClCompile Include="cpp_source\cuda_common.cpp" />
-    <ClCompile Include="cpp_source\misc.cpp" />
     <ClCompile Include="cpp_source\Exception.cpp" />
     <ClCompile Include="cpp_source\mnist.cpp" />
     <ClCompile Include="cpp_source\nn_layer.cpp" />
@@ -98,7 +97,6 @@
     <ClInclude Include="cpp_source\convolution_host.h" />
     <ClInclude Include="cpp_source\CudaCheck.h" />
     <ClInclude Include="cpp_source\cuda_common.h" />
-    <ClInclude Include="cpp_source\misc.h" />
     <ClInclude Include="cpp_source\Exception.h" />
     <ClInclude Include="cpp_source\mnist.h" />
     <ClInclude Include="cpp_source\nn_layer.h" />
@@ -110,7 +108,6 @@
     <ClInclude Include="cpp_source\nn_optimizer.h" />
     <ClInclude Include="cpp_source\nn_tensor.h" />
     <ClInclude Include="cpp_source\ptrManager.h" />
-    <ClInclude Include="cuda_source\add_bias.cuh" />
     <ClInclude Include="cuda_source\cast.cuh" />
     <ClInclude Include="cuda_source\convolution.cuh" />
     <ClInclude Include="cuda_source\cuda_indice.cuh" />
@@ -119,9 +116,9 @@
     <ClInclude Include="cuda_source\maxpool.cuh" />
     <ClInclude Include="cuda_source\optimizer.cuh" />
     <ClInclude Include="cuda_source\relu.cuh" />
+    <ClInclude Include="cuda_source\softmax.cuh" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="cuda_source\add_bias.cu" />
     <CudaCompile Include="cuda_source\cast.cu" />
     <CudaCompile Include="cuda_source\convolution.cu" />
     <CudaCompile Include="cuda_source\cuda_indice.cu" />
@@ -130,6 +127,7 @@
     <CudaCompile Include="cuda_source\maxpool.cu" />
     <CudaCompile Include="cuda_source\optimizer.cu" />
     <CudaCompile Include="cuda_source\relu.cu" />
+    <CudaCompile Include="cuda_source\softmax.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

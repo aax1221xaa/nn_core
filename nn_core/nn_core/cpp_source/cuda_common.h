@@ -8,15 +8,18 @@
 
 #define STR_MAX			1024
 
-#define HARF_BLOCK				16
-#define BLOCK_Z					4
-#define BLOCK_SIZE				32
-#define SQR_BLOCK_SIZE			BLOCK_SIZE * BLOCK_SIZE
+#define BLOCK_4					4
+#define BLOCK_8					8
+#define BLOCK_16				16
+#define BLOCK_32				32
+#define BLOCK_1024				1024
 #define CONST_ELEM_SIZE			(65536 / sizeof(uint))
 
 #define EPSILON					1e-8
 
 #define STREAMS					32
+
+#define DIM_SIZE				4
 
 #define FIX_MODE
 
@@ -24,9 +27,6 @@ typedef const int cint;
 typedef unsigned int uint;
 typedef const unsigned int cuint;
 
-typedef std::vector<int> nn_shape;
-
-const char* dimension_to_str(const nn_shape& shape);
 dim3 get_grid_size(const dim3 block, unsigned int x = 1, unsigned int y = 1, unsigned int z = 1);
 
 class NN_Shared_Ptr {
@@ -37,6 +37,24 @@ protected:
 public:
 	NN_Shared_Ptr();
 };
+
+/*******************************************
+
+					 Pad
+
+*******************************************/
+
+enum class Pad { VALID, SAME };
+
+/**********************************************/
+/*                                            */
+/*                   nn_shape                 */
+/*                                            */
+/**********************************************/
+
+typedef std::vector<int> nn_shape;
+
+const char* put_shape(const nn_shape& tensor);
 
 /**********************************************/
 /*                                            */

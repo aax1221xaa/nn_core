@@ -4,11 +4,29 @@
 #include "../cpp_source/cuda_common.h"
 
 
+/**********************************************
+
+					  ReLU
+
+**********************************************/
+
 void relu(
-	cudaStream_t stream,
-	const float* input,
-	float* output,
-	cuint len
+	const nn_type* input,
+	nn_type* output,
+	const nn_shape& in_shape
+);
+
+/**********************************************
+
+					 D_ReLU
+
+**********************************************/
+
+void d_relu(
+	const nn_type* d_output,
+	const nn_type* input,
+	nn_type* d_input,
+	const nn_shape& in_shape
 );
 
 

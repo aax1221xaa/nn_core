@@ -1,33 +1,33 @@
 #ifndef OPTIMIZER_CUH
 #define OPTIMIZER_CUH
 
-#include "../cpp_source/nn_tensor.h"
+#include "../cpp_source/cuda_common.h"
 
 
 void sgd(
-	cudaStream_t stream,
-	const CudaTensor gradient,
-	CudaTensor momentum,
-	CudaTensor weight,
+	const nn_type* gradient,
+	nn_type* momentum,
+	nn_type* weight,
+	const nn_shape& w_shape,
 	float learn_rate,
 	float momentum_rate
 );
 
 void rms_prop(
-	cudaStream_t stream,
-	const CudaTensor gradient,
-	CudaTensor square_g,
-	CudaTensor weight,
+	const nn_type* gradient,
+	nn_type* square_g,
+	nn_type* weight,
+	const nn_shape& w_shape,
 	float decay_rate,
 	float learn_rate
 );
 
 void adam(
-	cudaStream_t stream,
-	const CudaTensor gradient,
-	CudaTensor square_g,
-	CudaTensor decay_g,
-	CudaTensor weight,
+	const nn_type* gradient,
+	nn_type* square_g,
+	nn_type* decay_g,
+	nn_type* weight,
+	const nn_shape& w_shape,
 	float learn_rate,
 	float beta_1,
 	float beta_2

@@ -4,7 +4,7 @@
 #define __CUDACC__
 #endif
 
-//#include <device_functions.h>
+#include <device_functions.h>
 #include <device_launch_parameters.h>
 
 
@@ -84,145 +84,72 @@ __global__ void __adam(
 /*										      */
 /**********************************************/
 
-void check_sgd(
-	const CudaTensor gradient,
-	const CudaTensor momentum,
-	const CudaTensor weight
-) {
-	uint g_size = get_elem_size(gradient);
-	uint m_size = get_elem_size(momentum);
-	uint w_size = get_elem_size(weight);
-
-	if (w_size != g_size || w_size != m_size) {
-		ErrorExcept(
-			"[check_sgd] invalid size. \
-			gradient = %zd, momentum = %zd, weight = %zd",
-			g_size, m_size, w_size
-		);
-	}
-}
-
-void check_rms_prop(
-	const CudaTensor gradient,
-	const CudaTensor g,
-	const CudaTensor weight
-) {
-	uint g_size = get_elem_size(gradient);
-	uint m_size = get_elem_size(g);
-	uint w_size = get_elem_size(weight);
-
-	if (w_size != g_size || w_size != m_size) {
-		ErrorExcept(
-			"[check_rms_prop] invalid size. \
-			gradient = %zd, momentum = %zd, weight = %zd",
-			g_size, m_size, w_size
-		);
-	}
-}
-
-void check_adam(
-	const CudaTensor gradient,
-	const CudaTensor square_g,
-	const CudaTensor decay_avg,
-	const CudaTensor weight
-) {
-	uint g_size = get_elem_size(gradient);
-	uint sqg_size = get_elem_size(square_g);
-	uint davg_size = get_elem_size(decay_avg);
-	uint w_size = get_elem_size(weight);
-
-	if (w_size != g_size || w_size != sqg_size || w_size != davg_size) {
-		ErrorExcept(
-			"[check_adam] invalid size. \
-			gradient = %zd, square_gradient = %zd, decay_avg = %zd, weight = %zd",
-			g_size,
-			sqg_size,
-			davg_size,
-			w_size
-		);
-	}
-}
-
 void sgd(
-	cudaStream_t stream,
-	const CudaTensor gradient,
-	CudaTensor momentum,
-	CudaTensor weight,
+	const nn_type* gradient,
+	nn_type* momentum,
+	nn_type* weight,
+	const nn_shape& w_shape,
 	float learn_rate,
 	float momentum_rate
 ) {
-	check_sgd(gradient, momentum, weight);
+	cuint len = w_shape[0] * w_shape[1] * w_shape[2] * w_shape[3];
+	dim3 threads(BLOCK_1024);
+	dim3 blocks = get_grid_size(threads, len);
 
-	uint length = get_elem_size(weight);
-	dim3 threads(SQR_BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, length);
-
-	__sgd << <blocks, threads, 0, stream >> > (
-		gradient.data,
-		weight.data,
-		momentum.data,
-		length,
+	__sgd<<<blocks, threads>>>(
+		gradient,
+		weight,
+		momentum,
+		len,
 		learn_rate,
 		momentum_rate
 	);
-	check_cuda(cudaStreamSynchronize(stream));
 }
 
 void rms_prop(
-	cudaStream_t stream,
-	const CudaTensor gradient,
-	CudaTensor square_g,
-	CudaTensor weight,
+	const nn_type* gradient,
+	nn_type* square_g,
+	nn_type* weight,
+	const nn_shape& w_shape,
 	float decay_rate,
 	float learn_rate
 ) {
-	check_rms_prop(gradient, square_g, weight);
+	cuint len = w_shape[0] * w_shape[1] * w_shape[2] * w_shape[3];
+	dim3 threads(BLOCK_1024);
+	dim3 blocks = get_grid_size(threads, len);
 
-	uint length = get_elem_size(weight);
-	dim3 threads(SQR_BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, length);
-
-	__rms_prop<<<blocks, threads, 0, stream>>>(
-		gradient.data,
-		weight.data,
-		square_g.data,
-		length,
+	__rms_prop<<<blocks, threads>>>(
+		gradient,
+		weight,
+		square_g,
+		len,
 		learn_rate,
 		decay_rate
 	);
-	check_cuda(cudaStreamSynchronize(stream));
 }
 
 void adam(
-	cudaStream_t stream,
-	const CudaTensor gradient,
-	CudaTensor square_g,
-	CudaTensor decay_g,
-	CudaTensor weight,
+	const nn_type* gradient,
+	nn_type* square_g,
+	nn_type* decay_g,
+	nn_type* weight,
+	const nn_shape& w_shape,
 	float learn_rate,
 	float beta_1,
 	float beta_2
 ) {
-	check_adam(
+	cuint len = w_shape[0] * w_shape[1] * w_shape[2] * w_shape[3];
+	dim3 threads(BLOCK_1024);
+	dim3 blocks = get_grid_size(threads, len);
+
+	__adam<<<blocks, threads>>>(
 		gradient,
+		weight,
 		square_g,
 		decay_g,
-		weight
-	);
-
-	uint length = get_elem_size(weight);
-	dim3 threads(SQR_BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, length);
-
-	__adam<<<blocks, threads, 0, stream>>>(
-		gradient.data,
-		weight.data,
-		square_g.data,
-		decay_g.data,
-		length,
+		len,
 		learn_rate,
 		beta_1,
 		beta_2
 	);
-	check_cuda(cudaStreamSynchronize(stream));
 }

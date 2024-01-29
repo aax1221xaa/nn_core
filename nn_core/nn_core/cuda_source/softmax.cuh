@@ -1,21 +1,21 @@
-#ifndef DENSE_CUH
-#define DENSE_CUH
+#ifndef __SOFTMAX_CUH__
+#define __SOFTMAX_CUH__
 
 #include "../cpp_source/cuda_common.h"
 
 
 /**********************************************
 
-				  Mat multiple
+					softmax
 
 **********************************************/
 
-void matmul(
+void softmax(
+	cudaStream_t* s,
 	const nn_type* input,
-	const nn_type* weight,
 	nn_type* output,
 	const nn_shape& in_shape,
-	const nn_shape& out_shape
+	std::vector<uint>& axis
 );
 
-#endif
+#endif // !__SOFTMAX_CUH__

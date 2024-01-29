@@ -1,54 +1,46 @@
 #ifndef MAXPOOL_CUH
 #define MAXPOOL_CUH
 
-#include "../cpp_source/misc.h"
+#include "../cpp_source/cuda_common.h"
 
 
 /**********************************************
 
-				  _maxpool2d
+				    Maxpool2d
 
 **********************************************/
 
-class maxpool2dParam {
-public:
-	int _kh;
-	int _kw;
-	int _stride_h;
-	int _stride_w;
-
-	maxpool2dParam();
-	maxpool2dParam(int kh, int kw, int stride_h, int stride_w);
-	void set(int kh, int kw, int stride_h, int stride_w);
-	const bool is_valid() const;
-};
-
-class _maxpool2d : public solutionBase {
-public:
-	const tensor4d& _input;
-	tensor4d _output;
-
-	const maxpool2dParam& _param;
-
-	_maxpool2d(const tensor4d& input, const maxpool2dParam& param);
-	const tensor4d calculate_size();
-	void operator()(cudaStream_t* s, const nn_type* input, nn_type* output);
-};
+void maxpool2d(
+	cudaStream_t s,
+	const nn_type* input,
+	nn_type* output,
+	const nn_shape& in_shape,
+	const nn_shape& out_shape,
+	uint* max_indice,
+	cuint h_kernel,
+	cuint w_kernel,
+	cuint h_stride,
+	cuint w_stride,
+	cuint h_tile,
+	cuint w_tile
+);
 
 /**********************************************
 
-				  _dMaxpool2d
+				  D_Maxpool2d
 
 **********************************************/
 
-class _dMaxpool2d : public solutionBase {
-public:
-	const tensor4d& _d_output;
-	const _maxpool2d& _maxpool;
-
-	_dMaxpool2d(const tensor4d& d_output, const _maxpool2d& maxpool);
-	const tensor4d calculate_size();
-	void operator()(const nn_type* d_output, nn_type* d_input);
-};
+void d_maxpool2d(
+	cudaStream_t* s,
+	const nn_type* d_output,
+	nn_type* d_input,
+	const nn_shape& out_shape,
+	const nn_shape& in_shape,
+	cuint* max_indice,
+	cuint w_kernel,
+	cuint h_stride,
+	cuint w_stride
+);
 
 #endif // !MAXPOOL_CUH

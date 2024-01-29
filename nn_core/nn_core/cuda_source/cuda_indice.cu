@@ -15,7 +15,7 @@ void get_indice(uint* indice, size_t size, size_t offset) {
 	check_cuda(cudaMemcpyFromSymbol(indice, __indice, size, offset));
 }
 
-const uint* get_indice_ptr() {
+uint* get_indice_ptr() {
 	uint* symbol = NULL;
 
 	check_cuda(cudaGetSymbolAddress((void**)&symbol, __indice));

@@ -1,4 +1,5 @@
 #include "maxpool.cuh"
+#include "cuda_misc.cuh"
 
 #ifndef __CUDACC__
 #define __CUDACC__
@@ -22,7 +23,6 @@ __global__ void __maxpool_2d(
 	cuint a_w,
 	cuint b_h,
 	cuint b_w,
-	cuint ch,
 	cuint k_h,
 	cuint k_w,
 	cuint st_h,
@@ -80,135 +80,113 @@ __global__ void __maxpool_2d(
 	}
 }
 
-
-/**********************************************
-
-				  _maxpool2d
-
-**********************************************/
-
-int calc_shared_mem_size(
-	int kernel_size,
-	int strides
+__global__ void __d_maxpool(
+	const float* a,
+	const uint* indice,
+	float* b,
+	cuint a_h,
+	cuint a_w,
+	cuint b_h,
+	cuint b_w,
+	cuint k_w,
+	cuint st_h,
+	cuint st_w
 ) {
-	return (BLOCK_SIZE - 1) * strides + kernel_size;
-}
+	cuint cx = blockIdx.x * blockDim.x + threadIdx.x;
+	cuint cy = blockIdx.y * blockDim.y + threadIdx.y;
+	cuint cz = blockIdx.z;
 
-maxpool2dParam::maxpool2dParam() :
-	_kh(0),
-	_kw(0),
-	_stride_h(0),
-	_stride_w(0)
-{
-}
+	const float* p_a = a + (cz * (a_h * a_w) + (cy * st_h * a_w) + (cx * st_w));
+	const uint* p_indice = indice + (cz * (b_h * b_w) + (cy * b_w) + cx);
+	float* p_b = b + (cz * (b_h * b_w) + (cy * b_w) + cx);
 
-maxpool2dParam::maxpool2dParam(int kh, int kw, int stride_h, int stride_w) :
-	_kh(kh),
-	_kw(kw),
-	_stride_h(stride_h),
-	_stride_w(stride_w)
-{
-}
+	if (cx < b_w && cy < b_h) {
+		cuint index = *p_indice;
+		cuint x = index % k_w;
+		cuint y = index / k_w;
 
-void maxpool2dParam::set(int kh, int kw, int stride_h, int stride_w) {
-	_kh = kh;
-	_kw = kw;
-	_stride_h = stride_h;
-	_stride_w = stride_w;
-}
-
-const bool maxpool2dParam::is_valid() const {
-	return (_kh > 0 && _kw > 0 && _stride_h > 0 && _stride_w > 0);
-}
-
-
-_maxpool2d::_maxpool2d(const tensor4d& input, const maxpool2dParam& param) :
-	_input(input),
-	_param(param)
-{
-}
-
-const tensor4d _maxpool2d::calculate_size() {
-	if (!_input.is_valid() || !_param.is_valid()) {
-		ErrorExcept(
-			"[_maxpool2d::calculate_size()] invalid arguments. input: %s, kernel_size: [%d, %d], strides: [%d, %d]",
-			tensor4d::shape_to_str(_input),
-			_param._kw, _param._kh,
-			_param._stride_w, _param._stride_h
-		);
+		*p_b = p_a[y * a_w + x];
 	}
-
-	int out_n = _input._n;
-	int out_c = _input._c;
-	int out_h = (_input._h - _param._kh) / _param._stride_h + 1;
-	int out_w = (_input._w - _param._kw) / _param._stride_w + 1;
-
-	_output.set(out_n, out_c, out_h, out_w);
-
-	if (!_output.is_valid()) {
-		ErrorExcept(
-			"[_maxpool2d::calculate_size()] invalid output size. output: %s",
-			tensor4d::shape_to_str(_output)
-		);
-	}
-
-	return _output;
 }
 
-void _maxpool2d::operator()(cudaStream_t* s, const nn_type* input, nn_type* output) {
-	int share_w = calc_shared_mem_size(_param._kw, _param._stride_w);
-	int share_h = calc_shared_mem_size(_param._kh, _param._stride_h);
 
-	size_t smem_size = sizeof(float) * share_w * share_h;
+/**********************************************
 
-	dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 blocks = get_grid_size(threads, _output._w, _output._h);
+				    Maxpool2d
 
-	for (uint i = 0; i < _input._n; ++i) {
-		const float* d_in = input + (i * _input._h * _input._w * _input._c);
-		float* d_out = output + (i * _output._h * _output._w * _output._c);
+**********************************************/
 
-		__maxpool_2d<<<blocks, threads, smem_size, s[i % STREAMS]>>>(
-			d_in,
-			d_out,
-			_input._h,
-			_input._w,
-			_output._h,
-			_output._w,
-			_input._c,
-			_param._kh,
-			_param._kw,
-			_param._stride_h,
-			_param._stride_w,
-			share_h,
-			share_w
-		);
-	}
+void maxpool2d(
+	cudaStream_t s,
+	const nn_type* input,
+	nn_type* output,
+	const nn_shape& in_shape,
+	const nn_shape& out_shape,
+	uint* max_indice,
+	cuint h_kernel,
+	cuint w_kernel,
+	cuint h_stride,
+	cuint w_stride,
+	cuint h_tile,
+	cuint w_tile
+) {
+	size_t smem_size = sizeof(nn_type) * h_tile * w_tile;
+	dim3 threads(BLOCK_32, BLOCK_32);
+	dim3 blocks = get_grid_size(threads, in_shape[3], in_shape[2]);
+
+	__maxpool_2d<<<blocks, threads, smem_size, s>>>(
+		input,
+		output,
+		max_indice,
+		in_shape[2],
+		in_shape[3],
+		out_shape[2],
+		out_shape[3],
+		h_kernel,
+		w_kernel,
+		h_stride,
+		w_stride,
+		h_tile,
+		w_tile
+	);
 }
 
 /**********************************************
 
-				  _dMaxpool2d
+				  D_Maxpool2d
 
 **********************************************/
 
-_dMaxpool2d::_dMaxpool2d(const tensor4d& d_output, const _maxpool2d& maxpool) :
-	_d_output(d_output),
-	_maxpool(maxpool)
-{
-}
+void d_maxpool2d(
+	cudaStream_t* s,
+	const nn_type* d_output,
+	nn_type* d_input,
+	const nn_shape& out_shape,
+	const nn_shape& in_shape,
+	cuint* max_indice,
+	cuint w_kernel,
+	cuint h_stride,
+	cuint w_stride
+) {
+	dim3 threads(BLOCK_32, BLOCK_32);
+	dim3 blocks = get_grid_size(threads, out_shape[3], out_shape[2], out_shape[1]);
 
-const tensor4d _dMaxpool2d::calculate_size() {
-	if (!_d_output.is_valid()) {
-		ErrorExcept(
-			"[_dMaxpool2d::calculate_size()] invalid d_output. %s",
-			tensor4d::shape_to_str(_d_output)
+	for (uint i = 0; i < out_shape[0]; ++i) {
+		const nn_type* d_doutput = d_output + (i * out_shape[1] * out_shape[2] * out_shape[3]);
+		cuint* d_indice = max_indice + (i * out_shape[1] * out_shape[2] * out_shape[3]);
+		nn_type* d_dinput = d_input + (i * in_shape[1] * in_shape[2] * in_shape[3]);
+
+		__d_maxpool<<<blocks, threads, 0, s[i % STREAMS]>>>(
+			d_doutput,
+			d_indice,
+			d_dinput,
+			out_shape[2],
+			out_shape[3],
+			in_shape[2],
+			in_shape[3],
+			w_kernel,
+			h_stride,
+			w_stride
 		);
 	}
-
-	return _maxpool._input;
-}
-
-void _dMaxpool2d::operator()(const nn_type* d_output, nn_type* d_input) {
-
 }

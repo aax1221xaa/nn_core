@@ -18,7 +18,7 @@ dtype get_type(unsigned long* data);
 dtype get_type(float* data);
 dtype get_type(double* data);
 
-void type_cast(cudaStream_t s, dtype dst_type, void* dst, dtype src_type, void* src, cuint len);
+void type_cast(dtype src_type, void* src, dtype dst_type, void* dst, size_t len);
 
 #endif
 

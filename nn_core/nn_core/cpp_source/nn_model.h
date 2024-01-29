@@ -57,59 +57,57 @@ public:
 
 	int get_node_index(NN_Link* next_node);
 	void set_next_node(NN_Link* next_node, int node_index);
-	NN_Tensor<nn_type>& get_output(int node_index);
-	std::vector<NN_Tensor<nn_type>*>& get_d_output(int node_index);
+	DeviceTensor<nn_type>& get_output(int node_index);
+	std::vector<DeviceTensor<nn_type>*>& get_d_output(int node_index);
 	nn_shape& get_out_shape(int node_index);
 	void link_prev_child();
 
 	void calculate_output_size(std::vector<nn_shape*>& input_shape, nn_shape& out_shape);
 	void build(std::vector<nn_shape*>& input_shape);
-	void run_forward(cudaStream_t* s, std::vector<NN_Tensor<nn_type>*>& input, NN_Tensor<nn_type>& output);
-	void run_backward(cudaStream_t* s, NN_Tensor<nn_type>& d_output, std::vector<NN_Tensor<nn_type>*>& d_input);
+	void run_forward(cudaStream_t* s, std::vector<DeviceTensor<nn_type>*>& input, DeviceTensor<nn_type>& output);
+	void run_backward(cudaStream_t* s, DeviceTensor<nn_type>& d_output, std::vector<DeviceTensor<nn_type>*>& d_input);
 
 	void standby(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer);
 
 	template <typename sample_type, typename truth_type>
-	std::vector<Tensor<nn_type>> train_on_batch(const std::vector<Tensor<sample_type>>& samples, const std::vector<Tensor<truth_type>>& truth);
+	std::vector<HostTensor<nn_type>> train_on_batch(const std::vector<HostTensor<sample_type>>& samples, const std::vector<HostTensor<truth_type>>& truth);
 	
 	template <typename sample_type, typename truth_type>
-	std::vector<Tensor<nn_type>> fit(
-		const std::vector<Tensor<sample_type>>& samples,
-		const std::vector<Tensor<truth_type>>& truth,
+	std::vector<HostTensor<nn_type>> fit(
+		const std::vector<HostTensor<sample_type>>& samples,
+		const std::vector<HostTensor<truth_type>>& truth,
 		uint batch,
 		uint iter
 	);
 
 	template <typename d_type>
-	std::vector<Tensor<nn_type>> predict(
-		List<Tensor<d_type>> x,
+	std::vector<HostTensor<nn_type>> predict(
+		List<HostTensor<d_type>> x,
 		const int batch,
 		const int steps
 	);
 
 	void summary();
-
-	static void check_dimension(const nn_shape& ref_shape, const nn_shape& real_shape);
 };
 
 template <typename sample_type, typename truth_type>
-std::vector<Tensor<nn_type>> Model::train_on_batch(const std::vector<Tensor<sample_type>>& samples, const std::vector<Tensor<truth_type>>& truth) {
-	return Tensor<nn_type>();
+std::vector<HostTensor<nn_type>> Model::train_on_batch(const std::vector<HostTensor<sample_type>>& samples, const std::vector<HostTensor<truth_type>>& truth) {
+	return HostTensor<nn_type>();
 }
 
 template <typename sample_type, typename truth_type>
-std::vector<Tensor<nn_type>> Model::fit(
-	const std::vector<Tensor<sample_type>>& samples,
-	const std::vector<Tensor<truth_type>>& truth,
+std::vector<HostTensor<nn_type>> Model::fit(
+	const std::vector<HostTensor<sample_type>>& samples,
+	const std::vector<HostTensor<truth_type>>& truth,
 	uint batch,
 	uint iter
 ) {
-	return Tensor<nn_type>();
+	return HostTensor<nn_type>();
 }
 
 template <typename d_type>
-std::vector<Tensor<nn_type>> Model::predict(
-	List<Tensor<d_type>> x,
+std::vector<HostTensor<nn_type>> Model::predict(
+	List<HostTensor<d_type>> x,
 	const int batch,
 	const int steps
 ) {
@@ -129,7 +127,7 @@ std::vector<Tensor<nn_type>> Model::predict(
 		for (int j = 1; j < x[i].get()._shape.size(); ++j) x_shape->push_back(x[i].get()._shape[j]);
 
 		_input_nodes[i]->_in_shape.push_back(x_shape);
-		_input_nodes[i]->_input.push_back(new NN_Tensor<nn_type>(*x_shape));
+		_input_nodes[i]->_input.push_back(new DeviceTensor<nn_type>(*x_shape));
 	}
 
 	/*         set nodes outputs        */
@@ -139,14 +137,14 @@ std::vector<Tensor<nn_type>> Model::predict(
 	}
 
 	/*            set outputs           */
-	std::vector<Tensor<nn_type>> output;
+	std::vector<HostTensor<nn_type>> output;
 	for (NN_Link* node : _output_nodes) {
 		nn_shape out_shape;
 
 		out_shape.push_back(batch * steps);
 		for (int i = 1; i < node->_out_shape.size(); ++i) out_shape.push_back(node->_out_shape[i]);
 		
-		output.push_back(Tensor<nn_type>(out_shape));
+		output.push_back(HostTensor<nn_type>(out_shape));
 	}
 
 	/*           run forward          */
@@ -180,7 +178,7 @@ std::vector<Tensor<nn_type>> Model::predict(
 
 	/*        release inputs        */
 	for (NN_Link* node : _input_nodes) {
-		for (NN_Tensor<nn_type>* tensor : node->_input) delete tensor;
+		for (DeviceTensor<nn_type>* tensor : node->_input) delete tensor;
 		for (nn_shape* shape : node->_in_shape) delete shape;
 
 		node->_input.clear();
