@@ -1,44 +1,12 @@
-#include "../nn_core/cpp_source/dimension.h"
-#include <time.h>
-#include "tbb/tbb.h"
+#include "../nn_core/cpp_source/cuda_common.h"
 #include "vld.h"
 
-using namespace tbb;
-
-class A {
-public:
-	virtual void print();
-};
-
-class B : public A {
-public:
-	virtual void print();
-};
-
-void A::print() {
-	printf("AAAAAAAAAAAA\n");
-}
-
-void B::print() {
-	printf("BBBBBBBBBBBB\n");
-}
 
 int main() {
-	try {
-		A a;
-		B b;
-
-		a.print();
-
-		A& c = b;
-
-		c.print();
-
-		A d = b;
-		d.print();
-	}
-	catch (Exception& p) {
-		p.Put();
+	List<uint> a({ 1, 2, 3, 4, 5 });
+	
+	for (const List<uint>& val : a) {
+		std::cout << val;
 	}
 
 	return 0;

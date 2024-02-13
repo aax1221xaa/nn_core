@@ -39,9 +39,6 @@
     <ClCompile Include="cpp_source\cuda_common.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\convolution_host.cpp">
-      <Filter>소스 파일\cpp</Filter>
-    </ClCompile>
     <ClCompile Include="cpp_source\nn_layer.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
@@ -98,9 +95,6 @@
     <ClInclude Include="cuda_source\optimizer.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
-    <ClInclude Include="cpp_source\convolution_host.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
     <ClInclude Include="cpp_source\nn_layer.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
@@ -140,9 +134,6 @@
     <ClInclude Include="cuda_source\cuda_misc.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_source\softmax.cuh">
-      <Filter>헤더 파일\cuh</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_source\convolution.cu">
@@ -167,9 +158,6 @@
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_source\cuda_misc.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_source\softmax.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
   </ItemGroup>

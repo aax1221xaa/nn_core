@@ -77,7 +77,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="cpp_source\convolution_host.cpp" />
     <ClCompile Include="cpp_source\CudaCheck.cpp" />
     <ClCompile Include="cpp_source\cuda_common.cpp" />
     <ClCompile Include="cpp_source\Exception.cpp" />
@@ -94,7 +93,6 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cpp_source\convolution_host.h" />
     <ClInclude Include="cpp_source\CudaCheck.h" />
     <ClInclude Include="cpp_source\cuda_common.h" />
     <ClInclude Include="cpp_source\Exception.h" />
@@ -116,7 +114,6 @@
     <ClInclude Include="cuda_source\maxpool.cuh" />
     <ClInclude Include="cuda_source\optimizer.cuh" />
     <ClInclude Include="cuda_source\relu.cuh" />
-    <ClInclude Include="cuda_source\softmax.cuh" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_source\cast.cu" />
@@ -127,7 +124,6 @@
     <CudaCompile Include="cuda_source\maxpool.cu" />
     <CudaCompile Include="cuda_source\optimizer.cu" />
     <CudaCompile Include="cuda_source\relu.cu" />
-    <CudaCompile Include="cuda_source\softmax.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

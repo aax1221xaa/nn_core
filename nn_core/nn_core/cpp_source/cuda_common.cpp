@@ -5,6 +5,8 @@ char str_buffer[STR_MAX] = { '\0', };
 int str_idx = 0;
 
 dim3 get_grid_size(const dim3 block, unsigned int x, unsigned int y, unsigned int z) {
+	if (x < 0 || y < 0 || z < 0) ErrorExcept("[get_grid_size()] x, y, z can't less than 0. but x = %d, y = %d, z = %d.", x, y, z);
+
 	dim3 grid(
 		(x + block.x - 1) / block.x,
 		(y + block.y - 1) / block.y,
