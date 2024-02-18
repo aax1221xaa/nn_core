@@ -71,29 +71,11 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cpp_source\cuda_common.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
     <ClInclude Include="cpp_source\CudaCheck.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\Exception.h">
       <Filter>헤더 파일\h</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_source\relu.cuh">
-      <Filter>헤더 파일\cuh</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_source\maxpool.cuh">
-      <Filter>헤더 파일\cuh</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_source\dens.cuh">
-      <Filter>헤더 파일\cuh</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_source\convolution.cuh">
-      <Filter>헤더 파일\cuh</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_source\optimizer.cuh">
-      <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_layer.h">
       <Filter>헤더 파일\h</Filter>
@@ -122,43 +104,11 @@
     <ClInclude Include="cpp_source\mnist.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_source\cast.cuh">
-      <Filter>헤더 파일\cuh</Filter>
-    </ClInclude>
     <ClInclude Include="cpp_source\ptrManager.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_source\cuda_indice.cuh">
-      <Filter>헤더 파일\cuh</Filter>
+    <ClInclude Include="cpp_source\cuda_common.h">
+      <Filter>헤더 파일\h</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_source\cuda_misc.cuh">
-      <Filter>헤더 파일\cuh</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="cuda_source\convolution.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_source\dens.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_source\maxpool.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_source\relu.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_source\optimizer.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_source\cast.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_source\cuda_indice.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_source\cuda_misc.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
   </ItemGroup>
 </Project>

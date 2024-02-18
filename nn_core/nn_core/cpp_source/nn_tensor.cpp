@@ -8,42 +8,42 @@
 /*                                            */
 /**********************************************/
 
-TensorBase::TensorBase() {
-
-}
-
-TensorBase::TensorBase(const nn_shape& shape) :
-	_shape(shape)
+TensorBase::TensorBase() :
+	_is_valid(false),
+	_len(0)
 {
 }
 
-size_t TensorBase::get_len() const {
-	size_t n = 1;
+TensorBase::TensorBase(const nn_shape& shape) :
+	_len(0)
+{
+	_is_valid = check_shape(shape);
 
-	for (cint i : _shape) {
-		if (i < 1) {
-			ErrorExcept(
-				"Invalid shape. %s",
-				put_shape(_shape)
-			);
-		}
-		n *= i;
+	if (_is_valid) {
+		_shape = shape;
+		_len = get_len(shape);
 	}
-
-	return n;
 }
 
-void set_uniform(DeviceTensor<nn_type>& p) {
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_real_distribution<float> dis(-0.1f, 0.1f);
+size_t TensorBase::get_len(const nn_shape& shape) {
+	size_t len = 1;
 
-	size_t size = p.get_len();
+	for (const int& n : shape) {
+		if (n > 0) len *= n;
+	}
 
-	float* tmp = new nn_type[size];
+	return len;
+}
 
-	for (size_t i = 0; i < size; ++i) tmp[i] = dis(gen);
-	check_cuda(cudaMemcpy(p._data, tmp, sizeof(nn_type) * size, cudaMemcpyHostToDevice));
+bool TensorBase::check_shape(const nn_shape& shape) {
+	bool is_valid = true;
 
-	delete[] tmp;
+	if (shape.size() > 0) {
+		for (const int& n : shape) {
+			if (n < 1) is_valid = false;
+		}
+	}
+	else is_valid = false;
+
+	return is_valid;
 }

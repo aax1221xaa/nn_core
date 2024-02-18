@@ -185,8 +185,8 @@ void kernel_conv2d(
 	uint* indice = NULL;
 	uint* _indice = new uint[hw];
 
-	for (uint h = 0; h < out_shape[2]; ++h) {
-		for (uint w = 0; w < out_shape[3]; ++w) {
+	for (int h = 0; h < out_shape[2]; ++h) {
+		for (int w = 0; w < out_shape[3]; ++w) {
 			_indice[h * out_shape[3] + w] = h * in_shape[3] + w;
 		}
 	}
@@ -204,7 +204,7 @@ void kernel_conv2d(
 	dim3 threads(BLOCK_32, BLOCK_32);
 	dim3 blocks = get_grid_size(threads, grad_shape[1] * grad_shape[2] * grad_shape[3], grad_shape[0]);
 
-	for (uint i = 0; i < out_shape[0]; ++i) {
+	for (int i = 0; i < out_shape[0]; ++i) {
 		const nn_type* d_dout = d_output + (i * out_shape[1] * out_shape[2] * out_shape[3]);
 		const nn_type* d_input = input + (i * in_shape[1] * in_shape[2] * in_shape[3]);
 

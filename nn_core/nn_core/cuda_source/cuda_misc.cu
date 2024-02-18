@@ -296,7 +296,7 @@ void add_bias_2d(
 		dim3 threads(BLOCK_16, BLOCK_16, BLOCK_4);
 		dim3 blocks = get_grid_size(threads, in_shape[3], in_shape[2], in_shape[1]);
 
-		for (uint i = 0; i < in_shape[0]; ++i) {
+		for (int i = 0; i < in_shape[0]; ++i) {
 			const nn_type* d_in = input + (i * in_shape[1] * in_shape[2] * in_shape[3]);
 			nn_type* d_out = output + (i * in_shape[1] * in_shape[2] * in_shape[3]);
 
@@ -314,7 +314,7 @@ void add_bias_2d(
 		dim3 threads(BLOCK_8, BLOCK_8, BLOCK_16);
 		dim3 blocks = get_grid_size(threads, in_shape[3], in_shape[2], in_shape[1]);
 
-		for (uint i = 0; i < in_shape[0]; ++i) {
+		for (int i = 0; i < in_shape[0]; ++i) {
 			const nn_type* d_in = input + (i * in_shape[1] * in_shape[2] * in_shape[3]);
 			nn_type* d_out = output + (i * in_shape[1] * in_shape[2] * in_shape[3]);
 

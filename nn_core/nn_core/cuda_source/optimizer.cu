@@ -85,14 +85,13 @@ __global__ void __adam(
 /**********************************************/
 
 void sgd(
-	const nn_type* gradient,
+	nn_type* gradient,
 	nn_type* momentum,
 	nn_type* weight,
-	const nn_shape& w_shape,
+	const uint len,
 	float learn_rate,
 	float momentum_rate
 ) {
-	cuint len = w_shape[0] * w_shape[1] * w_shape[2] * w_shape[3];
 	dim3 threads(BLOCK_1024);
 	dim3 blocks = get_grid_size(threads, len);
 
@@ -107,14 +106,13 @@ void sgd(
 }
 
 void rms_prop(
-	const nn_type* gradient,
+	nn_type* gradient,
 	nn_type* square_g,
 	nn_type* weight,
-	const nn_shape& w_shape,
+	const uint len,
 	float decay_rate,
 	float learn_rate
 ) {
-	cuint len = w_shape[0] * w_shape[1] * w_shape[2] * w_shape[3];
 	dim3 threads(BLOCK_1024);
 	dim3 blocks = get_grid_size(threads, len);
 
@@ -129,16 +127,15 @@ void rms_prop(
 }
 
 void adam(
-	const nn_type* gradient,
+	nn_type* gradient,
 	nn_type* square_g,
 	nn_type* decay_g,
 	nn_type* weight,
-	const nn_shape& w_shape,
+	const uint len,
 	float learn_rate,
 	float beta_1,
 	float beta_2
 ) {
-	cuint len = w_shape[0] * w_shape[1] * w_shape[2] * w_shape[3];
 	dim3 threads(BLOCK_1024);
 	dim3 blocks = get_grid_size(threads, len);
 

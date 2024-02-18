@@ -38,7 +38,7 @@ MNIST::MNIST(const char* dir, int batch, bool do_shuffle) :
 	}
 }
 
-void MNIST::load_file(const char* image_file, const char* label_file, HostTensor<uchar>& image, HostTensor<uchar>& truth) {
+void MNIST::load_file(const char* image_file, const char* label_file, Tensor<uchar>& image, Tensor<uchar>& truth) {
 	FILE* image_fp = NULL;
 	FILE* label_fp = NULL;
 
@@ -89,8 +89,8 @@ void MNIST::load_file(const char* image_file, const char* label_file, HostTensor
 		image.set(shape);
 		truth.set({ sample_cnt, 1 });
 
-		fread_s(image._data, sizeof(uchar) * image.get_len(), sizeof(uchar), image.get_len(), image_fp);
-		fread_s(truth._data, sizeof(uchar) * truth.get_len(), sizeof(uchar), truth.get_len(), label_fp);
+		fread_s(image._data, sizeof(uchar) * image._len, sizeof(uchar), image._len, image_fp);
+		fread_s(truth._data, sizeof(uchar) * truth._len, sizeof(uchar), truth._len, label_fp);
 
 		fclose(image_fp);
 		fclose(label_fp);

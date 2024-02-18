@@ -26,7 +26,7 @@ const char* put_shape(const nn_shape& tensor) {
 	}
 	strcat_s(tmp_buff, "]");
 
-	int str_size = strlen(tmp_buff) + 1;
+	int str_size = (int)strlen(tmp_buff) + 1;
 	int least = STR_MAX - str_idx;
 	char* p_buff = NULL;
 

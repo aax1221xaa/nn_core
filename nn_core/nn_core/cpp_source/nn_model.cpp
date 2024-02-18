@@ -12,24 +12,25 @@ Model::Model(const char* model_name) :
 {
 }
 
-Model::Model(const Layer_t& inputs, const Layer_t& outputs, const char* model_name) :
+Model::Model(Layer_t inputs, Layer_t outputs, const char* model_name) :
 	NN_Layer(model_name)
 {
 	try {
 		if (!NN_Manager::condition) {
 			ErrorExcept(
-				"[Model::Model()] can't create model."
+				"[Model::Model] can't create model."
 			);
 		}
 
+		NN_Manager::clear_mark();
+
 		/*    marking output to input    */
-		NN_Manager::clear_select_mask();
 
-		for (Layer_t output_node : outputs) {
-			NN_Link* p_output = output_node[0].get()._link;
+		for (Layer_t& output_node : outputs) {
+			NN_Link* p_output = output_node._val._p_node;
 
-			for (Layer_t input_node : inputs) {
-				NN_Link* p_input = input_node[0].get()._link;
+			for (Layer_t& input_node : inputs) {
+				NN_Link* p_input = input_node._val._p_node;
 
 				std::vector<NN_Link*> node_list;
 				node_list.push_back(p_output);
@@ -37,14 +38,11 @@ Model::Model(const Layer_t& inputs, const Layer_t& outputs, const char* model_na
 				while (!node_list.empty()) {
 					NN_Link* p_current = node_list.front();
 
-					p_current->is_selected = true;
+					p_current->_mark = (uint)(p_current->_prev.size());
 
 					for (NN_Link* p_prev : p_current->_prev) {
 						if (p_prev != p_input) {
-							if (!p_prev->is_selected) node_list.push_back(p_prev);
-						}
-						else {
-							p_input->is_selected = true;
+							if (!p_prev->_mark) node_list.push_back(p_prev);
 						}
 					}
 					node_list.erase(node_list.begin());
@@ -53,81 +51,62 @@ Model::Model(const Layer_t& inputs, const Layer_t& outputs, const char* model_na
 		}
 
 		/*    create input to output layers    */
-		for (Layer_t input_node : inputs) {
-			NN_Link* p_input = input_node[0].get()._link;
+		for (Layer_t& input_node : inputs) {
+			NN_Link* p_input = input_node._val._p_node;
 			std::vector<NN_Link*> node_list;
 
 			node_list.push_back(p_input);
 
 			while (!node_list.empty()) {
 				NN_Link* p_current = node_list.front();
-				int prev_selects = 0;
+				NN_Link* p_child = p_current->create_child();
 
-				if (p_current->is_selected) {
-					for (NN_Link* p_prev : p_current->_prev) {
-						if (p_prev->is_selected) ++prev_selects;
-					}
+				_layers.push_back(p_child);
+				NN_Manager::add_node(p_child);
 
-					if (prev_selects == 0) {
-						p_current->is_selected = false;
-						NN_Link* p_current_child = p_current->create_child();
-						_forward_list.push_back(p_current_child);
-						NN_Manager::add_node(p_current_child);
-
-						for (NN_Link* p_next : p_current->_next) {
-							if (p_next->is_selected) node_list.push_back(p_next);
-						}
+				for (NN_Link* p_next : p_current->_next) {
+					if (p_next->_mark > 0) {
+						if (p_next->_mark == 1) node_list.push_back(p_next);
+						
+						--p_next->_mark;
 					}
 				}
+
 				node_list.erase(node_list.begin());
 			}
 		}
 
-		for (Layer_t input_node : inputs) {
-			NN_Link* p_child_input = NN_Link::get_child(input_node[0].get()._link);
+		for (Layer_t& input_node : inputs) {
+			NN_Link* p_current = input_node._val._p_node;
 
-			if (p_child_input == NULL) {
+			if (p_current->_p_link == NULL) {
 				ErrorExcept(
 					"[Model::Model()] can't create model."
 				);
 			}
-			_input_nodes.push_back(p_child_input);
+			_input_nodes.push_back(p_current->_p_link);
 		}
-		for (Layer_t output_node : outputs) {
-			NN_Link* p_child_output = NN_Link::get_child(output_node[0].get()._link);
+		for (Layer_t& output_node : outputs) {
+			NN_Link* p_current = output_node._val._p_node;
 
-			if (p_child_output == NULL) {
+			if (p_current->_p_link == NULL) {
 				ErrorExcept(
 					"[Model::Model()] can't create model."
 				);
 			}
-			_output_nodes.push_back(p_child_output);
+			_output_nodes.push_back(p_current->_p_link);
 		}
 
 		/*   link child node   */
-		for (NN_Link* p_child : _forward_list) {
-			p_child->link_prev_child();
-			//p_child->is_selected = false;
-		}
-		NN_Manager::clear_select_mask();
+		for (NN_Link* p_child : _layers) {
+			NN_Link* p_parant = p_child->_p_link;
 
-		/*   first calculate output size   */
-		for (NN_Link* p_child : _forward_list) {
-			 p_child->_forward->calculate_output_size(p_child->_in_shape, p_child->_out_shape);
-
-			for (const int& n : p_child->_out_shape) {
-				if (n < -1 || n == 0) {
-					ErrorExcept(
-						"[Model::Model()] can't create model. invalid %s layer's dimension %s.",
-						p_child->_forward->_layer_name, put_shape(p_child->_out_shape)
-					);
-				}
+			for (NN_Link* p_next_paranet : p_parant->_next) {
+				NN_Link* p_next_child = p_next_paranet->_p_link;
+				
+				p_child->_next.push_back(p_next_child);
+				p_next_child->_prev.push_back(p_child);
 			}
-		}
-
-		/*    build    */
-		for (NN_Link* p_child : _forward_list) {
-			p_child->_forward->build(p_child->_in_shape);
 		}
 	}
 	catch (const Exception& e) {
@@ -137,7 +116,7 @@ Model::Model(const Layer_t& inputs, const Layer_t& outputs, const char* model_na
 }
 
 Model::~Model() {
-	for (DeviceTensor<nn_type>* p : _d_outputs) delete p;
+
 }
 
 NN_Link* Model::create_child() {
@@ -155,133 +134,81 @@ NN_Link* Model::create_child() {
 
 	Model* child_model = new Model(_layer_name);
 
-	child_model->_parent = this;
-	child_model->is_selected = true;
+	_p_link = child_model;
+
+	child_model->_p_link = this;
 	child_model->_forward = child_model;
-	child_model->_output_indices = _output_indices;
+	child_model->_backward = NULL;
+	child_model->trainable = trainable;
+	child_model->_out_indice = _out_indice;
 
-	_child.push_back(child_model);
-
-	for (NN_Link* p_node : _forward_list) {
+	for (NN_Link* p_node : _layers) {
 		NN_Link* child_node = p_node->create_child();
-		child_model->_forward_list.push_back(child_node);
+		child_model->_layers.push_back(child_node);
 
 		NN_Manager::add_node(child_node);
 	}
 	for (NN_Link* p_input : _input_nodes) {
-		child_model->_input_nodes.push_back(NN_Link::get_child(p_input));
+		child_model->_input_nodes.push_back(p_input->_p_link);
 	}
 	for (NN_Link* p_output : _output_nodes) {
-		child_model->_output_nodes.push_back(NN_Link::get_child(p_output));
+		child_model->_output_nodes.push_back(p_output->_p_link);
 	}
-	for (NN_Link* p_child : child_model->_forward_list) p_child->link_prev_child();
+	for (NN_Link* p_child : child_model->_layers) {
+		NN_Link* p_parant = p_child->_p_link;
+
+		for (NN_Link* p_next_paranet : p_parant->_next) {
+			NN_Link* p_next_child = p_next_paranet->_p_link;
+
+			p_child->_next.push_back(p_next_child);
+			p_next_child->_prev.push_back(p_child);
+		}
+	}
 
 	return child_model;
 }
 
-Layer_t Model::operator()(const Layer_t& prev_node) {
-	int i = 0;
+Layer_t Model::operator()(Layer_t prev_node) {
+	for (Layer_t& p_prev_node : prev_node) {
+		NN_LinkPtr& m_prev = p_prev_node._val;
 
-	for (Layer_t p_prev_node : prev_node) {
-		NN_Link* m_prev_node = p_prev_node[0].get()._link;
-		int n_prev_node = p_prev_node[0].get()._output_index;
-
-		m_prev_node->set_next_node(this, n_prev_node);
-		_prev.push_back(m_prev_node);
+		m_prev._p_node->set_link(this, m_prev._n_node);
+		_prev.push_back(m_prev._p_node);
 		//_input_nodes[i]->_input.push_back(&m_prev_node->get_output(n_prev_node));
 		//_input_nodes[i]->_in_shape.push_back(&m_prev_node->get_out_shape(n_prev_node));
 		//m_prev_node->get_d_output(n_prev_node).push_back(&_input_nodes[i]->_d_input);
-
-		++i;
 	}
 
 	Layer_t output_nodes;
-	i = 0;
 
-	for (NN_Link* p_output : _output_nodes) {
-		output_nodes.push_back(Layer_Ptr<NN_Link> { this, i++});
-	}
+	for (int i = 0; i < _output_nodes.size(); ++i) output_nodes.push_back(NN_LinkPtr({ i, this }));
 
 	return output_nodes;
 }
 
-int Model::get_node_index(NN_Link* next_node) {
-	int n = 0;
-
-	for (int i = 0; i < _next.size(); ++i) {
-		if (next_node == _next[i]) {
-			n = _output_indices[i];
-			break;
-		}
-	}
-
-	return n;
+void Model::set_link(NN_Link* node, int index) {
+	_next.push_back(node);
+	_out_indice.push_back(index);
 }
 
-void Model::set_next_node(NN_Link* next_node, int node_index) {
-	_next.push_back(next_node);
-	_output_indices.push_back(node_index);
+void Model::calculate_output_size(std::vector<nn_shape>& input_shape, nn_shape& out_shape) {
+
 }
 
-DeviceTensor<nn_type>& Model::get_output(int node_index) {
-	return _output_nodes[node_index]->_output;
+void Model::build(std::vector<nn_shape>& input_shape) {
+
 }
 
-std::vector<DeviceTensor<nn_type>*>& Model::get_d_output(int node_index) {
-	return _output_nodes[node_index]->_d_outputs;
+void Model::set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output) {
+
 }
 
-nn_shape& Model::get_out_shape(int node_index) {
-	return _output_nodes[node_index]->_out_shape;
+void Model::run_forward(std::vector<cudaStream_t>& stream, std::vector<GpuTensor<nn_type>>& input, GpuTensor<nn_type>& output) {
+
 }
 
-void Model::link_prev_child() {
-	int i = 0;
-	for (NN_Link* p_prev : _parent->_prev) {
-		NN_Link* p_prev_child = NN_Link::get_child(p_prev);
-
-		if (p_prev_child) {
-			int n_prev_child = p_prev->get_node_index(this->_parent);
-
-			p_prev_child->set_next_node(this, n_prev_child);
-			_prev.push_back(p_prev_child);
-			_input_nodes[i]->_input.push_back(&p_prev_child->get_output(n_prev_child));
-			_input_nodes[i]->_in_shape.push_back(&p_prev_child->get_out_shape(n_prev_child));
-
-			DeviceTensor<nn_type>* pd_input = new DeviceTensor<nn_type>();
-
-			_input_nodes[i]->_d_inputs.push_back(pd_input);
-			p_prev_child->get_d_output(n_prev_child).push_back(pd_input);
-
-			++i;
-		}
-	}
-}
-
-void Model::calculate_output_size(std::vector<nn_shape*>& input_shape, nn_shape& out_shape) {
-	for (NN_Link* p_link : _forward_list) {
-		p_link->_forward->calculate_output_size(p_link->_in_shape, p_link->_out_shape);
-	}
-}
-
-void Model::build(std::vector<nn_shape*>& input_shape) {
-	for (NN_Link* p_link : _forward_list) {
-		p_link->_forward->build(p_link->_in_shape);
-	}
-}
-
-void Model::run_forward(cudaStream_t* s, std::vector<DeviceTensor<nn_type>*>& input, DeviceTensor<nn_type>& output) {
-	for (NN_Link* p_node : _forward_list) {
-		p_node->_forward->run_forward(s, p_node->_input, p_node->_output);
-	}
-}
-
-void Model::run_backward(cudaStream_t* s, DeviceTensor<nn_type>& d_output, std::vector<DeviceTensor<nn_type>*>& d_input) {
-	
-}
-
-void Model::standby(const std::vector<NN_Loss>& loss, const std::vector<NN_Optimizer>& optimizer) {
-
+NN_BackPropLayer* Model::create_backprop(NN_Optimizer& optimizer) {
+	return NULL;
 }
 
 void Model::summary() {
@@ -289,8 +216,8 @@ void Model::summary() {
 
 	std::cout << '[' << _layer_name << ']' << std::endl;
 
-	for (NN_Link* p_node : _forward_list) {
-		std::cout << ++i << " : layer_name = " << p_node->_forward->_layer_name
-			<< " output size: " << put_shape(p_node->_out_shape) << std::endl;
+	for (NN_Link* p_node : _layers) {
+		std::cout << ++i << " : layer_name = " << p_node->_forward->_layer_name << std::endl;
+			//<< " output size: " << put_shape(p_node->) << std::endl;
 	}
 }

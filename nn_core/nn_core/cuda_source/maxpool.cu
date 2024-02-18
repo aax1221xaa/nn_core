@@ -171,7 +171,7 @@ void d_maxpool2d(
 	dim3 threads(BLOCK_32, BLOCK_32);
 	dim3 blocks = get_grid_size(threads, out_shape[3], out_shape[2], out_shape[1]);
 
-	for (uint i = 0; i < out_shape[0]; ++i) {
+	for (int i = 0; i < out_shape[0]; ++i) {
 		const nn_type* d_doutput = d_output + (i * out_shape[1] * out_shape[2] * out_shape[3]);
 		cuint* d_indice = max_indice + (i * out_shape[1] * out_shape[2] * out_shape[3]);
 		nn_type* d_dinput = d_input + (i * in_shape[1] * in_shape[2] * in_shape[3]);

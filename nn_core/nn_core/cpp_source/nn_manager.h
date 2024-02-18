@@ -23,5 +23,5 @@ public:
 	NN_Manager();
 	~NN_Manager();
 
-	static void clear_select_mask();
+	static void clear_mark();
 };

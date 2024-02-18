@@ -106,24 +106,6 @@
     <ClInclude Include="cpp_source\nn_optimizer.h" />
     <ClInclude Include="cpp_source\nn_tensor.h" />
     <ClInclude Include="cpp_source\ptrManager.h" />
-    <ClInclude Include="cuda_source\cast.cuh" />
-    <ClInclude Include="cuda_source\convolution.cuh" />
-    <ClInclude Include="cuda_source\cuda_indice.cuh" />
-    <ClInclude Include="cuda_source\cuda_misc.cuh" />
-    <ClInclude Include="cuda_source\dens.cuh" />
-    <ClInclude Include="cuda_source\maxpool.cuh" />
-    <ClInclude Include="cuda_source\optimizer.cuh" />
-    <ClInclude Include="cuda_source\relu.cuh" />
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="cuda_source\cast.cu" />
-    <CudaCompile Include="cuda_source\convolution.cu" />
-    <CudaCompile Include="cuda_source\cuda_indice.cu" />
-    <CudaCompile Include="cuda_source\cuda_misc.cu" />
-    <CudaCompile Include="cuda_source\dens.cu" />
-    <CudaCompile Include="cuda_source\maxpool.cu" />
-    <CudaCompile Include="cuda_source\optimizer.cu" />
-    <CudaCompile Include="cuda_source\relu.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

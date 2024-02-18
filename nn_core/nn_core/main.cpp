@@ -6,59 +6,58 @@
 
 #include "cpp_source/nn_model.h"
 #include "cpp_source/nn_layer.h"
-#include "cpp_source/mnist.h"
 #include "cuda_source/convolution.cuh"
 
 int main() {
 	try {
-		MNIST mnist("E:\\data_set\\mnist", 64);
 		NN_Manager nn;
 
 		Layer_t x_input = Input({1, 28, 28 }, -1, "input");
+		Layer_t x2_input = Input({ 1, 28, 28 }, -1, "input2");
+		Layer_t x3_input = Input({ 1, 28, 28 }, -1, "input3");
+
+		Layer_t x = NN_Creater(NN_Dense(1024, "Dense_1_1"))(x_input);
+		x = NN_Creater(NN_Dense(512, "Dense_1_2"))(x);
+		x = NN_Creater(NN_Dense(256, "Dense_1_3"))(x);
+
+		Layer_t x2 = NN_Creater(NN_Dense(1024, "Dense_2_1"))(x2_input);
+		x2 = NN_Creater(NN_Dense(512, "Dense_2_2"))(x2);
+		x2 = NN_Creater(NN_Dense(256, "Dense_2_3"))(x2);
+
+		Layer_t x3 = NN_Creater(NN_Dense(1024, "Dense_1_1"))(x3_input);
+		x3 = NN_Creater(NN_Dense(512, "Dense_3_2"))(x3);
+		x3 = NN_Creater(NN_Dense(256, "Dense_3_3"))(x3);
 		
-		Layer_t x = NN_Creater(NN_Conv2D(32, { 5, 5 }, { 1, 1 }, Pad::VALID, "conv2d_1"))(x_input);
-		x = NN_Creater(NN_ReLU("ReLU_1"))(x);
-		x = NN_Creater(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, "maxpool2d_1"))(x);				
-		x = NN_Creater(NN_Conv2D(64, { 5, 5 }, { 1, 1 }, Pad::VALID, "conv2d_2"))(x);
-		x = NN_Creater(NN_ReLU("ReLU_2"))(x);
-		x = NN_Creater(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, "maxpool2d_2"))(x);				
-		x = NN_Creater(NN_Flatten("Flatten"))(x);										
-		x = NN_Creater(NN_Dense(512, "Dense_1"))(x);
-		x = NN_Creater(NN_ReLU("ReLU_3"))(x);
-		x = NN_Creater(NN_Dense(256, "Dense_2"))(x);
-		x = NN_Creater(NN_ReLU("ReLU_4"))(x);
-		x = NN_Creater(NN_Dense(10, "Dense_3"))(x);
-		x = NN_Creater(NN_ReLU("ReLU_5"))(x);
+		Layer_t y = NN_Creater(NN_Dense(128, "Dense_7_1"))({ x, x2 });
+		y = NN_Creater(NN_Dense(64, "Dense_7_2"))(y);
 
-		Model model = Model(x_input, x, "model_1");
-		model.summary();
+		Model model_1({ x_input, x2_input, x3_input }, { y, x3 }, "model_1");
+		model_1.summary();
 
-		HostTensor<nn_type> x_tensor({ 60000, 1, 28, 28 });
+		Layer_t x4_input = Input({ 1, 28, 28 }, -1, "input4");
+		Layer_t x5_input = Input({ 1, 28, 28 }, -1, "input5");
+		Layer_t x6_input = Input({ 1, 28, 28 }, -1, "input6");
 
-		tbb::parallel_for(tbb::blocked_range<uint>(0, x_tensor._len),
-			[&](const tbb::blocked_range<uint>& e){
-			for (uint i = e.begin(); i < e.end(); ++i) x_tensor._data[i] = (nn_type)(mnist.train_x._data[i]) / 255.f;
-		});
-		
-		clock_t start = clock();
-		std::vector<HostTensor<nn_type>> output = model.predict<nn_type>(x_tensor, 128, 60000 / 128);
-		clock_t end = clock();
+		Layer_t x4 = NN_Creater(NN_Dense(1024, "Dense_4_1"))(x4_input);
+		x4 = NN_Creater(NN_Dense(512, "Dense_4_2"))(x4);
+		x4 = NN_Creater(NN_Dense(256, "Dense_4_3"))(x4);
 
-		printf("elapsed time: %ld ms.\n", end - start);
-		//std::cout << output[0] << std::endl;
-	
-		/*
-		for (uint i = 0; i < 128; ++i) {
-			for (uint j = 0; j < 784; ++j) {
-				sample._data[i * 784 + j] = ((float)mnist.train_x._data[i * 784 + j]) / 255.f;
-			}
-		}
-		clock_t start = clock();
-		std::vector<Tensor<nn_type>> output = model.predict({ sample });
-		clock_t end = clock();
+		Layer_t x5 = NN_Creater(NN_Dense(1024, "Dense_5_1"))(x5_input);
+		x5 = NN_Creater(NN_Dense(512, "Dense_5_2"))(x5);
+		x5 = NN_Creater(NN_Dense(256, "Dense_5_3"))(x5);
 
-		printf("\n\nelapsed time: %ld ms.\n", end - start);
-		*/
+		Layer_t x6 = NN_Creater(NN_Dense(1024, "Dense_1_1"))(x6_input);
+		x6 = NN_Creater(NN_Dense(512, "Dense_6_2"))(x6);
+		x6 = NN_Creater(NN_Dense(256, "Dense_6_3"))(x6);
+
+		Layer_t y2 = model_1({ x4, x5, x6 });
+
+		Layer_t y4 = NN_Creater(NN_Dense(128, "Dense_9_1"))(y2[1]);
+		Layer_t y3 = NN_Creater(NN_Dense(128, "Dense_8_1"))(y2[0]);
+
+		Model model_2({ x4_input, x5_input, x6_input }, { y3, y4 }, "model_2");
+		model_2.summary();
+
 	}
 	catch (const Exception& e) {
 		cudaDeviceReset();

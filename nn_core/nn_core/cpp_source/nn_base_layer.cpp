@@ -7,24 +7,24 @@
 /*                                            */
 /**********************************************/
 
-NN_Backward::~NN_Backward() {
+NN_BackPropLayer::~NN_BackPropLayer() {
 
 }
 
-void NN_Backward::set_dio(
-	std::vector<nn_shape*>& in_shape,
-	std::vector<DeviceTensor<nn_type>*>& d_outputs,
-	std::vector<DeviceTensor<nn_type>*>& d_inputs
+void NN_BackPropLayer::set_dio(
+	std::vector<nn_shape>& in_shape,
+	std::vector<GpuTensor<nn_type>>& d_outputs,
+	std::vector<GpuTensor<nn_type>>& d_inputs
 ) {
-	for (DeviceTensor<nn_type>* p_dinput : d_inputs) *p_dinput = DeviceTensor<nn_type>::zeros(*in_shape[0]);
+
 }
 
-void NN_Backward::run_backward(
-	cudaStream_t* s,
-	std::vector<DeviceTensor<nn_type>*>& inputs,
-	DeviceTensor<nn_type>& outputs,
-	DeviceTensor<nn_type>& d_output,
-	std::vector<DeviceTensor<nn_type>*>& d_input
+void NN_BackPropLayer::run_backprop(
+	std::vector<cudaStream_t>& s,
+	std::vector<GpuTensor<nn_type>>& inputs,
+	GpuTensor<nn_type>& outputs,
+	GpuTensor<nn_type>& d_output,
+	std::vector<GpuTensor<nn_type>>& d_input
 ) {
 
 }
@@ -38,14 +38,14 @@ NN_Layer::~NN_Layer() {
 
 }
 
-void NN_Layer::build(std::vector<nn_shape*>& input_shape) {
+void NN_Layer::build(std::vector<nn_shape>& input_shape) {
 
 }
 
-void NN_Layer::set_io(nn_shape& out_shape, std::vector<DeviceTensor<nn_type>*>& input, DeviceTensor<nn_type>& output) {
+void NN_Layer::set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output) {
 	output.set(out_shape);
 }
 
-NN_Backward* NN_Layer::create_backward(NN_Optimizer& optimizer) {
+NN_BackPropLayer* NN_Layer::create_backprop(NN_Optimizer& optimizer) {
 	return NULL;
 }

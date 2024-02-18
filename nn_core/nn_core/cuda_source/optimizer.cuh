@@ -5,29 +5,29 @@
 
 
 void sgd(
-	const nn_type* gradient,
+	nn_type* gradient,
 	nn_type* momentum,
 	nn_type* weight,
-	const nn_shape& w_shape,
+	const uint len,
 	float learn_rate,
 	float momentum_rate
 );
 
 void rms_prop(
-	const nn_type* gradient,
+	nn_type* gradient,
 	nn_type* square_g,
 	nn_type* weight,
-	const nn_shape& w_shape,
+	const uint len,
 	float decay_rate,
 	float learn_rate
 );
 
 void adam(
-	const nn_type* gradient,
+	nn_type* gradient,
 	nn_type* square_g,
 	nn_type* decay_g,
 	nn_type* weight,
-	const nn_shape& w_shape,
+	const uint len,
 	float learn_rate,
 	float beta_1,
 	float beta_2

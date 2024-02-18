@@ -1,7 +1,7 @@
 #include "nn_manager.h"
 
 
-cudaStream_t NN_Manager::_stream[STREAMS] = { NULL, };
+cudaStream_t NN_Manager::_stream[STREAMS];
 std::vector<NN_Link*> NN_Manager::_nodes;
 std::vector<NN_Layer*> NN_Manager::_layers;
 bool NN_Manager::condition = false;
@@ -66,6 +66,9 @@ NN_Manager::~NN_Manager() {
 	condition = false;
 }
 
-void NN_Manager::clear_select_mask() {
-	for (NN_Link* p : _nodes) p->is_selected = false;
+void NN_Manager::clear_mark() {
+	for (NN_Link* p : _nodes) {
+		p->_mark = 0;
+		p->_p_link = NULL;
+	}
 }

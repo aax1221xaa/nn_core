@@ -2,23 +2,6 @@
 #include "nn_base_layer.h"
 
 
-#define Layer_t List<Layer_Ptr<NN_Link>>
-
-/**********************************************/
-/*                                            */
-/*                  Layer_Ptr                 */
-/*                                            */
-/**********************************************/
-
-template <class _T>
-struct Layer_Ptr {
-	_T* _link;
-	//NN_Tensor* _output;
-	//vector<NN_Tensor*>* _d_output;
-
-	int _output_index;
-};
-
 /**********************************************/
 /*                                            */
 /*                   NN_Link                  */
@@ -27,40 +10,34 @@ struct Layer_Ptr {
 
 class NN_Link {
 public:
+	struct NN_LinkPtr {
+		int _n_node;
+		NN_Link* _p_node;
+	};
+
+	typedef List<NN_LinkPtr> Layer;
+
+	uint _mark;
+
+	NN_Link* _p_link;
+
 	std::vector<NN_Link*> _prev;
 	std::vector<NN_Link*> _next;
 
-	NN_Link* _parent;
-	std::vector<NN_Link*> _child;
+	GpuTensor<nn_type> _output;
 
-	std::vector<DeviceTensor<nn_type>*> _input;
-	DeviceTensor<nn_type> _output;
-
-	std::vector<DeviceTensor<nn_type>*> _d_inputs;
-	//NN_Tensor<nn_type> _d_output;
-	std::vector<DeviceTensor<nn_type>*> _d_outputs;
-
-	std::vector<nn_shape*> _in_shape;
-	nn_shape _out_shape;
-
-	bool is_selected;
 	bool trainable;
 
 	NN_Layer* _forward;
-	NN_Backward* _backward;
+	NN_BackPropLayer* _backward;
 
 	NN_Link();
 	virtual ~NN_Link();
 
 	virtual NN_Link* create_child();
-	virtual Layer_t operator()(const Layer_t& prev_node);
+	virtual Layer operator()(Layer prev_node);
 
-	virtual int get_node_index(NN_Link* next_node);
-	virtual void set_next_node(NN_Link* next_node, int node_index);
-	virtual DeviceTensor<nn_type>& get_output(int node_index);
-	virtual std::vector<DeviceTensor<nn_type>*>& get_d_output(int node_index);
-	virtual nn_shape& get_out_shape(int node_index);
-	virtual void link_prev_child();
-
-	static NN_Link* get_child(NN_Link* current_parent);
+	virtual void set_link(NN_Link* node, int index);
 };
+
+#define Layer_t	NN_Link::Layer
