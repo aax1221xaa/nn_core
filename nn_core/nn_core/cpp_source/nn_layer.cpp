@@ -12,10 +12,10 @@ NN_Input::NN_Input(const nn_shape& input_size, int batch, const char* _layer_nam
 	_shape(input_size)
 {
 	try {
-		_shape.insert(_shape.begin(), batch);
+		_shape.push_back(batch);
 
-		for (const int& n : _shape) {
-			if (n < -1 || n == 0) {
+		for (const List<int>& n : _shape) {
+			if (n._val < -1 || n._val == 0) {
 				ErrorExcept(
 					"[NN_Input::NN_Input] can't create input layer by dimension(%s).",
 					put_shape(input_size)
@@ -34,37 +34,8 @@ NN_Input::~NN_Input() {
 
 }
 
-void NN_Input::calculate_output_size(std::vector<nn_shape>& input_shape, nn_shape& out_shape) {
-	if (input_shape.size() == 0) out_shape = _shape;
-	else {
-		if (input_shape.size() > 1) {
-			ErrorExcept(
-				"[NN_Input::calculate_output_size()] input layer can't receive %d layers.",
-				input_shape.size()
-			);
-		}
-		else if (input_shape[0].size() != _shape.size()) {
-			ErrorExcept(
-				"[NN_Input::calculate_output_size()] input layer expected %ld dimensions. but received %ld dimensions.",
-				_shape.size(), input_shape[0].size()
-			);
-		}
-
-		for (nn_shape::iterator i = _shape.begin(), j = input_shape[0].begin(); i != _shape.end(); ++i, ++j) {
-			if (*i >= 0 && *i != *j) {
-				ErrorExcept(
-					"[NN_Input::calculate_output_size()] input layer expected %s. but received %s.",
-					put_shape(_shape), put_shape(input_shape[0])
-				);
-			}
-		}
-
-		out_shape = input_shape[0];
-	}
-}
-
-void NN_Input::build(std::vector<nn_shape>& input_shape) {
-
+nn_shape NN_Input::calculate_output_size(nn_shape& input_shape) {
+	return { _shape };
 }
 
 void NN_Input::set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output) {
@@ -122,7 +93,7 @@ NN_Dense::NN_Dense(const int amounts, const char* name) :
 {
 }
 
-void NN_Dense::calculate_output_size(std::vector<nn_shape>& input_shape, nn_shape& out_shape) {
+nn_shape NN_Dense::calculate_output_size(nn_shape& input_shape) {
 	/*
 	[-1, h, w, c]
 
@@ -130,10 +101,7 @@ void NN_Dense::calculate_output_size(std::vector<nn_shape>& input_shape, nn_shap
 	weight = [c_in, c_out]
 	output = [n, c_out]
 	*/
-}
-
-void NN_Dense::build(std::vector<nn_shape>& input_shape) {
-
+	return { {input_shape[0][0], _amounts} };
 }
 
 void NN_Dense::set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output) {

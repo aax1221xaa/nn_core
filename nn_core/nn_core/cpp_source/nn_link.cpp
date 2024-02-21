@@ -33,8 +33,8 @@ NN_Link* NN_Link::create_child() {
 }
 
 NN_Link::Layer NN_Link::operator()(NN_Link::Layer prev_node) {
-	for (NN_Link::Layer& p_prev_node : prev_node) {
-		NN_LinkPtr& m_prev = p_prev_node._val;
+	for (const NN_Link::Layer& p_prev_node : prev_node) {
+		const NN_LinkPtr& m_prev = p_prev_node._val;
 
 		m_prev._p_node->set_link(this, m_prev._n_node);
 		_prev.push_back(m_prev._p_node);

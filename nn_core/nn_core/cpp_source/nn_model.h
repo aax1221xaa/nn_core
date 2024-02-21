@@ -19,16 +19,16 @@ public:
 	std::vector<int> _out_indice;
 
 	Model(const char* model_name);
-	Model(Layer_t inputs, Layer_t outputs, const char* model_name);
+	Model(NN_Link::Layer inputs, NN_Link::Layer outputs, const char* model_name);
 	~Model();
 
 	NN_Link* create_child();
-	Layer_t operator()(Layer_t prev_node);
+	NN_Link::Layer operator()(NN_Link::Layer prev_node);
 
 	void set_link(NN_Link* node, int index);
 
-	void calculate_output_size(std::vector<nn_shape>& input_shape, nn_shape& out_shape);
-	void build(std::vector<nn_shape>& input_shape);
+	nn_shape calculate_output_size(nn_shape& input_shape);
+	void build();
 	void set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output);
 	void run_forward(std::vector<cudaStream_t>& stream, std::vector<GpuTensor<nn_type>>& input, GpuTensor<nn_type>& output);
 	NN_BackPropLayer* create_backprop(NN_Optimizer& optimizer);

@@ -1,20 +1,15 @@
-#include "../nn_core/cpp_source/nn_tensor.h"
+#include "../nn_core/cpp_source/cuda_common.h"
 #include "vld.h"
 
 
 int main() {
-	List<uint> a({ 1, 2, 3 });
-	List<uint> b({ 4, 5, 6 });
-	List<uint> c({ 7, 8, 9 });
+	List<int> a;
 
-	List<uint> d({ a, b, c });
+	a.resize(10);
 
-	for (const List<uint>& val : d) {
-		if (val._list.size() > 0) {
-			for (const List<uint>& v : val._list) std::cout << v._val << std::endl;
-		}
-		else std::cout << val._val << std::endl;
-	}
+	for (int i = 0; i < 10; ++i) a[i] = i;
+
+	for (const List<int>& b : a) std::cout << b._val << std::endl;
 
 	return 0;
 }

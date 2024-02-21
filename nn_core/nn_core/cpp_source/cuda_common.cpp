@@ -20,8 +20,8 @@ const char* put_shape(const nn_shape& tensor) {
 	char tmp_buff[128] = { '[', '\0', };
 	char tmp_dim[16] = { '\0', };
 
-	for (cint n : tensor) {
-		sprintf_s(tmp_dim, "%d, ", n);
+	for (const nn_shape& n : tensor) {
+		sprintf_s(tmp_dim, "%d, ", n._val);
 		strcat_s(tmp_buff, tmp_dim);
 	}
 	strcat_s(tmp_buff, "]");

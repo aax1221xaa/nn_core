@@ -12,7 +12,7 @@ Model::Model(const char* model_name) :
 {
 }
 
-Model::Model(Layer_t inputs, Layer_t outputs, const char* model_name) :
+Model::Model(NN_Link::Layer inputs, NN_Link::Layer outputs, const char* model_name) :
 	NN_Layer(model_name)
 {
 	try {
@@ -26,10 +26,10 @@ Model::Model(Layer_t inputs, Layer_t outputs, const char* model_name) :
 
 		/*    marking output to input    */
 
-		for (Layer_t& output_node : outputs) {
+		for (const NN_Link::Layer& output_node : outputs) {
 			NN_Link* p_output = output_node._val._p_node;
 
-			for (Layer_t& input_node : inputs) {
+			for (const NN_Link::Layer& input_node : inputs) {
 				NN_Link* p_input = input_node._val._p_node;
 
 				std::vector<NN_Link*> node_list;
@@ -51,7 +51,7 @@ Model::Model(Layer_t inputs, Layer_t outputs, const char* model_name) :
 		}
 
 		/*    create input to output layers    */
-		for (Layer_t& input_node : inputs) {
+		for (const NN_Link::Layer& input_node : inputs) {
 			NN_Link* p_input = input_node._val._p_node;
 			std::vector<NN_Link*> node_list;
 
@@ -76,7 +76,7 @@ Model::Model(Layer_t inputs, Layer_t outputs, const char* model_name) :
 			}
 		}
 
-		for (Layer_t& input_node : inputs) {
+		for (const NN_Link::Layer& input_node : inputs) {
 			NN_Link* p_current = input_node._val._p_node;
 
 			if (p_current->_p_link == NULL) {
@@ -86,7 +86,7 @@ Model::Model(Layer_t inputs, Layer_t outputs, const char* model_name) :
 			}
 			_input_nodes.push_back(p_current->_p_link);
 		}
-		for (Layer_t& output_node : outputs) {
+		for (const NN_Link::Layer& output_node : outputs) {
 			NN_Link* p_current = output_node._val._p_node;
 
 			if (p_current->_p_link == NULL) {
@@ -168,9 +168,9 @@ NN_Link* Model::create_child() {
 	return child_model;
 }
 
-Layer_t Model::operator()(Layer_t prev_node) {
-	for (Layer_t& p_prev_node : prev_node) {
-		NN_LinkPtr& m_prev = p_prev_node._val;
+NN_Link::Layer Model::operator()(NN_Link::Layer prev_node) {
+	for (const NN_Link::Layer& p_prev_node : prev_node) {
+		const NN_LinkPtr& m_prev = p_prev_node._val;
 
 		m_prev._p_node->set_link(this, m_prev._n_node);
 		_prev.push_back(m_prev._p_node);
@@ -179,7 +179,7 @@ Layer_t Model::operator()(Layer_t prev_node) {
 		//m_prev_node->get_d_output(n_prev_node).push_back(&_input_nodes[i]->_d_input);
 	}
 
-	Layer_t output_nodes;
+	NN_Link::Layer output_nodes;
 
 	for (int i = 0; i < _output_nodes.size(); ++i) output_nodes.push_back(NN_LinkPtr({ i, this }));
 
@@ -191,11 +191,40 @@ void Model::set_link(NN_Link* node, int index) {
 	_out_indice.push_back(index);
 }
 
-void Model::calculate_output_size(std::vector<nn_shape>& input_shape, nn_shape& out_shape) {
+nn_shape Model::calculate_output_size(nn_shape& input_shape) {
+	nn_shape layers_shape;
+	nn_shape output_shape;
 
+	layers_shape.resize(_layers.size());
+
+	for (uint i = 0; i < _layers.size(); ++i) _layers[i]->_mark = i;
+	for (uint i = 0; i < _layers.size(); ++i) {
+		if (_layers[i]->_prev.size() > 0) {
+			nn_shape input_shape;
+
+			for (NN_Link* p_prev : _layers[i]->_prev) {
+				input_shape.push_back(layers_shape[p_prev->_mark]);
+			}
+
+			layers_shape[i] = _layers[i]->_forward->calculate_output_size(input_shape);
+		}
+		else {
+			for (uint j = 0; j < _input_nodes.size(); ++j) {
+				if (_layers[i] == _input_nodes[j]) {
+					layers_shape[i] = _layers[i]->_forward->calculate_output_size(input_shape[j]);
+
+					break;
+				}
+			}
+		}
+	}
+
+	for (NN_Link* p_link : _output_nodes) output_shape.push_back(layers_shape[p_link->_mark]);
+
+	return output_shape;
 }
 
-void Model::build(std::vector<nn_shape>& input_shape) {
+void Model::build() {
 
 }
 

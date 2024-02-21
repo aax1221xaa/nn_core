@@ -33,9 +33,7 @@ public:
 
 	NN_Layer(const char* layer_name);
 	virtual ~NN_Layer();
-
-	virtual void calculate_output_size(std::vector<nn_shape>& input_shape, nn_shape& out_shape) = 0;
-	virtual void build(std::vector<nn_shape>& input_shape);
+	virtual nn_shape calculate_output_size(nn_shape& input_shape) = 0;
 	virtual void set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output);
 	virtual void run_forward(std::vector<cudaStream_t>& stream, std::vector<GpuTensor<nn_type>>& input, GpuTensor<nn_type>& output) = 0;
 	virtual NN_BackPropLayer* create_backprop(NN_Optimizer& optimizer);

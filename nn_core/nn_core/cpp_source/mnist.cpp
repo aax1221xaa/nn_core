@@ -30,8 +30,8 @@ MNIST::MNIST(const char* dir, int batch, bool do_shuffle) :
 		load_file(train_image, train_label, train_x, train_y);
 		load_file(test_image, test_label, test_x, test_y);
 
-		_train_max_iter =  (int)ceil((float)train_x._shape[0] / _batch);
-		_test_max_iter = (int)ceil((float)test_x._shape[0] / _batch);
+		_train_max_iter =  (int)ceil((float)train_x._shape[0]._val / _batch);
+		_test_max_iter = (int)ceil((float)test_x._shape[0]._val / _batch);
 	}
 	catch (const Exception& e) {
 		e.Put();

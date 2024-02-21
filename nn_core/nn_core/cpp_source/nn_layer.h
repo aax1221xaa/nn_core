@@ -52,8 +52,7 @@ public:
 	NN_Input(const nn_shape& input_size, int batch, const char* _layer_name);
 	~NN_Input();
 
-	void calculate_output_size(std::vector<nn_shape>& input_shape, nn_shape& out_shape);
-	void build(std::vector<nn_shape>& input_shape);
+	nn_shape calculate_output_size(nn_shape& input_shape);
 	void set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output);
 	void run_forward(std::vector<cudaStream_t>& stream, std::vector<GpuTensor<nn_type>>& input, GpuTensor<nn_type>& output);
 	NN_BackPropLayer* create_backprop(NN_Optimizer& optimizer);
@@ -75,8 +74,7 @@ public:
 
 	NN_Dense(const int amounts, const char* name);
 
-	void calculate_output_size(std::vector<nn_shape>& input_shape, nn_shape& out_shape);
-	void build(std::vector<nn_shape>& input_shape);
+	nn_shape calculate_output_size(nn_shape& input_shape);
 	void set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output);
 	void run_forward(std::vector<cudaStream_t>& stream, std::vector<GpuTensor<nn_type>>& input, GpuTensor<nn_type>& output);
 	NN_BackPropLayer* create_backprop(NN_Optimizer& optimizer);
