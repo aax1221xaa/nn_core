@@ -3,13 +3,22 @@
 
 
 int main() {
-	List<int> a;
+	try {
+		std::vector<int> a = { 1, 2, 3, 4 ,5 };
+		std::vector<int> b;
 
-	a.resize(10);
+		b = a;
 
-	for (int i = 0; i < 10; ++i) a[i] = i;
+		a.push_back(6);
+		b.push_back(7);
 
-	for (const List<int>& b : a) std::cout << b._val << std::endl;
+		for (const int& val : a) std::cout << val << std::endl;
+		for (const int& val : b) std::cout << val << std::endl;
+
+	}
+	catch (const Exception& e) {
+		e.Put();
+	}
 
 	return 0;
 }

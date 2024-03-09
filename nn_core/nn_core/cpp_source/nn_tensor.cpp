@@ -29,7 +29,7 @@ size_t TensorBase::get_len(const nn_shape& shape) {
 	size_t len = 1;
 
 	for (const nn_shape& n : shape) {
-		if (n._val > 0) len *= n._val;
+		if (n.get_val() > 0) len *= n.get_val();
 	}
 
 	return len;
@@ -38,12 +38,9 @@ size_t TensorBase::get_len(const nn_shape& shape) {
 bool TensorBase::check_shape(const nn_shape& shape) {
 	bool is_valid = true;
 
-	if (shape.size() > 0) {
-		for (const nn_shape& n : shape) {
-			if (n._val < 1) is_valid = false;
-		}
+	for (const nn_shape& n : shape) {
+		if (n.get_val() < 1) is_valid = false;
 	}
-	else is_valid = false;
 
 	return is_valid;
 }

@@ -80,10 +80,7 @@
     <ClCompile Include="cpp_source\CudaCheck.cpp" />
     <ClCompile Include="cpp_source\cuda_common.cpp" />
     <ClCompile Include="cpp_source\Exception.cpp" />
-    <ClCompile Include="cpp_source\mnist.cpp" />
     <ClCompile Include="cpp_source\nn_layer.cpp" />
-    <ClCompile Include="cpp_source\nn_link.cpp" />
-    <ClCompile Include="cpp_source\nn_manager.cpp" />
     <ClCompile Include="cpp_source\nn_base_layer.cpp" />
     <ClCompile Include="cpp_source\nn_loss.cpp" />
     <ClCompile Include="cpp_source\nn_model.cpp" />
@@ -96,11 +93,8 @@
     <ClInclude Include="cpp_source\CudaCheck.h" />
     <ClInclude Include="cpp_source\cuda_common.h" />
     <ClInclude Include="cpp_source\Exception.h" />
-    <ClInclude Include="cpp_source\mnist.h" />
-    <ClInclude Include="cpp_source\nn_layer.h" />
-    <ClInclude Include="cpp_source\nn_link.h" />
-    <ClInclude Include="cpp_source\nn_manager.h" />
     <ClInclude Include="cpp_source\nn_base_layer.h" />
+    <ClInclude Include="cpp_source\nn_layer.h" />
     <ClInclude Include="cpp_source\nn_loss.h" />
     <ClInclude Include="cpp_source\nn_model.h" />
     <ClInclude Include="cpp_source\nn_optimizer.h" />

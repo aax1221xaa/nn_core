@@ -159,15 +159,14 @@ const Tensor<_T>& Tensor<_T>::operator=(Tensor&& p) {
 
 template <typename _T>
 void Tensor<_T>::put(std::ostream& os) const {
-	uint lank = 0;
-	uint index = 0;
+	//uint lank = 0;
+	//uint index = 0;
 	
-	if (_shape.size() > 0) {
-		os << "Dimenstion: " << put_shape(_shape) << std::endl << std::endl;
+	//os << "Dimenstion: " << put_shape(_shape) << std::endl << std::endl;
 
-		put_tensor(os, *this, lank, index);
-	}
-	else os << "[]\n";
+	//put_tensor(os, *this, lank, index);
+
+	//else os << "[]\n";
 }
 
 template <typename _T>

@@ -44,10 +44,10 @@
     <ClInclude Include="..\nn_core\cpp_source\Exception.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
+    <ClInclude Include="..\nn_core\cpp_source\ptrManager.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\ptrManager.h">
+    <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
