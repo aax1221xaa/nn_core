@@ -62,7 +62,7 @@ std::ostream& operator<<(std::ostream& os, List<int>& list) {
 /*                   nn_shape                 */
 /*                                            */
 /**********************************************/
-
+/*
 NN_Shape::NN_Shape() :
 	_shape(NULL)
 {	
@@ -169,3 +169,4 @@ void NN_Shape::resize(int size) {
 		_shape->_ref = 1;
 	}
 }
+*/

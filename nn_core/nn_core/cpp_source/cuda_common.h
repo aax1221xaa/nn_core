@@ -363,7 +363,7 @@ typename List<_T>::Iterator List<_T>::end() const {
 /*                   nn_shape                 */
 /*                                            */
 /**********************************************/
-
+/*
 class NN_Shape {
 protected:
 	struct Container {
@@ -398,7 +398,7 @@ public:
 	void erase(int index);
 	void resize(int size);
 };
-
+*/
 typedef List<int> nn_shape;
 
 const char* put_shape(const nn_shape& tensor);

@@ -139,13 +139,14 @@ public:
 	void set_nodes(NN_Link* node);
 	void set_static_node(NN_Link* const node);
 
-	template <class _T>
-	NN_Link& create(const _T& layer);
 	Layer_t input(const nn_shape& input_size, int batch, const char* layer_name);
+
+	template <class _T>
+	NN_Link& operator()(const _T& layer);
 };
 
 template <class _T>
-NN_Link& NN_Manager::create(const _T& layer) {
+NN_Link& NN_Manager::operator()(const _T& layer) {
 	NN_Link* p_node = new NN_Link;
 	NN_Layer* p_layer = new _T(layer);
 
@@ -156,5 +157,3 @@ NN_Link& NN_Manager::create(const _T& layer) {
 
 	return *p_node;
 }
-
-
