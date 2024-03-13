@@ -34,12 +34,8 @@ public:
 
 	NN_Layer(const char* layer_name);
 	virtual ~NN_Layer();
-	virtual nn_shape calculate_output_size(nn_shape& input_shape) = 0;
-	virtual void set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output);
-	virtual void run_forward(std::vector<cudaStream_t>& stream, std::vector<GpuTensor<nn_type>>& input, GpuTensor<nn_type>& output) = 0;
-	virtual NN_BackPropLayer* create_backprop(NN_Optimizer& optimizer);
 
-	virtual std::vector<int> digestion(const std::vector<int>& feed);
+	virtual void test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val);
 };
 
 
@@ -53,13 +49,10 @@ class NN_Input : public NN_Layer {
 public:
 	nn_shape _shape;
 
-	NN_Input(const nn_shape& input_size, int batch, const char* _layer_name);
+	NN_Input(const nn_shape& input_size, int batch = -1, const char* _layer_name = "Input");
 	~NN_Input();
 
-	nn_shape calculate_output_size(nn_shape& input_shape);
-	void set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output);
-	void run_forward(std::vector<cudaStream_t>& stream, std::vector<GpuTensor<nn_type>>& input, GpuTensor<nn_type>& output);
-	NN_BackPropLayer* create_backprop(NN_Optimizer& optimizer);
+	void test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val);
 };
 
 

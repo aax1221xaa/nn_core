@@ -2,7 +2,6 @@
 #include <vector>
 #include <iostream>
 #include "CudaCheck.h"
-#include "ptrManager.h"
 
 
 #define STR_MAX					1024
@@ -26,14 +25,6 @@ typedef const unsigned int cuint;
 
 dim3 get_grid_size(const dim3 block, unsigned int x = 1, unsigned int y = 1, unsigned int z = 1);
 
-class NN_Shared_Ptr {
-protected:
-	ptrRef* id;
-	static ptrManager linker;
-
-public:
-	NN_Shared_Ptr();
-};
 
 /*******************************************
 
@@ -356,49 +347,12 @@ typename List<_T>::Iterator List<_T>::end() const {
 }
 
 
-
-
 /**********************************************/
 /*                                            */
 /*                   nn_shape                 */
 /*                                            */
 /**********************************************/
-/*
-class NN_Shape {
-protected:
-	struct Container {
-		int* _nums;
-		
-		int _ref;
-		int _rank;
-	};
 
-public:
-	Container* _shape;
-
-	class Iterator {
-	public:
-		int* _p_nums;
-		int _index;
-
-		Iterator(int* p_nums, int index);
-		Iterator(const Iterator& p);
-
-		void operator++();
-		bool operator!=(const Iterator& p) const;
-		int& operator*();
-	};
-
-	NN_Shape();
-	NN_Shape(const std::initializer_list<int> shape);
-	~NN_Shape();
-
-	void push_front(int num);
-	void push_back(int num);
-	void erase(int index);
-	void resize(int size);
-};
-*/
-typedef List<int> nn_shape;
+typedef std::vector<int> nn_shape;
 
 const char* put_shape(const nn_shape& tensor);

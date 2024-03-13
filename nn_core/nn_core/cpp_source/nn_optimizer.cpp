@@ -35,8 +35,8 @@ NN_Optimizer* SGD::create() {
 void SGD::set(GpuTensor<nn_type>& weight, GpuTensor<nn_type>& bias) {
 	NN_Optimizer::set(weight, bias);
 
-	_w_momentum = zeros_like(weight);
-	_b_momentum = zeros_like(bias);
+	_w_momentum = gpu_zeros_like<nn_type>(weight);
+	_b_momentum = gpu_zeros_like<nn_type>(bias);
 }
 
 void SGD::run(const GpuTensor<nn_type>& w_gradient, const GpuTensor<nn_type>& b_gradient) {
@@ -57,8 +57,8 @@ NN_Optimizer* RmsProp::create() {
 void RmsProp::set(GpuTensor<nn_type>& weight, GpuTensor<nn_type>& bias) {
 	NN_Optimizer::set(weight, bias);
 
-	_w_square = zeros_like(weight);
-	_b_square = zeros_like(bias);
+	_w_square = gpu_zeros_like<nn_type>(weight);
+	_b_square = gpu_zeros_like<nn_type>(bias);
 }
 
 void RmsProp::run(const GpuTensor<nn_type>& w_gradient, const GpuTensor<nn_type>& b_gradient) {
@@ -80,11 +80,11 @@ NN_Optimizer* Adam::create() {
 void Adam::set(GpuTensor<nn_type>& weight, GpuTensor<nn_type>& bias) {
 	NN_Optimizer::set(weight, bias);
 
-	_w_square = zeros_like(weight);
-	_w_decay = zeros_like(weight);
+	_w_square = gpu_zeros_like<nn_type>(weight);
+	_w_decay = gpu_zeros_like<nn_type>(weight);
 
-	_b_square = zeros_like(bias);
-	_b_decay = zeros_like(bias);
+	_b_square = gpu_zeros_like<nn_type>(bias);
+	_b_decay = gpu_zeros_like<nn_type>(bias);
 }
 
 void Adam::run(const GpuTensor<nn_type>& w_gradient, const GpuTensor<nn_type>& b_gradient) {

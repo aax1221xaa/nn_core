@@ -28,7 +28,7 @@ int main() {
 		x3 = nn(NN_Dense(512, "Dense_3_2"))(x3);
 		x3 = nn(NN_Dense(256, "Dense_3_3"))(x3);
 
-		Layer_t y = nn(NN_Dense(128, "Dense_7_1"))({ x, x2 });
+		Layer_t y = nn(NN_Concat("Concat_1"))({ x, x2 });
 		y = nn(NN_Dense(64, "Dense_7_2"))(y);
 
 		Model model_1(nn, { x_input, x2_input, x3_input }, { y, x3 }, "model_1");
@@ -55,10 +55,31 @@ int main() {
 		Layer_t y4 = nn(NN_Dense(128, "Dense_9_1"))(y2[1]);
 		Layer_t y3 = nn(NN_Dense(128, "Dense_8_1"))(y2[0]);
 
-		Model::_stack = 1;
-
 		Model model_2(nn, { x4_input, x5_input, x6_input }, { y3, y4 }, "model_2");
 		model_2.summary();
+
+		std::vector<Tensor<nn_type>> inputs(3);
+		std::vector<Tensor<nn_type>> outputs;
+
+		for (Tensor<nn_type>& tensor : inputs) {
+			tensor.set({ 5, 5 });
+
+			nn_type* data = tensor.get_data();
+			for (size_t i = 0; i < tensor.get_len(); ++i) data[i] = 1.f;
+		}
+
+		model_2.test(inputs, outputs);
+
+		std::cout << "====================inputs==================" << std::endl;
+		for (Tensor<nn_type>& tensor : inputs) {
+			std::cout << "============================================" << std::endl;
+			std::cout << tensor;
+		}
+		std::cout << "====================outputs==================" << std::endl;
+		for (Tensor<nn_type>& tensor : outputs) {
+			std::cout << "=============================================" << std::endl;
+			std::cout << tensor;
+		}
 	}
 	catch (Exception& e) {
 		e.Put();

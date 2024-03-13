@@ -23,14 +23,16 @@ private:
 public:
 	static int _stack;
 
-
 	Model(NN_Manager& manager, const char* model_name);
 	Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* model_name);
 	~Model();
 
 	Layer_t operator()(Layer_t prev_node);
+
+	/************************** NN_Link **************************/
 	NN_Link* create_child();
 	void set_next_link(NN_Link* node, int index);
+	/*************************************************************/
 
 	void find_path(Layer_t& inputs, Layer_t& outputs, std::vector<int>& find_mask);
 	void set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask);
@@ -38,13 +40,9 @@ public:
 	const std::vector<int>& get_output_indice();
 	void set_output_indice(const std::vector<int>& indice);
 
-	nn_shape calculate_output_size(nn_shape& input_shape);
-	void build();
-	void set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output);
-	void run_forward(std::vector<cudaStream_t>& stream, std::vector<GpuTensor<nn_type>>& input, GpuTensor<nn_type>& output);
-	NN_BackPropLayer* create_backprop(NN_Optimizer& optimizer);
-
-	std::vector<int> digestion(const std::vector<int>& feed);
+	/************************** NN_Layer **************************/
+	void test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val);
+	/**************************************************************/
 
 	void summary();
 };

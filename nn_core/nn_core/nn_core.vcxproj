@@ -86,7 +86,6 @@
     <ClCompile Include="cpp_source\nn_model.cpp" />
     <ClCompile Include="cpp_source\nn_optimizer.cpp" />
     <ClCompile Include="cpp_source\nn_tensor.cpp" />
-    <ClCompile Include="cpp_source\ptrManager.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -99,7 +98,6 @@
     <ClInclude Include="cpp_source\nn_model.h" />
     <ClInclude Include="cpp_source\nn_optimizer.h" />
     <ClInclude Include="cpp_source\nn_tensor.h" />
-    <ClInclude Include="cpp_source\ptrManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,46 +1,31 @@
 #include "nn_tensor.h"
-#include <random>
+#include <opencv2/opencv.hpp>
 
 
 /**********************************************/
 /*                                            */
-/*                 TensorBase                 */
+/*					  Random                  */
 /*                                            */
 /**********************************************/
 
-TensorBase::TensorBase() :
-	_is_valid(false),
-	_len(0)
-{
+void set_random_uniform(Tensor<float>& tensor, float a, float b) {
+	if (tensor.get_shape().size() == 0) return;
+
+	cv::RNG rng(cv::getTickCount());
+	cv::Mat mat(tensor.get_shape(), CV_32FC1, tensor.get_data());
+
+	rng.fill(mat, cv::RNG::UNIFORM, a, b);
 }
 
-TensorBase::TensorBase(const nn_shape& shape) :
-	_len(0)
-{
-	_is_valid = check_shape(shape);
+void set_random_uniform(GpuTensor<float>& tensor, float a, float b) {
+	if (tensor.get_shape().size() == 0) return;
 
-	if (_is_valid) {
-		_shape = shape;
-		_len = get_len(shape);
-	}
-}
+	Tensor<float> tmp(tensor.get_shape());
 
-size_t TensorBase::get_len(const nn_shape& shape) {
-	size_t len = 1;
+	cv::RNG rng(cv::getTickCount());
+	cv::Mat mat(tmp.get_shape(), CV_32FC1, tmp.get_data());
 
-	for (const nn_shape& n : shape) {
-		if (n.get_val() > 0) len *= n.get_val();
-	}
+	rng.fill(mat, cv::RNG::UNIFORM, a, b);
 
-	return len;
-}
-
-bool TensorBase::check_shape(const nn_shape& shape) {
-	bool is_valid = true;
-
-	for (const nn_shape& n : shape) {
-		if (n.get_val() < 1) is_valid = false;
-	}
-
-	return is_valid;
+	host_to_gpu(tmp, tensor);
 }

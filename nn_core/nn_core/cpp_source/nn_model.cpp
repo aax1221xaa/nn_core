@@ -243,28 +243,51 @@ void Model::set_output_indice(const std::vector<int>& indice) {
 	_output_indice = indice;
 }
 
-nn_shape Model::calculate_output_size(nn_shape& input_shape) {
-	return nn_shape();
-}
+void Model::test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val) {
+	++_stack;
 
-void Model::build() {
+	std::vector<std::vector<Tensor<nn_type>>> outputs(_manager.get_nodes().size());
 
-}
+	for (NN_Link* p_node : _layers) {
+		std::vector<Tensor<nn_type>> input_storage;
+		std::vector<Tensor<nn_type>>& output_storage = outputs[p_node->get_index()];
 
-void Model::set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output) {
+		if (p_node->get_prev_nodes().size() > 0) {
+			for (NN_Link* p_prev_node : p_node->get_prev_nodes()) {
+				size_t i = 0;
+				for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
+					if (p_node == p_next_node) break;
+					else ++i;
+				}
+				input_storage.push_back(outputs[p_prev_node->get_index()][i]);
+			}
+		}
+		else {
+			size_t i = 0;
+			for (NN_Link* p_input : _input_nodes) {
+				if (p_input == p_node) break;
+				else ++i;
+			}
+			input_storage.push_back(in_val[i]);
+		}
 
-}
+		p_node->get_layer().test(input_storage, output_storage);
+	}
+	if (_output_indice.size() > 0) {
+		for (size_t i = 0; i < _output_nodes.size(); ++i) {
+			std::vector<Tensor<nn_type>>& p_output = outputs[_output_nodes[_output_indice[i]]->get_index()];
 
-void Model::run_forward(std::vector<cudaStream_t>& stream, std::vector<GpuTensor<nn_type>>& input, GpuTensor<nn_type>& output) {
+			out_val.insert(out_val.end(), p_output.begin(), p_output.end());
+		}
+	}
+	else {
+		for (size_t i = 0; i < _output_nodes.size(); ++i) {
+			std::vector<Tensor<nn_type>>& p_output = outputs[_output_nodes[i]->get_index()];
 
-}
-
-NN_BackPropLayer* Model::create_backprop(NN_Optimizer& optimizer) {
-	return NULL;
-}
-
-std::vector<int> Model::digestion(const std::vector<int>& feed) {
-	return feed;
+			out_val.insert(out_val.end(), p_output.begin(), p_output.end());
+		}
+	}
+	--_stack;
 }
 
 void Model::summary() {

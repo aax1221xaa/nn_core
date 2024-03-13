@@ -5,36 +5,30 @@
 
 /**********************************************/
 /*                                            */
-/*                 TensorBase                 */
-/*                                            */
-/**********************************************/
-
-class TensorBase {
-public:
-	bool _is_valid;
-	size_t _len;
-	nn_shape _shape;
-
-	TensorBase();
-	TensorBase(const nn_shape& shape);
-	
-	static size_t get_len(const nn_shape& shape);
-	static bool check_shape(const nn_shape& shape);
-};
-
-/**********************************************/
-/*                                            */
 /*                    Tensor                  */
 /*                                            */
 /**********************************************/
 
 template <typename _T>
-class Tensor : public NN_Shared_Ptr, public TensorBase {
-protected:
-	static void put_tensor(std::ostream& os, const Tensor<_T>& tensor, uint& current_lank, uint& index);
+class Tensor {
+private:
+	class _Container {
+	public:
+		_T* _data;
+		int _n_ref;
+
+		_Container() : _data(NULL), _n_ref(0) {}
+	};
+
+	_Container* _tensor;
+	size_t _len;
+	nn_shape _shape;
+
+	static bool check_shape(const nn_shape& shape);
+	static size_t calculate_lenth(const nn_shape& shape);
+	static void put_tensor(std::ostream& os, const Tensor<_T>& tensor, int& current_rank, size_t& counter);
 
 public:
-	_T* _data;
 
 	Tensor();
 	Tensor(const nn_shape& shape);
@@ -42,8 +36,12 @@ public:
 	Tensor(Tensor&& p);
 	~Tensor();
 
-	const Tensor& operator=(const Tensor& p);
-	const Tensor& operator=(Tensor&& p);
+	Tensor& operator=(Tensor& p);
+	Tensor& operator=(Tensor&& p);
+
+	_T* get_data() const;
+	const size_t& get_len() const;
+	const nn_shape& get_shape() const;
 
 	void clear();
 	void set(const nn_shape& shape);
@@ -51,70 +49,87 @@ public:
 };
 
 template <typename _T>
-void Tensor<_T>::put_tensor(std::ostream& os, const Tensor<_T>& tensor, uint& current_lank, uint& index) {
-	if (current_lank < tensor._shape.size() - 1) {
-		for (int i = 0; i < tensor._shape[current_lank]; ++i) {
-			++current_lank;
+bool Tensor<_T>::check_shape(const nn_shape& shape) {
+	bool is_valid = true;
 
-			os << '[';
-			put_tensor(os, tensor, current_lank, index);
-			os << "]\n";
+	if (shape.size() > 0) {
+		for (const int& n : shape) {
+			if (n < 1) is_valid = false;
+		}
+	}
+	else is_valid = false;
 
-			--current_lank;
+	return is_valid;
+}
+
+template <typename _T>
+size_t Tensor<_T>::calculate_lenth(const nn_shape& shape) {
+	size_t len = 1;
+
+	for (const int& n : shape) len *= n;
+
+	return len;
+}
+
+template <typename _T>
+void Tensor<_T>::put_tensor(std::ostream& os, const Tensor<_T>& tensor, int& current_rank, size_t& counter) {
+	if (current_rank < tensor._shape.size() - 1) {
+		for (int i = 0; i < tensor._shape[current_rank]; ++i) {
+			++current_rank;
+			os << '[' << std::endl;
+			put_tensor(os, tensor, current_rank, counter);
+			os << ']' << std::endl;
+			--current_rank;
 		}
 	}
 	else {
 		os << '[';
-		for(int i = 0; i < tensor._shape[current_lank - 1]; ++i)
-			os << tensor._data[index++] << ", ";
-		os << "]\n";
+		for (int i = 0; i < tensor._shape[current_rank]; ++i)
+			os << tensor._tensor->_data[counter++] << ", ";
+		os << ']';
 	}
 }
 
 template <typename _T>
 Tensor<_T>::Tensor() :
-	_data(NULL)
+	_len(0),
+	_tensor(new _Container)
 {
-	id = NULL;
 }
 
 template <typename _T>
 Tensor<_T>::Tensor(const nn_shape& shape) :
-	_data(NULL),
-	TensorBase(shape)
+	_tensor(new _Container),
+	_len(0)
 {
-	if (_is_valid) {
-		_data = new _T[_len];
-		id = linker.create();
+	if (!check_shape(shape)) {
+		std::cout << "[Tensor<_T>::Tensor] shape is invalid." << put_shape(shape) << std::endl;
 	}
-	else id = NULL;
+	else {
+		_shape = shape;
+		_len = calculate_lenth(shape);
+		_tensor->_data = new _T[_len];
+	}
 }
 
 template <typename _T>
 Tensor<_T>::Tensor(const Tensor& p) :
-	_data(p._data)
+	_tensor(p._tensor),
+	_len(p._len),
+	_shape(p._shape)
 {
-	_shape = p._shape;
-	_is_valid = p._is_valid;
-	_len = p._len;
-
-	id = p.id;
-
-	if (id) ++id->ref_cnt;
+	if (_tensor) ++_tensor->_n_ref;
 }
 
 template <typename _T>
 Tensor<_T>::Tensor(Tensor&& p) :
-	_data(p._data)
+	_tensor(p._tensor),
+	_len(p._len),
+	_shape(p._shape)
 {
-	_shape = p._shape;
-	_is_valid = p._is_valid;
-	_len = p._len;
-
-	id = p.id;
-
-	p._data = NULL;
-	p.id = NULL;
+	p._tensor = NULL;
+	p._len = 0;
+	p._shape.clear();
 }
 
 template <typename _T>
@@ -123,81 +138,93 @@ Tensor<_T>::~Tensor() {
 }
 
 template <typename _T>
-const Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
+Tensor<_T>& Tensor<_T>::operator=(Tensor& p) {
 	if (this == &p) return *this;
 
 	clear();
 
-	_data = p._data;
-	_shape = p._shape;
-	_is_valid = p._is_valid;
+	_tensor = p._tensor;
 	_len = p._len;
+	_shape = p._shape;
 
-	id = p.id;
-
-	if (id) ++id->ref_cnt;
+	if (_tensor) ++_tensor->_n_ref;
 
 	return *this;
 }
 
 template <typename _T>
-const Tensor<_T>& Tensor<_T>::operator=(Tensor&& p) {
+Tensor<_T>& Tensor<_T>::operator=(Tensor&& p) {
 	clear();
 
-	_data = p._data;
-	_shape = p._shape;
-	_is_valid = p._is_valid;
+	_tensor = p._tensor;
 	_len = p._len;
+	_shape = p._shape;
 
-	id = p.id;
-
-	p._data = NULL;
-	p.id = NULL;
+	p._tensor = NULL;
+	p._len = 0;
+	p._shape.clear();
 
 	return *this;
+}
+
+template <typename _T>
+_T* Tensor<_T>::get_data() const {
+	if (_tensor) return _tensor->_data;
+	else return NULL;
+}
+
+template <typename _T>
+const size_t& Tensor<_T>::get_len() const {
+	return _len;
+}
+
+template <typename _T>
+const nn_shape& Tensor<_T>::get_shape() const {
+	return _shape;
 }
 
 template <typename _T>
 void Tensor<_T>::put(std::ostream& os) const {
-	//uint lank = 0;
-	//uint index = 0;
+	int rank = 0;
+	size_t counter = 0;
 	
-	//os << "Dimenstion: " << put_shape(_shape) << std::endl << std::endl;
+	os << "Dimenstion: " << put_shape(_shape) << std::endl << std::endl;
 
-	//put_tensor(os, *this, lank, index);
-
-	//else os << "[]\n";
+	if (_shape.size() > 0) put_tensor(os, *this, rank, counter);
+	else os << "[]\n";
 }
 
 template <typename _T>
 void Tensor<_T>::clear() {
-	if (id) {
-		if (id->ref_cnt > 1) --id->ref_cnt;
+	if (_tensor) {
+		if (_tensor->_n_ref > 0) --_tensor->_n_ref;
 		else {
-			delete[] _data;
-			linker.erase(id);
+			delete[] _tensor->_data;
+			delete _tensor;
 		}
 	}
-	id = NULL;
-	_data = NULL;
-	_shape.clear();
-	_is_valid = false;
+
+	_tensor = NULL;
 	_len = 0;
+	_shape.clear();
 }
 
 template <typename _T>
 void Tensor<_T>::set(const nn_shape& shape) {
 	clear();
 
-	_is_valid = check_shape(shape);
-
-	if (_is_valid) {
-		_shape = shape;
-		_len = get_len(shape);
-		_data = new _T[_len];
-
-		id = linker.create();
+	if (!check_shape(shape)) {
+		ErrorExcept(
+			"[Tensor<_T>::set] shape is invalid. %s",
+			put_shape(shape)
+		);
 	}
+
+	_shape = shape;
+	_len = calculate_lenth(shape);
+
+	_tensor = new _Container;
+	_tensor->_data = new _T[_len];
 }
 
 template <typename _T>
@@ -212,19 +239,20 @@ template <typename _T>
 Tensor<_T> zeros(const nn_shape& shape) {
 	Tensor<_T> tensor(shape);
 
-	memset(tensor._data, 0, sizeof(_T) * tensor._len);
+	memset(tensor.get_data(), 0, sizeof(_T) * tensor.get_len());
 
 	return tensor;
 }
 
-template <typename _T>
-Tensor<_T> zeros_like(const Tensor<_T>& src) {
-	Tensor<_T> tensor(src._shape);
+template <typename _DT, typename _ST>
+Tensor<_DT> zeros_like(const Tensor<_ST>& src) {
+	Tensor<_DT> tensor(src.get_shape());
 
-	memset(tensor._data, 0, sizeof(_T) * tensor._len);
+	memset(tensor.get_data(), 0, sizeof(_DT) * tensor.get_len());
 
 	return tensor;
 }
+
 
 
 /**********************************************/
@@ -234,69 +262,105 @@ Tensor<_T> zeros_like(const Tensor<_T>& src) {
 /**********************************************/
 
 template <typename _T>
-class GpuTensor : public NN_Shared_Ptr, public TensorBase {
-public:
-	_T* _data;
+class GpuTensor {
+private:
+	class _Container {
+	public:
+		_T* _data;
+		int _n_ref;
+		
+		_Container() : _data(NULL), _n_ref(0) {}
+	};
 
+	_Container* _tensor;
+	size_t _len;
+	nn_shape _shape;
+
+	static bool check_shape(const nn_shape& shape);
+	static size_t calculate_lenth(const nn_shape& shape);
+
+public:
 	GpuTensor();
 	GpuTensor(const nn_shape& shape);
 	GpuTensor(const GpuTensor& p);
 	GpuTensor(GpuTensor&& p);
 	~GpuTensor();
 
-	const GpuTensor& operator=(const GpuTensor& p);
-	const GpuTensor& operator=(GpuTensor&& p);
+	GpuTensor& operator=(GpuTensor& p);
+	GpuTensor& operator=(GpuTensor&& p);
+
+	_T* get_data() const;
+	const size_t& get_len() const;
+	const nn_shape& get_shape() const;
 
 	void clear();
 	void set(const nn_shape& shape);
 };
 
 template <typename _T>
+bool GpuTensor<_T>::check_shape(const nn_shape& shape) {
+	bool is_valid = true;
+
+	if (shape.size() > 0) {
+		for (const int& n : shape) {
+			if (n < 1) is_valid = false;
+		}
+	}
+	else is_valid = false;
+
+	return is_valid;
+}
+
+template <typename _T>
+size_t GpuTensor<_T>::calculate_lenth(const nn_shape& shape) {
+	size_t len = 1;
+
+	for (const int& n : shape) len *= n;
+
+	return len;
+}
+
+template <typename _T>
 GpuTensor<_T>::GpuTensor() :
-	_data(NULL)
+	_tensor(new _Container),
+	_len(0)
 {
-	id = NULL;
 }
 
 template <typename _T>
 GpuTensor<_T>::GpuTensor(const nn_shape& shape) :
-	_data(NULL),
-	TensorBase(shape)
+	_tensor(new _Container),
+	_len(0)
 {
-	if (_is_valid && (cudaMalloc(&_data, sizeof(_T) * _len) == cudaSuccess)) {
-		id = linker.create();
+	if (!check_shape(shape)) {
+		std::cout << "[GpuTensor<_T>::GpuTensor] shape is invalid." << put_shape(shape) << std::endl;
 	}
 	else {
-		_is_valid = false;
-		id = NULL;
+		_shape = shape;
+		_len = calculate_lenth(shape);
+		
+		cudaMalloc(&(_tensor->_data), sizeof(_T) * _len);
 	}
 }
 
 template <typename _T>
 GpuTensor<_T>::GpuTensor(const GpuTensor& p) :
-	_data(p._data)
+	_tensor(p._tensor),
+	_len(p._len),
+	_shape(p._shape)
 {
-	_shape = p._shape;
-	_is_valid = p._is_valid;
-	_len = p._len;
-
-	id = p.id;
-
-	if (id) ++id->ref_cnt;
+	if (_tensor) ++_tensor->_n_ref;
 }
 
 template <typename _T>
 GpuTensor<_T>::GpuTensor(GpuTensor&& p) :
-	_data(p._data)
+	_tensor(p._tensor),
+	_len(p._len),
+	_shape(p._shape)
 {
-	_shape = p._shape;
-	_is_valid = p._is_valid;
-	_len = p._len;
-
-	id = p.id;
-
-	p._data = NULL;
-	p.id = NULL;
+	p._tensor = NULL;
+	p._len = 0;
+	p._shape.clear();
 }
 
 template <typename _T>
@@ -305,89 +369,97 @@ GpuTensor<_T>::~GpuTensor() {
 }
 
 template <typename _T>
-const GpuTensor<_T>& GpuTensor<_T>::operator=(const GpuTensor& p) {
+GpuTensor<_T>& GpuTensor<_T>::operator=(GpuTensor& p) {
 	if (this == &p) return *this;
 
 	clear();
 
-	_data = p._data;
-	_shape = p._shape;
-	_is_valid = p._is_valid;
+	_tensor = p._tensor;
 	_len = p._len;
+	_shape = p._shape;
 
-	id = p.id;
-
-	if (id) ++id->ref_cnt;
+	if (_tensor) ++_tensor->_n_ref;
 
 	return *this;
 }
 
 template <typename _T>
-const GpuTensor<_T>& GpuTensor<_T>::operator=(GpuTensor&& p) {
+GpuTensor<_T>& GpuTensor<_T>::operator=(GpuTensor&& p) {
 	clear();
 
-	_data = p._data;
-	_shape = p._shape;
-	_is_valid = p._is_valid;
+	_tensor = p._tensor;
 	_len = p._len;
+	_shape = p._shape;
 
-	id = p.id;
-
-	p._data = NULL;
-	p.id = NULL;
+	p._tensor = NULL;
+	p._len = 0;
+	p._shape.clear();
 
 	return *this;
+}
+
+template <typename _T>
+_T* GpuTensor<_T>::get_data() const {
+	return _tensor->_data;
+}
+
+template <typename _T>
+const size_t& GpuTensor<_T>::get_len() const {
+	return _len;
+}
+
+template <typename _T>
+const nn_shape& GpuTensor<_T>::get_shape() const {
+	return _shape;
 }
 
 template <typename _T>
 void GpuTensor<_T>::clear() {
-	if (id) {
-		if (id->ref_cnt > 1) --id->ref_cnt;
+	if (_tensor) {
+		if (_tensor->_n_ref > 0) --_tensor->_n_ref;
 		else {
-			cudaFree(_data);
-			linker.erase(id);
+			cudaFree(_tensor->_data);
+			delete _tensor;
 		}
 	}
-	id = NULL;
-	_data = NULL;
-	_shape.clear();
-	_is_valid = false;
+
+	_tensor = NULL;
 	_len = 0;
+	_shape.clear();
 }
 
 template <typename _T>
 void GpuTensor<_T>::set(const nn_shape& shape) {
 	clear();
 
-	_is_valid = check_shape(shape);
-	_len = get_len(shape);
-
-	if (_is_valid && (cudaMalloc(&_data, sizeof(_T) * _len) == cudaSuccess)) {
-		_shape = shape;
-		id = linker.create();
+	if (!check_shape(shape)) {
+		ErrorExcept(
+			"[Tensor<_T>::set] shape is invalid. %s",
+			put_shape(shape)
+		);
 	}
-	else {
-		_is_valid = false;
-		_len = 0;
 
-		id = NULL;
-	}
+	_shape = shape;
+	_len = calculate_lenth(shape);
+
+	_tensor = new _Container;
+	cudaMalloc(&(_tensor->_data), sizeof(_T) * _len);
 }
 
 template <class _T>
-GpuTensor<_T> zeros(const nn_shape& shape) {
+GpuTensor<_T> gpu_zeros(const nn_shape& shape) {
 	GpuTensor<_T> tensor(shape);
 
-	check_cuda(cudaMemset(tensor._data, 0, sizeof(_T) * tensor._len));
+	check_cuda(cudaMemset(tensor.get_data(), 0, sizeof(_T) * tensor.get_len()));
 
 	return tensor;
 }
 
-template <class _T>
-GpuTensor<_T> zeros_like(const GpuTensor<_T>& src) {
-	GpuTensor<_T> tensor(src._shape);
+template <typename _DT, typename _ST>
+GpuTensor<_DT> gpu_zeros_like(const GpuTensor<_ST>& src) {
+	GpuTensor<_DT> tensor(src.get_shape());
 
-	check_cuda(cudaMemset(tensor._data, 0, sizeof(_T) * tensor._len));
+	check_cuda(cudaMemset(tensor.get_data(), 0, sizeof(_DT) * tensor.get_len()));
 
 	return tensor;
 }
@@ -399,26 +471,60 @@ GpuTensor<_T> zeros_like(const GpuTensor<_T>& src) {
 /*                                            */
 /**********************************************/
 
-template <class _T>
-void copy_to_gpu(const Tensor<_T>& src, GpuTensor<_T>& dst) {
-	if (src._len != dst._len) {
+template <typename _T>
+void host_to_host(const Tensor<_T>& src, Tensor<_T>& dst) {
+	if (src.get_len() != dst.get_len()) {
 		ErrorExcept(
-			"[copy_to_gpu] The space of sdt and dst are different. %ld != %ld",
-			src._len, dst._len
+			"[host_to_host] The size of src and dst are different. %ld != %ld",
+			src.get_len(), dst.get_len()
 		);
 	}
 
-	check_cuda(cudaMemcpy(dst._data, src._data, sizeof(_T) * src._len, cudaMemcpyHostToDevice));
+	memcpy_s(dst.get_data(), sizeof(_T) * dst.get_len(), src.get_data(), sizeof(_T) * src.get_len());
 }
 
-template <class _T>
-void copy_to_host(const GpuTensor<_T>& src, Tensor<_T>& dst) {
-	if (src._len != dst._len) {
+template <typename _T>
+void host_to_gpu(const Tensor<_T>& src, GpuTensor<_T>& dst) {
+	if (src.get_len() != dst.get_len()) {
 		ErrorExcept(
-			"[copy_to_host] The space of sdt and dst are different. %ld != %ld",
-			src._len, dst._len
+			"[host_to_gpu] The size of src and dst are different. %ld != %ld",
+			src.get_len(), dst.get_len()
 		);
 	}
 
-	check_cuda(cudaMemcpy(dst._data, src._data, sizeof(_T) * src._len, cudaMemcpyDeviceToHost));
+	check_cuda(cudaMemcpy(dst.get_data(), src.get_data(), sizeof(_T) * src.get_len(), cudaMemcpyHostToDevice));
 }
+
+template <typename _T>
+void gpu_to_host(const GpuTensor<_T>& src, Tensor<_T>& dst) {
+	if (src.get_len() != dst.get_len()) {
+		ErrorExcept(
+			"[gpu_to_host] The size of src and dst are different. %ld != %ld",
+			src.get_len(), dst.get_len()
+		);
+	}
+
+	check_cuda(cudaMemcpy(dst.get_data(), src.get_data(), sizeof(_T) * dst.get_len(), cudaMemcpyDeviceToHost));
+}
+
+template <typename _T>
+void gpu_to_gpu(const GpuTensor<_T>& src, GpuTensor<_T>& dst) {
+	if (src.get_len() != dst.get_len()) {
+		ErrorExcept(
+			"[gpu_to_gpu] The size of src and dst are different. %ld != %ld",
+			src.get_len(), dst.get_len()
+		);
+	}
+
+	check_cuda(cudaMemcpy(dst.get_data(), src.get_data(), sizeof(_T) * dst.get_len(), cudaMemcpyDeviceToDevice));
+}
+
+
+/**********************************************/
+/*                                            */
+/*					  Random                  */
+/*                                            */
+/**********************************************/
+
+void set_random_uniform(Tensor<float>& tensor, float a, float b);
+void set_random_uniform(GpuTensor<float>& tensor, float a, float b);

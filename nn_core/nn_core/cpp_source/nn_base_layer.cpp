@@ -39,28 +39,10 @@ NN_Layer::~NN_Layer() {
 
 }
 
-void NN_Layer::set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output) {
-	output.set(out_shape);
-}
-
-NN_BackPropLayer* NN_Layer::create_backprop(NN_Optimizer& optimizer) {
-	return NULL;
-}
-
-std::vector<int> NN_Layer::digestion(const std::vector<int>& feed) {
-	std::cout << _layer_name << " ";
-
-	std::cout << '[';
-	for (const int& val : feed)
-		std::cout << val << ", ";
-	std::cout << ']' << std::endl;
-
-	int sum = 0; // = cv::Mat::zeros(cv::Size({ 1 }), CV_32SC1);
-
-	for (const int& val : feed) sum += val;
-
-
-	return { sum };
+void NN_Layer::test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val) {
+	ErrorExcept(
+		"[NN_Layer::test] Do make this function."
+	);
 }
 
 
@@ -74,42 +56,22 @@ NN_Input::NN_Input(const nn_shape& input_size, int batch, const char* _layer_nam
 	NN_Layer(_layer_name),
 	_shape(input_size)
 {
-	try {
-		_shape.push_back(batch);
-
-		for (const List<int>& n : _shape) {
-			if (*(n._ptr->data) < -1 || *(n._ptr->data) == 0) {
-				ErrorExcept(
-					"[NN_Input::NN_Input] can't create input layer by dimension(%s).",
-					put_shape(input_size)
-				);
-			}
-		}
-
-	}
-	catch (const Exception& e) {
-		e.Put();
-	}
+	_shape.insert(_shape.begin(), batch);
 }
 
 NN_Input::~NN_Input() {
 
 }
 
-nn_shape NN_Input::calculate_output_size(nn_shape& input_shape) {
-	return _shape ;
-}
+void NN_Input::test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val) {
+	out_val.push_back(Tensor<nn_type>(in_val[0].get_shape()));
 
-void NN_Input::set_io(std::vector<GpuTensor<nn_type>>& input, nn_shape& out_shape, GpuTensor<nn_type>& output) {
-
-}
-
-void NN_Input::run_forward(std::vector<cudaStream_t>& stream, std::vector<GpuTensor<nn_type>>& input, GpuTensor<nn_type>& output) {
-	//check_cuda(cudaMemcpy(output._data, input[0]->_data, output._elem_size * output._len, cudaMemcpyDeviceToDevice));
-}
-
-NN_BackPropLayer* NN_Input::create_backprop(NN_Optimizer& optimizer) {
-	return NULL;
+	memcpy_s(
+		out_val[0].get_data(),
+		out_val[0].get_len() * sizeof(nn_type),
+		in_val[0].get_data(),
+		in_val[0].get_len() * sizeof(nn_type)
+		);
 }
 
 

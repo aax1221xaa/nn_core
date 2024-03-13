@@ -1,20 +1,14 @@
-#include "../nn_core/cpp_source/cuda_common.h"
+#include "../nn_core/cpp_source/nn_tensor.h"
 #include "vld.h"
 
 
 int main() {
 	try {
-		std::vector<int> a = { 1, 2, 3, 4 ,5 };
-		std::vector<int> b;
+		Tensor<float> a({ 5, 5 });
+		Tensor<int> b = zeros_like<int>(a);
 
-		b = a;
-
-		a.push_back(6);
-		b.push_back(7);
-
-		for (const int& val : a) std::cout << val << std::endl;
-		for (const int& val : b) std::cout << val << std::endl;
-
+		GpuTensor<int> c({ 5, 5 });
+		GpuTensor<float> d = gpu_zeros_like<float>(c);
 	}
 	catch (const Exception& e) {
 		e.Put();
