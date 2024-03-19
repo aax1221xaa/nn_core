@@ -21,24 +21,33 @@ Model::Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* m
 {
 	try {
 		/*    marking output to input    */
-		std::vector<NN_Link*>& node_list = manager.get_nodes();
 		std::vector<int> mask;
 
 		find_path(inputs, outputs, mask);
+		count_branch(mask);
+		set_childs(inputs, outputs, mask);
+		/*
+		_manager.set_reserved_shapes();
 
-		std::vector<int> m_mask(mask.size(), 0);
+		for (NN_Link* node : _layers) {
+			std::vector<NN_Shape>& output_shape = _manager.get_node_shape(node->get_index());
+			std::vector<NN_Shape> input_shape;
 
-		for (NN_Link* node : node_list) {
-			int i = 0;
+			if (node->get_prev_nodes().size() > 0) {
+				for (NN_Link* p_prev_node : node->get_prev_nodes()) {
+					size_t i = 0;
 
-			for (NN_Link* p_prev : node->get_prev_nodes()) {
-				if (mask[p_prev->get_index()] == -1) ++i;
+					for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
+						if (p_next_node == node) break;
+						else ++i;
+					}
+					input_shape.push_back(_manager.get_node_shape(p_prev_node->get_index())[i]);
+				}
 			}
 
-			m_mask[node->get_index()] = i;
+			node->get_layer().get_output_shape(input_shape, output_shape);
 		}
-
-		set_childs(inputs, outputs, m_mask);
+		*/
 	}
 	catch (const Exception& e) {
 		e.Put();
@@ -172,6 +181,23 @@ void Model::find_path(Layer_t& inputs, Layer_t& outputs, std::vector<int>& find_
 	}
 }
 
+void Model::count_branch(std::vector<int>& mask) {
+	std::vector<NN_Link*>& nodes = _manager.get_nodes();
+	std::vector<int> counter(nodes.size(), 0);
+
+	for (const NN_Link* node : nodes) {
+		if (mask[node->get_index()] < 0) {
+			for (const NN_Link* prev_node : node->get_prev_nodes()) {
+				if (mask[node->get_index()] < 0) {
+					++counter[node->get_index()];
+				}
+			}
+		}
+	}
+
+	mask = counter;
+}
+
 void Model::set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask) {
 	std::vector<NN_Link*>& nodes = _manager.get_nodes();
 	std::vector<int> child_index(nodes.size(), -1);
@@ -235,7 +261,7 @@ void Model::set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask
 	}
 }
 
-const std::vector<int>& Model::get_output_indice() {
+const std::vector<int>& Model::get_output_indice() const {
 	return _output_indice;
 }
 
@@ -243,6 +269,49 @@ void Model::set_output_indice(const std::vector<int>& indice) {
 	_output_indice = indice;
 }
 
+void Model::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
+	for (NN_Link* node : _layers) {
+		std::vector<NN_Shape>& output_shape = _manager.get_node_shape(node->get_index());
+		std::vector<NN_Shape> input_shape;
+
+		if (node->get_prev_nodes().size() > 0) {
+			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
+				size_t i = 0;
+
+				for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
+					if (p_next_node == node) break;
+					else ++i;
+				}
+				input_shape.push_back(_manager.get_node_shape(p_prev_node->get_index())[i]);
+			}
+		}
+		else {
+			size_t i = 0;
+			for (NN_Link* p_input : _input_nodes) {
+				if (p_input == node) break;
+				else ++i;
+			}
+			input_shape.push_back(input_shape[i]);
+		}
+
+		node->get_layer().get_output_shape(input_shape, output_shape);
+	}
+
+	for (size_t i = 0; i < _output_nodes.size(); ++i) {
+		std::vector<NN_Shape>& out_shape = _manager.get_node_shape(_output_nodes[_output_indice[i]]->get_index());
+		output_shape.insert(output_shape.end(), out_shape.begin(), out_shape.end());
+	}
+}
+
+void Model::build(const std::vector<NN_Shape>& input_shape) {
+
+}
+
+void Model::run_forward(const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
+
+}
+
+/*
 void Model::test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val) {
 	++_stack;
 
@@ -289,7 +358,7 @@ void Model::test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<
 	}
 	--_stack;
 }
-
+*/
 void Model::summary() {
 	int i = 0;
 
@@ -299,4 +368,8 @@ void Model::summary() {
 		std::cout << ++i << " : layer_name = " << p_node->get_layer()._layer_name << std::endl;
 			//<< " output size: " << put_shape(p_node->) << std::endl;
 	}
+}
+
+std::vector<Tensor<nn_type>> Model::predict(const std::vector<Tensor<nn_type>>& x) {
+
 }

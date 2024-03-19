@@ -17,8 +17,6 @@
 
 #define STREAMS					32
 
-#define DIM_SIZE				4
-
 typedef const int cint;
 typedef unsigned int uint;
 typedef const unsigned int cuint;
@@ -349,10 +347,60 @@ typename List<_T>::Iterator List<_T>::end() const {
 
 /**********************************************/
 /*                                            */
-/*                   nn_shape                 */
+/*                   NN_Shape                 */
 /*                                            */
 /**********************************************/
 
-typedef std::vector<int> nn_shape;
+class NN_Shape {
+private:
+	class _Container {
+	public:
+		int* _dims;
+		int _n_ref;
 
-const char* put_shape(const nn_shape& tensor);
+		_Container() : _dims(NULL), _n_ref(0) {}
+	};
+
+	_Container* _data;
+	int _len;
+
+public:
+	class Iterator {
+	public:
+		int* _p_dims;
+		int _index;
+
+		Iterator(int* p_dims, int index);
+		Iterator(const typename Iterator& p);
+
+		void operator++();
+		bool operator!=(const typename Iterator& p) const;
+		int& operator*() const;
+	};
+
+	NN_Shape();
+	NN_Shape(int len);
+	NN_Shape(const std::initializer_list<int>& dims);
+	NN_Shape(const NN_Shape& p);
+	NN_Shape(NN_Shape&& p);
+	~NN_Shape();
+
+	NN_Shape& operator=(const NN_Shape& p);
+	NN_Shape& operator=(NN_Shape&& p);
+
+	int& operator[](const int& index) const;
+
+	void clear();
+	void set(const std::initializer_list<int>& dims);
+	void resize(int len);
+	void push_back(const int dim);
+	void push_front(const int dim);
+	const int& get_size() const;
+	int* get_dims() const;
+	void copy_to(NN_Shape& shape) const;
+
+	typename Iterator begin() const;
+	typename Iterator end() const;
+};
+
+const char* put_shape(const NN_Shape& tensor);

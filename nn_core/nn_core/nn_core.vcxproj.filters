@@ -51,10 +51,10 @@
     <ClCompile Include="cpp_source\nn_optimizer.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\nn_base_layer.cpp">
+    <ClCompile Include="cpp_source\nn_tensor.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\nn_tensor.cpp">
+    <ClCompile Include="cpp_source\nn_base_layer.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
   </ItemGroup>

@@ -80,8 +80,8 @@
     <ClCompile Include="cpp_source\CudaCheck.cpp" />
     <ClCompile Include="cpp_source\cuda_common.cpp" />
     <ClCompile Include="cpp_source\Exception.cpp" />
-    <ClCompile Include="cpp_source\nn_layer.cpp" />
     <ClCompile Include="cpp_source\nn_base_layer.cpp" />
+    <ClCompile Include="cpp_source\nn_layer.cpp" />
     <ClCompile Include="cpp_source\nn_loss.cpp" />
     <ClCompile Include="cpp_source\nn_model.cpp" />
     <ClCompile Include="cpp_source\nn_optimizer.cpp" />

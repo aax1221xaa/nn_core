@@ -31,55 +31,16 @@ int main() {
 		Layer_t y = nn(NN_Concat("Concat_1"))({ x, x2 });
 		y = nn(NN_Dense(64, "Dense_7_2"))(y);
 
-		Model model_1(nn, { x_input, x2_input, x3_input }, { y, x3 }, "model_1");
+		Layer_t y2 = nn(NN_Concat("Concat_2"))({ x3, y });
+
+		y = nn(NN_Dense(32, "Dense_4_1"))(y);
+		y2 = nn(NN_Dense(32, "Dense_4_2"))(y2);
+
+		Model model_1(nn, { x_input, x2_input }, y, "Model_1");
+		Model model_2(nn, { x_input, x2_input, x3_input }, y2, "Model_2");
+
 		model_1.summary();
-
-		Layer_t x4_input = nn.input({ 1, 28, 28 }, -1, "input4");
-		Layer_t x5_input = nn.input({ 1, 28, 28 }, -1, "input5");
-		Layer_t x6_input = nn.input({ 1, 28, 28 }, -1, "input6");
-
-		Layer_t x4 = nn(NN_Dense(1024, "Dense_4_1"))(x4_input);
-		x4 = nn(NN_Dense(512, "Dense_4_2"))(x4);
-		x4 = nn(NN_Dense(256, "Dense_4_3"))(x4);
-
-		Layer_t x5 = nn(NN_Dense(1024, "Dense_5_1"))(x5_input);
-		x5 = nn(NN_Dense(512, "Dense_5_2"))(x5);
-		x5 = nn(NN_Dense(256, "Dense_5_3"))(x5);
-
-		Layer_t x6 = nn(NN_Dense(1024, "Dense_6_1"))(x6_input);
-		x6 = nn(NN_Dense(512, "Dense_6_2"))(x6);
-		x6 = nn(NN_Dense(256, "Dense_6_3"))(x6);
-
-		Layer_t y2 = model_1({ x4, x5, x6 });
-
-		Layer_t y4 = nn(NN_Dense(128, "Dense_9_1"))(y2[1]);
-		Layer_t y3 = nn(NN_Dense(128, "Dense_8_1"))(y2[0]);
-
-		Model model_2(nn, { x4_input, x5_input, x6_input }, { y3, y4 }, "model_2");
 		model_2.summary();
-
-		std::vector<Tensor<nn_type>> inputs(3);
-		std::vector<Tensor<nn_type>> outputs;
-
-		for (Tensor<nn_type>& tensor : inputs) {
-			tensor.set({ 5, 5 });
-
-			nn_type* data = tensor.get_data();
-			for (size_t i = 0; i < tensor.get_len(); ++i) data[i] = 1.f;
-		}
-
-		model_2.test(inputs, outputs);
-
-		std::cout << "====================inputs==================" << std::endl;
-		for (Tensor<nn_type>& tensor : inputs) {
-			std::cout << "============================================" << std::endl;
-			std::cout << tensor;
-		}
-		std::cout << "====================outputs==================" << std::endl;
-		for (Tensor<nn_type>& tensor : outputs) {
-			std::cout << "=============================================" << std::endl;
-			std::cout << tensor;
-		}
 	}
 	catch (Exception& e) {
 		e.Put();

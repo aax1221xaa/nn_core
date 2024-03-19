@@ -15,8 +15,22 @@ public:
 	const int _amounts;
 
 	NN_Dense(const int amounts, const char* name);
+};
 
-	void test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val);
+
+/**********************************************/
+/*                                            */
+/*                   NN_Test                  */
+/*                                            */
+/**********************************************/
+
+class NN_Test : public NN_Layer {
+public:
+	NN_Test(const char* name);
+
+	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
+	void build(const std::vector<NN_Shape>& input_shape);
+	void run_forward(const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
 };
 
 
@@ -30,5 +44,7 @@ class NN_Concat : public NN_Layer {
 public:
 	NN_Concat(const char* name);
 
-	void test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val);
+	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
+	void build(const std::vector<NN_Shape>& input_shape);
+	void run_forward(const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
 };

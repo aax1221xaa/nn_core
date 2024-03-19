@@ -13,19 +13,7 @@
 
 class NN_BackPropLayer {
 public:
-	virtual ~NN_BackPropLayer();
-	virtual void set_dio(
-		std::vector<nn_shape>& in_shape,
-		std::vector<GpuTensor<nn_type>>& d_outputs,
-		std::vector<GpuTensor<nn_type>>& d_inputs
-	);
-	virtual void run_backprop(
-		std::vector<cudaStream_t>& s,
-		std::vector<GpuTensor<nn_type>>& inputs,
-		GpuTensor<nn_type>& outputs,
-		GpuTensor<nn_type>& d_output,
-		std::vector<GpuTensor<nn_type>>& d_input
-	);
+
 };
 
 class NN_Layer {
@@ -35,7 +23,10 @@ public:
 	NN_Layer(const char* layer_name);
 	virtual ~NN_Layer();
 
-	virtual void test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val);
+	virtual void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
+	virtual void build(const std::vector<NN_Shape>& input_shape);
+	virtual void run_forward(const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	virtual void trans_data(const Tensor<nn_type>& input, GpuTensor<nn_type>& output);
 };
 
 
@@ -47,12 +38,15 @@ public:
 
 class NN_Input : public NN_Layer {
 public:
-	nn_shape _shape;
+	NN_Shape _shape;
 
-	NN_Input(const nn_shape& input_size, int batch = -1, const char* _layer_name = "Input");
+	NN_Input(const NN_Shape& input_size, int batch = -1, const char* _layer_name = "Input");
 	~NN_Input();
 
-	void test(const std::vector<Tensor<nn_type>>& in_val, std::vector<Tensor<nn_type>>& out_val);
+	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
+	void build(const std::vector<NN_Shape>& input_shape);
+	void run_forward(const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	void trans_data(const Tensor<nn_type>& input, GpuTensor<nn_type>& output);
 };
 
 
@@ -83,8 +77,8 @@ public:
 	NN_Link();
 	virtual ~NN_Link();
 
-	std::vector<NN_Link*>& get_prev_nodes();
-	std::vector<NN_Link*>& get_next_nodes();
+	const std::vector<NN_Link*>& get_prev_nodes() const;
+	const std::vector<NN_Link*>& get_next_nodes() const;
 	
 	void set_prev_node(NN_Link* node);
 	void set_next_node(NN_Link* node);
@@ -95,7 +89,7 @@ public:
 	void set_layer(NN_Layer* layer);
 	void set_backprop(NN_BackPropLayer* backprop);
 
-	int get_index();
+	const int& get_index() const;
 	void set_index(int index);
 
 	Layer_t operator()(Layer_t prev_node);
@@ -120,6 +114,9 @@ class NN_Manager {
 
 	int _node_counter;
 
+	std::vector<std::vector<NN_Shape>> _out_shapes;
+	std::vector<std::vector<GpuTensor<nn_type>>> _outputs;
+
 public:
 	NN_Manager();
 	~NN_Manager();
@@ -132,7 +129,16 @@ public:
 	void set_nodes(NN_Link* node);
 	void set_static_node(NN_Link* const node);
 
-	Layer_t input(const nn_shape& input_size, int batch, const char* layer_name);
+	void set_reserved_shapes();
+	void set_reserved_outputs();
+
+	std::vector<NN_Shape>& get_node_shape(int index);
+	std::vector<GpuTensor<nn_type>>& get_node_output(int index);
+
+	void clear_shapes();
+	void clear_outputs();
+
+	Layer_t input(const NN_Shape& input_size, int batch, const char* layer_name);
 
 	template <class _T>
 	NN_Link& operator()(const _T& layer);
