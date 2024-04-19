@@ -18,9 +18,9 @@
 
 __global__ void __conv2d(
 	const uint* indice,
-	const float* input,
-	const float* kernel,
-	float* output,
+	const nn_type* input,
+	const nn_type* kernel,
+	nn_type* output,
 	cuint in_h,
 	cuint in_w,
 	cuint k_n,
@@ -42,13 +42,13 @@ __global__ void __conv2d(
 	cuint n = k_w * k_h * k_c;
 	cuint k = out_w * out_h;
 
-	__shared__ float share_in[BLOCK_32 * BLOCK_32];
-	__shared__ float share_k[BLOCK_32 * BLOCK_32];
+	__shared__ nn_type share_in[BLOCK_32 * BLOCK_32];
+	__shared__ nn_type share_k[BLOCK_32 * BLOCK_32];
 
-	const float* p_input = input + (y0 * in_w + x0);
-	const float* p_kernel = kernel + (cy * k_w * k_h * k_c);
+	const nn_type* p_input = input + (y0 * in_w + x0);
+	const nn_type* p_kernel = kernel + (cy * k_w * k_h * k_c);
 
-	float sum = 0.f;
+	nn_type sum = 0.f;
 
 	for (uint i = 0; i < n; i += BLOCK_32) {
 		uint th_x = i + threadIdx.x;
@@ -72,6 +72,7 @@ __global__ void __conv2d(
 	}
 }
 
+/*
 __global__ void __kernel_conv2d(
 	const uint* indice,
 	const float* d_output,
@@ -127,7 +128,7 @@ __global__ void __kernel_conv2d(
 		gradient[cy * k + cx] += sum;
 	}
 }
-
+*/
 /**********************************************
 
 				    Conv2d
@@ -140,28 +141,33 @@ void conv2d(
 	const nn_type* input,
 	const nn_type* kernel,
 	nn_type* output,
-	const nn_shape& in_shape,
-	const nn_shape& k_shape,
-	const nn_shape& out_shape,
+	cuint in_c,
+	cuint in_h,
+	cuint in_w,
+	cuint k_h,
+	cuint k_w,
+	cuint out_c,
+	cuint out_h,
+	cuint out_w,
 	cuint h_stride,
 	cuint w_stride
 ) {
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, out_shape[2] * out_shape[3], out_shape[1]);
+	dim3 blocks = get_grid_size(threads, out_h * out_w, out_c);
 
 	__conv2d<<<blocks, threads, 0, s>>>(
 		indice,
 		input,
 		kernel,
 		output,
-		in_shape[2],
-		in_shape[3],
-		k_shape[0],
-		k_shape[1],
-		k_shape[2],
-		k_shape[3],
-		out_shape[2],
-		out_shape[3],
+		in_h,
+		in_w,
+		out_c,
+		in_c,
+		k_h,
+		k_w,
+		out_h,
+		out_w,
 		h_stride,
 		w_stride
 	);
@@ -172,7 +178,7 @@ void conv2d(
 			     KernelConv2d
 
 **********************************************/
-
+/*
 void kernel_conv2d(
 	const nn_type* d_output,
 	const nn_type* input,
@@ -226,3 +232,4 @@ void kernel_conv2d(
 
 	if (hw > CONST_ELEM_SIZE) check_cuda(cudaFree(indice));
 }
+*/

@@ -1,5 +1,5 @@
 #pragma once
-#include "nn_base_layer.h"
+#include "nn_base.h"
 #include "nn_optimizer.h"
 #include "nn_loss.h"
 
@@ -45,7 +45,8 @@ public:
 	/************************** NN_Layer **************************/
 	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
 	void build(const std::vector<NN_Shape>& input_shape);
-	void run_forward(const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
 	/**************************************************************/
 
 	void summary();

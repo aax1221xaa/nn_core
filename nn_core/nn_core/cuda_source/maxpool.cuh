@@ -14,9 +14,11 @@ void maxpool2d(
 	cudaStream_t s,
 	const nn_type* input,
 	nn_type* output,
-	const nn_shape& in_shape,
-	const nn_shape& out_shape,
 	uint* max_indice,
+	cuint in_h,
+	cuint in_w,
+	cuint out_h,
+	cuint out_w,
 	cuint h_kernel,
 	cuint w_kernel,
 	cuint h_stride,
@@ -30,7 +32,7 @@ void maxpool2d(
 				  D_Maxpool2d
 
 **********************************************/
-
+/*
 void d_maxpool2d(
 	cudaStream_t* s,
 	const nn_type* d_output,
@@ -42,5 +44,6 @@ void d_maxpool2d(
 	cuint h_stride,
 	cuint w_stride
 );
+*/
 
 #endif // !MAXPOOL_CUH

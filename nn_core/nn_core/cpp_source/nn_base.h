@@ -5,16 +5,12 @@
 
 #define Layer_t	List<NN_Link::NN_Ptr>
 
+
 /**********************************************/
 /*                                            */
 /*                  NN_Layer                  */
 /*                                            */
 /**********************************************/
-
-class NN_BackPropLayer {
-public:
-
-};
 
 class NN_Layer {
 public:
@@ -25,8 +21,8 @@ public:
 
 	virtual void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
 	virtual void build(const std::vector<NN_Shape>& input_shape);
-	virtual void run_forward(const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
-	virtual void trans_data(const Tensor<nn_type>& input, GpuTensor<nn_type>& output);
+	virtual void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	virtual void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
 };
 
 
@@ -45,8 +41,7 @@ public:
 
 	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
 	void build(const std::vector<NN_Shape>& input_shape);
-	void run_forward(const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
-	void trans_data(const Tensor<nn_type>& input, GpuTensor<nn_type>& output);
+	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
 };
 
 
@@ -64,7 +59,6 @@ private:
 	std::vector<NN_Link*> _next;
 
 	NN_Layer* _layer;
-	NN_BackPropLayer* _backprop;
 
 public:
 	struct NN_Ptr {
@@ -84,10 +78,7 @@ public:
 	void set_next_node(NN_Link* node);
 
 	NN_Layer& get_layer();
-	NN_BackPropLayer& get_backprop();
-
 	void set_layer(NN_Layer* layer);
-	void set_backprop(NN_BackPropLayer* backprop);
 
 	const int& get_index() const;
 	void set_index(int index);
@@ -106,7 +97,7 @@ public:
 /**********************************************/
 
 class NN_Manager {
-	cudaStream_t _streams[STREAMS];
+	NN_Stream _stream;
 
 	std::vector<bool> _is_static;
 	std::vector<NN_Link*> _nodes;
@@ -121,7 +112,7 @@ public:
 	NN_Manager();
 	~NN_Manager();
 
-	cudaStream_t* get_streams();
+	NN_Stream& get_streams();
 	
 	std::vector<NN_Link*>& get_nodes();
 	std::vector<NN_Layer*>& get_layers();

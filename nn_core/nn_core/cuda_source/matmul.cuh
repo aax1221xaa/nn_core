@@ -1,21 +1,22 @@
-#ifndef DENSE_CUH
-#define DENSE_CUH
+#ifndef MATMUL_CUH
+#define MATMUL_CUH
 
 #include "../cpp_source/cuda_common.h"
 
 
 /**********************************************
 
-				  Mat multiple
+					matmul
 
 **********************************************/
 
 void matmul(
+	cuint m,
+	cuint k,
+	cuint n,
 	const nn_type* input,
 	const nn_type* weight,
-	nn_type* output,
-	const nn_shape& in_shape,
-	const nn_shape& out_shape
+	nn_type* output
 );
 
 #endif

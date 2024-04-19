@@ -16,8 +16,8 @@
 /**********************************************/
 
 __global__ void __maxpool_2d(
-	const float* a,
-	float* b,
+	const nn_type* a,
+	nn_type* b,
 	uint* mark,
 	cuint a_h,
 	cuint a_w,
@@ -30,7 +30,7 @@ __global__ void __maxpool_2d(
 	cuint tile_h,
 	cuint tile_w
 ) {
-	extern __shared__ float sm[];
+	extern __shared__ nn_type sm[];
 
 	cuint out_x = blockIdx.x * blockDim.x + threadIdx.x;
 	cuint out_y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -38,8 +38,8 @@ __global__ void __maxpool_2d(
 	cuint y0 = blockIdx.y * blockDim.y * st_h;
 	cuint z0 = blockIdx.z;
 
-	const float* pa = a + ((z0 * a_w * a_h) + (y0 * a_w) + x0);
-	float* pb = b + (b_w * b_h * z0);
+	const nn_type* pa = a + ((z0 * a_w * a_h) + (y0 * a_w) + x0);
+	nn_type* pb = b + (b_w * b_h * z0);
 	uint* pmark = mark + (b_w * b_h * z0);
 
 	for (uint h = 0; h < tile_h; h += blockDim.y) {
@@ -59,14 +59,14 @@ __global__ void __maxpool_2d(
 	__syncthreads();
 
 	if (out_x < b_w && out_y < b_h) {
-		float val = -FLT_MAX;
+		nn_type val = -FLT_MAX;
 		uint index = 0;
 
 		for (uint h = 0; h < k_h; ++h) {
 			cuint ty = threadIdx.y * st_h + h;
 			for (uint w = 0; w < k_w; ++w) {
 				cuint tx = threadIdx.x * st_w + w;
-				float sm_val = sm[ty * tile_w + tx];
+				nn_type sm_val = sm[ty * tile_w + tx];
 
 				if (sm_val > val) {
 					val = sm_val;
@@ -80,6 +80,7 @@ __global__ void __maxpool_2d(
 	}
 }
 
+/*
 __global__ void __d_maxpool(
 	const float* a,
 	const uint* indice,
@@ -108,7 +109,7 @@ __global__ void __d_maxpool(
 		*p_b = p_a[y * a_w + x];
 	}
 }
-
+*/
 
 /**********************************************
 
@@ -120,9 +121,11 @@ void maxpool2d(
 	cudaStream_t s,
 	const nn_type* input,
 	nn_type* output,
-	const nn_shape& in_shape,
-	const nn_shape& out_shape,
 	uint* max_indice,
+	cuint in_h,
+	cuint in_w,
+	cuint out_h,
+	cuint out_w,
 	cuint h_kernel,
 	cuint w_kernel,
 	cuint h_stride,
@@ -132,16 +135,16 @@ void maxpool2d(
 ) {
 	size_t smem_size = sizeof(nn_type) * h_tile * w_tile;
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, in_shape[3], in_shape[2]);
+	dim3 blocks = get_grid_size(threads, in_w, in_h);
 
 	__maxpool_2d<<<blocks, threads, smem_size, s>>>(
 		input,
 		output,
 		max_indice,
-		in_shape[2],
-		in_shape[3],
-		out_shape[2],
-		out_shape[3],
+		in_h,
+		in_w,
+		out_h,
+		out_w,
 		h_kernel,
 		w_kernel,
 		h_stride,
@@ -156,7 +159,7 @@ void maxpool2d(
 				  D_Maxpool2d
 
 **********************************************/
-
+/*
 void d_maxpool2d(
 	cudaStream_t* s,
 	const nn_type* d_output,
@@ -190,3 +193,4 @@ void d_maxpool2d(
 		);
 	}
 }
+*/

@@ -15,8 +15,8 @@
 *******************************************/
 
 __global__ void __transpose(
-	const float* input,
-	float* output,
+	const nn_type* input,
+	nn_type* output,
 	cuint n,
 	cuint c,
 	cuint h,
@@ -29,7 +29,7 @@ __global__ void __transpose(
 	cuint row = k_count % c;
 	cuint col = k_count / c;
 
-	float* p_out = output + (row * (w * h * n) + col * (w * h));
+	nn_type* p_out = output + (row * (w * h * n) + col * (w * h));
 
 	if (tidx < (n * h * w * c)) {
 		p_out[k_idx] = input[tidx];
@@ -37,8 +37,8 @@ __global__ void __transpose(
 }
 
 __global__ void __padding_dilation_2d(
-	const float* input,
-	float* output,
+	const nn_type* input,
+	nn_type* output,
 	cuint in_w,
 	cuint in_h,
 	cuint in_c,
@@ -62,9 +62,9 @@ __global__ void __padding_dilation_2d(
 }
 
 __global__ void __add_bias_32x32(
-	const float* data_a,
-	const float* data_b,
-	float* data_c,
+	const nn_type* data_a,
+	const nn_type* data_b,
+	nn_type* data_c,
 	cuint n,
 	cuint c
 ) {
@@ -73,7 +73,7 @@ __global__ void __add_bias_32x32(
 
 	cuint addr = cy * c + cx;
 
-	__shared__ float share_b[BLOCK_32];
+	__shared__ nn_type share_b[BLOCK_32];
 
 	if (threadIdx.y == 0) share_b[threadIdx.x] = cx < c ? data_b[cx] : 0.f;
 	__syncthreads();
@@ -84,9 +84,9 @@ __global__ void __add_bias_32x32(
 }
 
 __global__ void __add_bias_16x16x4(
-	const float* data_a,
-	const float* data_b,
-	float* data_c,
+	const nn_type* data_a,
+	const nn_type* data_b,
+	nn_type* data_c,
 	cuint c,
 	cuint h,
 	cuint w
@@ -97,7 +97,7 @@ __global__ void __add_bias_16x16x4(
 
 	cuint addr = cz * (h * w) + cy * w + cx;
 
-	__shared__ float share_b[BLOCK_4];
+	__shared__ nn_type share_b[BLOCK_4];
 
 	if (threadIdx.x == 0 && threadIdx.y == 0) share_b[threadIdx.z] = cz < c ? data_b[cz] : 0.f;
 	__syncthreads();
@@ -108,9 +108,9 @@ __global__ void __add_bias_16x16x4(
 }
 
 __global__ void __add_bias_8x8x16(
-	const float* data_a,
-	const float* data_b,
-	float* data_c,
+	const nn_type* data_a,
+	const nn_type* data_b,
+	nn_type* data_c,
 	cuint c,
 	cuint h,
 	cuint w
@@ -121,7 +121,7 @@ __global__ void __add_bias_8x8x16(
 
 	cuint addr = cz * (h * w) + cy * w + cx;
 
-	__shared__ float share_b[BLOCK_16];
+	__shared__ nn_type share_b[BLOCK_16];
 
 	if (threadIdx.x == 0 && threadIdx.y == 0) share_b[threadIdx.z] = cz < c ? data_b[cz] : 0.f;
 	__syncthreads();
@@ -132,15 +132,15 @@ __global__ void __add_bias_8x8x16(
 }
 
 __global__ void __sum_gradient_1d(
-	const float* a,
-	float* b,
+	const nn_type* a,
+	nn_type* b,
 	cuint n,
 	cuint c
 ) {
 	cuint cx = blockIdx.x * blockDim.x + threadIdx.x;
 	cuint tidx = threadIdx.y * BLOCK_32 + threadIdx.x;
 
-	__shared__ float sm[BLOCK_32 * BLOCK_32];
+	__shared__ nn_type sm[BLOCK_32 * BLOCK_32];
 	
 	sm[tidx] = 0.f;
 	__syncthreads();
@@ -165,8 +165,8 @@ __global__ void __sum_gradient_1d(
 }
 
 __global__ void __sum_gradient_2d(
-	const float* a,
-	float* b,
+	const nn_type* a,
+	nn_type* b,
 	cuint n,
 	cuint c,
 	cuint h,
@@ -177,9 +177,9 @@ __global__ void __sum_gradient_2d(
 	blocks = [c]
 	*/
 
-	__shared__ float sm[BLOCK_4 * BLOCK_16 * BLOCK_16];
+	__shared__ nn_type sm[BLOCK_4 * BLOCK_16 * BLOCK_16];
 
-	cuint tidx = threadIdx.z * BLOCK_16 * BLOCK_16 + threadIdx.y * BLOCK_16 + threadIdx.x;
+	cuint tidx = threadIdx.z * (BLOCK_16 * BLOCK_16) + threadIdx.y * BLOCK_16 + threadIdx.x;
 	cuint cidx = blockIdx.x * (w * h);
 
 	sm[tidx] = 0.f;
@@ -220,18 +220,18 @@ __global__ void __sum_gradient_2d(
 void transpose(
 	const nn_type* input,
 	nn_type* output,
-	const nn_shape& in_shape
+	cuint n,
+	cuint c,
+	cuint h,
+	cuint w
 ) {
 	dim3 threads(BLOCK_1024);
-	dim3 blocks = get_grid_size(threads, in_shape[0] * in_shape[1] * in_shape[2] * in_shape[3]);
+	dim3 blocks = get_grid_size(threads, n * c * h * w);
 
 	__transpose<<<blocks, threads>>>(
 		input,
 		output,
-		in_shape[0],
-		in_shape[1],
-		in_shape[2],
-		in_shape[3]
+		n, c, h, w
 	);
 }
 
@@ -239,24 +239,27 @@ void padding_dilation(
 	cudaStream_t s,
 	const nn_type* input,
 	nn_type* output,
-	const nn_shape& in_shape,
-	const nn_shape& out_shape,
-	int offset_x,
-	int offset_y,
-	int stride_x,
-	int stride_y
+	cuint c,
+	cuint in_h,
+	cuint in_w,
+	cuint out_h,
+	cuint out_w,
+	cuint offset_x,
+	cuint offset_y,
+	cuint stride_x,
+	cuint stride_y
 ) {
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, in_shape[1], in_shape[2], in_shape[3]);
+	dim3 blocks = get_grid_size(threads, in_w, in_h, c);
 
 	__padding_dilation_2d<<<blocks, threads, 0, s>>>(
 		input,
 		output,
-		in_shape[3],
-		in_shape[2],
-		in_shape[1],
-		out_shape[3],
-		out_shape[2],
+		in_w,
+		in_h,
+		c,
+		out_w,
+		out_h,
 		stride_x,
 		stride_y,
 		offset_x,
@@ -268,63 +271,60 @@ void add_bias_1d(
 	const nn_type* input,
 	const nn_type* bias,
 	nn_type* output,
-	const nn_shape& in_shape
+	cuint n,
+	cuint c
 ) {
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, in_shape[1], in_shape[0]);
+	dim3 blocks = get_grid_size(threads, c, n);
 
 	__add_bias_32x32<<<blocks, threads>>>(
 		input,
 		bias,
 		output,
-		in_shape[0],
-		in_shape[1]
+		n, c
 	);
 }
 
 void add_bias_2d(
-	cudaStream_t* s,
+	NN_Stream& s,
 	const nn_type* input,
 	const nn_type* bias,
 	nn_type* output,
-	const nn_shape& in_shape,
-	const nn_shape& b_shape,
-	const nn_shape& out_shape
+	cuint n,
+	cuint c,
+	cuint h,
+	cuint w
 ) {
 
-	if (in_shape[2] >= BLOCK_16 && in_shape[3] >= BLOCK_16 || in_shape[1] <= BLOCK_4) {
+	if (h >= BLOCK_16 && w >= BLOCK_16 || c <= BLOCK_4) {
 		dim3 threads(BLOCK_16, BLOCK_16, BLOCK_4);
-		dim3 blocks = get_grid_size(threads, in_shape[3], in_shape[2], in_shape[1]);
+		dim3 blocks = get_grid_size(threads, w, h, c);
 
-		for (int i = 0; i < in_shape[0]; ++i) {
-			const nn_type* d_in = input + (i * in_shape[1] * in_shape[2] * in_shape[3]);
-			nn_type* d_out = output + (i * in_shape[1] * in_shape[2] * in_shape[3]);
-
+		for (uint i = 0; i < n; ++i) {
+			const nn_type* d_in = input + (i * c * h * w);
+			nn_type* d_out = output + (i * c * h * w);
+			
 			__add_bias_16x16x4<<<blocks, threads, 0, s[i % STREAMS]>>>(
 				d_in,
 				bias,
 				d_out,
-				in_shape[1],
-				in_shape[2],
-				in_shape[3]
+				c, h, w
 			);
 		}
 	}
 	else {
 		dim3 threads(BLOCK_8, BLOCK_8, BLOCK_16);
-		dim3 blocks = get_grid_size(threads, in_shape[3], in_shape[2], in_shape[1]);
+		dim3 blocks = get_grid_size(threads, w, h, c);
 
-		for (int i = 0; i < in_shape[0]; ++i) {
-			const nn_type* d_in = input + (i * in_shape[1] * in_shape[2] * in_shape[3]);
-			nn_type* d_out = output + (i * in_shape[1] * in_shape[2] * in_shape[3]);
+		for (uint i = 0; i < n; ++i) {
+			const nn_type* d_in = input + (i * c * h * w);
+			nn_type* d_out = output + (i * c * h * w);
 
 			__add_bias_8x8x16<<<blocks, threads, 0, s[i % STREAMS]>>>(
 				d_in,
 				bias,
 				d_out,
-				in_shape[1],
-				in_shape[2],
-				in_shape[3]
+				c, h, w
 			);
 		}
 	}
@@ -333,33 +333,33 @@ void add_bias_2d(
 void sum_gradient_1d(
 	const nn_type* input,
 	nn_type* output,
-	const nn_shape& in_shape
+	cuint n,
+	cuint c
 ) {
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, in_shape[1]);
+	dim3 blocks = get_grid_size(threads, c);
 
 	__sum_gradient_1d<<<blocks, threads>>>(
 		input,
 		output,
-		in_shape[0],
-		in_shape[1]
+		n, c
 	);
 }
 
 void sum_gradient_2d(
 	const nn_type* input,
 	nn_type* output,
-	const nn_shape& in_shape
+	cuint n,
+	cuint c,
+	cuint h,
+	cuint w
 ) {
 	dim3 threads(BLOCK_16, BLOCK_16, BLOCK_4);
-	dim3 blocks(in_shape[0]);
+	dim3 blocks(c);
 
 	__sum_gradient_2d<<<blocks, threads>>>(
 		input,
 		output,
-		in_shape[0],
-		in_shape[1],
-		in_shape[2],
-		in_shape[3]
+		n, c, h, w
 	);
 }

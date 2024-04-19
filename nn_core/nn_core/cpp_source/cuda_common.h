@@ -40,6 +40,132 @@ enum class Pad { VALID, SAME };
 
 typedef float nn_type;
 
+
+/**********************************************/
+/*                                            */
+/*                  NN_Check                  */
+/*                                            */
+/**********************************************/
+
+class NN_Check {
+	static bool _is_valid;
+
+public:
+	static void set_flag(bool is_valid);
+	static const bool& get_flag();
+};
+
+
+/**********************************************/
+/*                                            */
+/*                   NN_Shape                 */
+/*                                            */
+/**********************************************/
+
+class NN_Shape {
+private:
+	class _Container {
+	public:
+		int* _dims;
+		int _n_ref;
+
+		_Container() : _dims(NULL), _n_ref(0) {}
+	};
+
+	_Container* _data;
+	int _len;
+
+public:
+	class Iterator {
+	public:
+		int* _p_dims;
+		int _index;
+
+		Iterator(int* p_dims, int index);
+		Iterator(const typename Iterator& p);
+
+		void operator++();
+		bool operator!=(const typename Iterator& p) const;
+		int& operator*() const;
+	};
+
+	NN_Shape();
+	NN_Shape(int len);
+	NN_Shape(const std::initializer_list<int>& dims);
+	NN_Shape(const NN_Shape& p);
+	NN_Shape(NN_Shape&& p);
+	~NN_Shape();
+
+	NN_Shape& operator=(const NN_Shape& p);
+	NN_Shape& operator=(NN_Shape&& p);
+
+	int& operator[](const int& index) const;
+
+	void clear();
+	void set(const std::initializer_list<int>& dims);
+	void resize(int len);
+	void push_back(const int dim);
+	void push_front(const int dim);
+	const int& get_size() const;
+	int* get_dims() const;
+	void copy_to(NN_Shape& shape) const;
+
+	typename Iterator begin() const;
+	typename Iterator end() const;
+};
+
+const char* put_shape(const NN_Shape& tensor);
+
+
+/**********************************************/
+/*                                            */
+/*                  NN_Stream                 */
+/*                                            */
+/**********************************************/
+
+class NN_Stream {
+private:
+	class Container {
+	public:
+		cudaStream_t* _st;
+		int _n_ref;
+		int _amounts;
+
+		Container() : _st(NULL), _n_ref(0), _amounts(0) {}
+	}*_ptr;
+
+	void destroy();
+
+public:
+	class Iterator {
+	public:
+		cudaStream_t* m_st;
+		int _index;
+
+		Iterator(cudaStream_t* st, int index) : m_st(st), _index(index) {}
+		Iterator(const typename Iterator& p) : m_st(p.m_st), _index(p._index) {}
+
+		bool operator!=(const typename Iterator& p) const { return _index != p._index; }
+		void operator++() { ++_index; }
+		cudaStream_t& operator*() const { return m_st[_index]; }
+	};
+
+	NN_Stream(int amounts = STREAMS);
+	NN_Stream(const NN_Stream& p);
+	NN_Stream(NN_Stream&& p);
+	~NN_Stream();
+
+	NN_Stream& operator=(const NN_Stream& p);
+	NN_Stream& operator=(NN_Stream&& p);
+
+	cudaStream_t& operator[](int index);
+
+	typename Iterator begin() const { return Iterator(_ptr->_st, 0); }
+	typename Iterator end() const { return Iterator(_ptr->_st, _ptr->_amounts); }
+	void clear();
+};
+
+
 /**********************************************/
 /*                                            */
 /*                     List                   */
@@ -343,64 +469,3 @@ template <class _T>
 typename List<_T>::Iterator List<_T>::end() const {
 	return List<_T>::Iterator(_head);
 }
-
-
-/**********************************************/
-/*                                            */
-/*                   NN_Shape                 */
-/*                                            */
-/**********************************************/
-
-class NN_Shape {
-private:
-	class _Container {
-	public:
-		int* _dims;
-		int _n_ref;
-
-		_Container() : _dims(NULL), _n_ref(0) {}
-	};
-
-	_Container* _data;
-	int _len;
-
-public:
-	class Iterator {
-	public:
-		int* _p_dims;
-		int _index;
-
-		Iterator(int* p_dims, int index);
-		Iterator(const typename Iterator& p);
-
-		void operator++();
-		bool operator!=(const typename Iterator& p) const;
-		int& operator*() const;
-	};
-
-	NN_Shape();
-	NN_Shape(int len);
-	NN_Shape(const std::initializer_list<int>& dims);
-	NN_Shape(const NN_Shape& p);
-	NN_Shape(NN_Shape&& p);
-	~NN_Shape();
-
-	NN_Shape& operator=(const NN_Shape& p);
-	NN_Shape& operator=(NN_Shape&& p);
-
-	int& operator[](const int& index) const;
-
-	void clear();
-	void set(const std::initializer_list<int>& dims);
-	void resize(int len);
-	void push_back(const int dim);
-	void push_front(const int dim);
-	const int& get_size() const;
-	int* get_dims() const;
-	void copy_to(NN_Shape& shape) const;
-
-	typename Iterator begin() const;
-	typename Iterator end() const;
-};
-
-const char* put_shape(const NN_Shape& tensor);

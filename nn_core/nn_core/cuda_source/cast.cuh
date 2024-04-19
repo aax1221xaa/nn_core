@@ -3,20 +3,33 @@
 
 #include "../cpp_source/cuda_common.h"
 
+#ifndef __CUDACC__
+#define __CUDACC__
+#endif
 
-enum class dtype { boolean, int8, uint8, int32, uint32, int64, uint64, float32, float64 };
+#include <device_functions.h>
+#include <device_launch_parameters.h>
 
-dtype get_type(bool* data);
-dtype get_type(char* data);
-dtype get_type(unsigned char* data);
-dtype get_type(int* data);
-dtype get_type(unsigned int* data);
-dtype get_type(long* data);
-dtype get_type(unsigned long* data);
-dtype get_type(float* data);
-dtype get_type(double* data);
 
-void type_cast(dtype src_type, void* src, dtype dst_type, void* dst, size_t len);
+template <typename sT, typename dT>
+__global__ void __cast(
+	sT* src,
+	dT* dst,
+	size_t elem_size
+) {
+	size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (index < elem_size) dst[index] = dT(src[index]);
+}
+
+
+template <typename _ST, typename _DT>
+void type_cast(_ST* src, _DT* dst, size_t len) {
+	dim3 threads(BLOCK_1024);
+	dim3 blocks((BLOCK_1024 + len - 1) / BLOCK_1024);
+
+	__cast<<<blocks, threads>>>(src, dst, len);
+}
 
 
 #endif // !_CAST_CUH

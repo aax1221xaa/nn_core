@@ -19,6 +19,23 @@ dim3 get_grid_size(const dim3 block, unsigned int x, unsigned int y, unsigned in
 
 /**********************************************/
 /*                                            */
+/*                  NN_Check                  */
+/*                                            */
+/**********************************************/
+
+bool NN_Check::_is_valid = true;
+
+void NN_Check::set_flag(bool is_valid) {
+	_is_valid = is_valid;
+}
+
+const bool& NN_Check::get_flag() {
+	return _is_valid;
+}
+
+
+/**********************************************/
+/*                                            */
 /*                   NN_Shape                 */
 /*                                            */
 /**********************************************/
@@ -58,6 +75,7 @@ NN_Shape::NN_Shape(int len) :
 	_len(len)
 {
 	_data->_dims = new int[len];
+
 	memset(_data->_dims, 0, sizeof(int) * _len);
 }
 
@@ -104,6 +122,8 @@ NN_Shape& NN_Shape::operator=(const NN_Shape& p) {
 
 NN_Shape& NN_Shape::operator=(NN_Shape&& p) {
 	if (this == &p) return *this;
+
+	clear();
 
 	_data = p._data;
 	_len = p._len;
@@ -235,4 +255,115 @@ std::ostream& operator<<(std::ostream& os, List<int>& list) {
 	list.put(os);
 
 	return os;
+}
+
+
+/**********************************************/
+/*                                            */
+/*                  NN_Stream                 */
+/*                                            */
+/**********************************************/
+
+void NN_Stream::destroy() {
+	if (_ptr) {
+		if (_ptr->_n_ref > 0) --_ptr->_n_ref;
+		else {
+			for (int i = 0; i < _ptr->_amounts; ++i)
+				check_cuda(cudaStreamDestroy(_ptr->_st[i]));
+
+			delete[] _ptr->_st;
+			delete _ptr;
+		}
+	}
+
+	_ptr = NULL;
+}
+
+NN_Stream::NN_Stream(int amounts) {
+	_ptr = new Container;
+
+	_ptr->_amounts = amounts;
+	_ptr->_n_ref = 0;
+	_ptr->_st = new cudaStream_t[amounts];
+
+	for (int i = 0; i < amounts; ++i) _ptr->_st[i] = NULL;
+
+	try {
+		for (int i = 0; i < amounts; ++i) check_cuda(cudaStreamCreate(&(_ptr->_st[i])));
+	}
+	catch (const Exception& e) {
+		for (int i = 0; i < amounts; ++i) cudaStreamDestroy(_ptr->_st[i]);
+
+		delete[] _ptr->_st;
+		delete _ptr;
+
+		NN_Check::set_flag(false);
+
+		e.Put();
+	}
+}
+
+NN_Stream::NN_Stream(const NN_Stream& p) :
+	_ptr(p._ptr)
+{
+	if (_ptr) ++_ptr->_n_ref;
+}
+
+NN_Stream::NN_Stream(NN_Stream&& p) :
+	_ptr(p._ptr)
+{
+	p._ptr = NULL;
+}
+
+NN_Stream::~NN_Stream() {
+	try {
+		clear();
+	}
+	catch (const Exception& e) {
+		NN_Check::set_flag(false);
+
+		e.Put();
+	}
+}
+
+NN_Stream& NN_Stream::operator=(const NN_Stream& p) {
+	if (this == &p) return *this;
+
+	_ptr = p._ptr;
+
+	if (_ptr) ++_ptr->_n_ref;
+
+	return *this;
+}
+
+NN_Stream& NN_Stream::operator=(NN_Stream&& p) {
+	if (this == &p) return *this;
+
+	_ptr = p._ptr;
+	p._ptr = NULL;
+
+	return *this;
+}
+
+cudaStream_t& NN_Stream::operator[](int index) {
+	if (index < 0 || index >= _ptr->_amounts) {
+		ErrorExcept(
+			"[NN_Stream::operator[]] Index is out of range."
+		);
+	}
+
+	return _ptr->_st[index];
+}
+
+void NN_Stream::clear() {
+	if (_ptr) {
+		if (_ptr->_n_ref > 0) --_ptr->_n_ref;
+		else {
+			for (int i = 0; i < _ptr->_amounts; ++i)
+				check_cuda(cudaStreamDestroy(_ptr->_st[i]));
+			delete[] _ptr->_st;
+			delete _ptr;
+		}
+	}
+	_ptr = NULL;
 }

@@ -1,4 +1,4 @@
-#include "nn_base_layer.h"
+#include "nn_base.h"
 
 
 
@@ -25,19 +25,19 @@ void NN_Layer::get_output_shape(const std::vector<NN_Shape>& input_shape, std::v
 
 void NN_Layer::build(const std::vector<NN_Shape>& input_shape) {
 	ErrorExcept(
-		"[NN_Layer::get_output_shape] Make this function."
+		"[NN_Layer::build] Make this function."
 	);
 }
 
-void NN_Layer::run_forward(const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
+void NN_Layer::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
 	ErrorExcept(
-		"[NN_Layer::get_output_shape] Make this function."
+		"[NN_Layer::run_forward] Make this function."
 	);
 }
 
-void NN_Layer::trans_data(const Tensor<nn_type>& input, GpuTensor<nn_type>& output) {
+void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input) {
 	ErrorExcept(
-		"[NN_Layer::get_output_shape] Make this function."
+		"[NN_Layer::run_backward] Make this function."
 	);
 }
 
@@ -60,8 +60,6 @@ NN_Input::~NN_Input() {
 }
 
 void NN_Input::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
-	output_shape.clear();
-
 	if (input_shape.size() > 1) {
 		ErrorExcept(
 			"[NN_Input::get_output_shape] Input node can't take %ld tensor shapes.",
@@ -113,12 +111,8 @@ void NN_Input::build(const std::vector<NN_Shape>& input_shape) {
 	std::cout << "build: " << _layer_name << std::endl;
 }
 
-void NN_Input::run_forward(const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
+void NN_Input::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
 	output = input;
-}
-
-void NN_Input::trans_data(const Tensor<nn_type>& input, GpuTensor<nn_type>& output) {
-	host_to_gpu(input, output);
 }
 
 
@@ -130,7 +124,6 @@ void NN_Input::trans_data(const Tensor<nn_type>& input, GpuTensor<nn_type>& outp
 
 NN_Link::NN_Link() :
 	_layer(NULL),
-	_backprop(NULL),
 	_index(0),
 	trainable(true)
 {
@@ -144,7 +137,6 @@ NN_Link* NN_Link::create_child() {
 	NN_Link* child_node = new NN_Link;
 
 	child_node->_layer = _layer;
-	child_node->_backprop = _backprop;
 	child_node->trainable = trainable;
 
 	return child_node;
@@ -170,16 +162,8 @@ NN_Layer& NN_Link::get_layer() {
 	return *_layer;
 }
 
-NN_BackPropLayer& NN_Link::get_backprop() {
-	return *_backprop;
-}
-
 void NN_Link::set_layer(NN_Layer* layer) {
 	_layer = layer;
-}
-
-void NN_Link::set_backprop(NN_BackPropLayer* backprop) {
-	_backprop = backprop;
 }
 
 const int& NN_Link::get_index() const {
@@ -215,16 +199,6 @@ void NN_Link::set_next_link(NN_Link* node, int index) {
 NN_Manager::NN_Manager() :
 	_node_counter(0)
 {
-	try {
-		for (int i = 0; i < STREAMS; ++i) check_cuda(cudaStreamCreate(&_streams[i]));
-	}
-	catch (const Exception& e) {
-		for (int i = 0; i < STREAMS; ++i) {
-			cudaStreamDestroy(_streams[i]);
-			_streams[i] = NULL;
-		}
-		e.Put();
-	}
 }
 
 NN_Manager::~NN_Manager() {
@@ -233,7 +207,6 @@ NN_Manager::~NN_Manager() {
 			if (!_is_static[i]) delete _nodes[i];
 		}
 		for (NN_Layer* layer : _layers) delete layer;
-		for (int i = 0; i < STREAMS; ++i) check_cuda(cudaStreamDestroy(_streams[i]));
 
 		_is_static.clear();
 		_nodes.clear();
@@ -244,8 +217,8 @@ NN_Manager::~NN_Manager() {
 	}
 }
 
-cudaStream_t* NN_Manager::get_streams() {
-	return _streams;
+NN_Stream& NN_Manager::get_streams() {
+	return _stream;
 }
 
 std::vector<NN_Link*>& NN_Manager::get_nodes() {

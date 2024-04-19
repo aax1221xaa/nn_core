@@ -13,21 +13,9 @@
 void relu(
 	const nn_type* input,
 	nn_type* output,
-	const nn_shape& in_shape
+	cuint len
 );
 
-/**********************************************
-
-					 D_ReLU
-
-**********************************************/
-
-void d_relu(
-	const nn_type* d_output,
-	const nn_type* input,
-	nn_type* d_input,
-	const nn_shape& in_shape
-);
 
 
 #endif // !RELU_CUH
