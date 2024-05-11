@@ -1,30 +1,52 @@
 #pragma once
 
-#include "../cpp_source/nn_tensor.h"
-#include <opencv2/opencv.hpp>
+#include "cuda_common.h"
 
 
 class MNIST {
-	static void load_file(const char* image_file, const char* label_file, Tensor<uchar>& image, Tensor<uchar>& truth);
+public:
+	struct DataSet {
+		cv::Mat _x;
+		cv::Mat _y;
+	}_train, _test;
+
+private:
+	static DataSet read_file(const std::string& img_path, const std::string& label_path);
 
 public:
-	Tensor<uchar> train_x;
-	Tensor<uchar> train_y;
-	Tensor<uchar> test_x;
-	Tensor<uchar> test_y;
+	class Sample {
+	private:
+		const DataSet& _origin;
+		const int _n_batch;
+		const int _n_iter;
+		const bool _shuffle;
 
-	bool _do_shuffle;
+		static const DataSet get_batch_samples(const DataSet& origin, int index, int n_batch, bool shuffle);
 
-	int _batch;
+	public:
+		class Iterator {
+		public:
+			const Sample& _samples;
+			int _n_iter;
 
-	int _train_max_iter;
-	int _test_max_iter;
+			Iterator(const Sample& samples, int n_iter);
+			Iterator(const typename Iterator& p);
 
-	int _train_iter_cnt;
-	int _test_iter_cnt;
+			bool operator!=(const typename Iterator& p) const;
+			void operator++();
+			const DataSet operator*() const;
+		};
 
-	MNIST(const char* dir, int batch, bool do_shuffle = true);
+		Sample(const DataSet& current_samples, int n_batch, int n_iter, bool shuffle);
 
-	//std::vector<Tensor<uchar>> train_iter();
-	//std::vector<Tensor<uchar>> test_iter();
+		typename Iterator begin() const;
+		typename Iterator end() const;
+
+		const DataSet operator[](int index) const;
+	};
+
+	MNIST(const std::string& dir_path);
+
+	Sample get_train_samples(int n_batch, int n_iter, bool shuffle = true) const;
+	Sample get_test_samples(int n_batch, int n_iter, bool shuffle = true) const;
 };

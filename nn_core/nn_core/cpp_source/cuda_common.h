@@ -1,10 +1,8 @@
 #pragma once
 #include <vector>
-#include <iostream>
+#include <opencv2/opencv.hpp>
 #include "CudaCheck.h"
 
-
-#define STR_MAX					1024
 
 #define BLOCK_4					4
 #define BLOCK_8					8
@@ -23,6 +21,8 @@ typedef const unsigned int cuint;
 
 dim3 get_grid_size(const dim3 block, unsigned int x = 1, unsigned int y = 1, unsigned int z = 1);
 
+std::vector<int> random_choice(int min, int max, int amounts, bool replace = true);
+
 
 /*******************************************
 
@@ -32,6 +32,8 @@ dim3 get_grid_size(const dim3 block, unsigned int x = 1, unsigned int y = 1, uns
 
 enum class Pad { VALID, SAME };
 
+
+
 /**********************************************/
 /*                                            */
 /*                   nn_type                  */
@@ -39,82 +41,6 @@ enum class Pad { VALID, SAME };
 /**********************************************/
 
 typedef float nn_type;
-
-
-/**********************************************/
-/*                                            */
-/*                  NN_Check                  */
-/*                                            */
-/**********************************************/
-
-class NN_Check {
-	static bool _is_valid;
-
-public:
-	static void set_flag(bool is_valid);
-	static const bool& get_flag();
-};
-
-
-/**********************************************/
-/*                                            */
-/*                   NN_Shape                 */
-/*                                            */
-/**********************************************/
-
-class NN_Shape {
-private:
-	class _Container {
-	public:
-		int* _dims;
-		int _n_ref;
-
-		_Container() : _dims(NULL), _n_ref(0) {}
-	};
-
-	_Container* _data;
-	int _len;
-
-public:
-	class Iterator {
-	public:
-		int* _p_dims;
-		int _index;
-
-		Iterator(int* p_dims, int index);
-		Iterator(const typename Iterator& p);
-
-		void operator++();
-		bool operator!=(const typename Iterator& p) const;
-		int& operator*() const;
-	};
-
-	NN_Shape();
-	NN_Shape(int len);
-	NN_Shape(const std::initializer_list<int>& dims);
-	NN_Shape(const NN_Shape& p);
-	NN_Shape(NN_Shape&& p);
-	~NN_Shape();
-
-	NN_Shape& operator=(const NN_Shape& p);
-	NN_Shape& operator=(NN_Shape&& p);
-
-	int& operator[](const int& index) const;
-
-	void clear();
-	void set(const std::initializer_list<int>& dims);
-	void resize(int len);
-	void push_back(const int dim);
-	void push_front(const int dim);
-	const int& get_size() const;
-	int* get_dims() const;
-	void copy_to(NN_Shape& shape) const;
-
-	typename Iterator begin() const;
-	typename Iterator end() const;
-};
-
-const char* put_shape(const NN_Shape& tensor);
 
 
 /**********************************************/

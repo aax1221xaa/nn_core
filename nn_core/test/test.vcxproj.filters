@@ -20,13 +20,16 @@
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="..\nn_core\cpp_source\cuda_common.cpp">
+    <ClCompile Include="..\nn_core\cpp_source\Exception.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="..\nn_core\cpp_source\CudaCheck.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="..\nn_core\cpp_source\Exception.cpp">
+    <ClCompile Include="..\nn_core\cpp_source\cuda_common.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="..\nn_core\cpp_source\nn_shape.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="..\nn_core\cpp_source\nn_tensor.cpp">
@@ -34,13 +37,16 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\nn_core\cpp_source\CudaCheck.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="..\nn_core\cpp_source\Exception.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="..\nn_core\cpp_source\CudaCheck.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
     <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\nn_core\cpp_source\nn_shape.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h">

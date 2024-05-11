@@ -1,5 +1,5 @@
 #pragma once
-#include "nn_tensor.h"
+#include "cuda_common.h"
 #include "nn_optimizer.h"
 
 
@@ -19,10 +19,11 @@ public:
 	NN_Layer(const char* layer_name);
 	virtual ~NN_Layer();
 
-	virtual void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
-	virtual void build(const std::vector<NN_Shape>& input_shape);
-	virtual void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
-	virtual void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
+	virtual void get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape);
+	virtual void build(const std::vector<nn_shape>& input_shape);
+	virtual void run_forward(NN_Stream& st, const std::vector<GpuTensor>& input, std::vector<GpuTensor>& output);
+	virtual void run_forward(const Tensor& src, GpuTensor& dst);
+	virtual void run_backward(NN_Stream& st, const std::vector<GpuTensor>& d_output, std::vector<GpuTensor>& d_input);
 };
 
 
@@ -34,14 +35,15 @@ public:
 
 class NN_Input : public NN_Layer {
 public:
-	NN_Shape _shape;
+	nn_shape _shape;
 
-	NN_Input(const NN_Shape& input_size, int batch = -1, const char* _layer_name = "Input");
+	NN_Input(const nn_shape& input_size, int batch = -1, const char* _layer_name = "Input");
 	~NN_Input();
 
-	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
-	void build(const std::vector<NN_Shape>& input_shape);
-	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	void get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape);
+	void build(const std::vector<nn_shape>& input_shape);
+	void run_forward(NN_Stream& st, const std::vector<GpuTensor>& input, std::vector<GpuTensor>& output);
+	void run_forward(const Tensor& src, GpuTensor& dst);
 };
 
 
@@ -105,8 +107,8 @@ class NN_Manager {
 
 	int _node_counter;
 
-	std::vector<std::vector<NN_Shape>> _out_shapes;
-	std::vector<std::vector<GpuTensor<nn_type>>> _outputs;
+	std::vector<std::vector<nn_shape>> _out_shapes;
+	std::vector<std::vector<GpuTensor>> _outputs;
 
 public:
 	NN_Manager();
@@ -123,13 +125,13 @@ public:
 	void set_reserved_shapes();
 	void set_reserved_outputs();
 
-	std::vector<NN_Shape>& get_node_shape(int index);
-	std::vector<GpuTensor<nn_type>>& get_node_output(int index);
+	std::vector<nn_shape>& get_node_shape(int index);
+	std::vector<GpuTensor>& get_node_output(int index);
 
 	void clear_shapes();
 	void clear_outputs();
 
-	Layer_t input(const NN_Shape& input_size, int batch, const char* layer_name);
+	Layer_t input(const nn_shape& input_size, int batch, const char* layer_name);
 
 	template <class _T>
 	NN_Link& operator()(const _T& layer);
@@ -147,3 +149,12 @@ NN_Link& NN_Manager::operator()(const _T& layer) {
 
 	return *p_node;
 }
+
+
+/**********************************************/
+/*                                            */
+/*                    misc					  */
+/*                                            */
+/**********************************************/
+
+void set_random_uniform(GpuTensor& g_mat);

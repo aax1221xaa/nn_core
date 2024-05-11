@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(OPEN_CV)\install\\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(OPEN_CV)\install\x64\vc15\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_bioinspired453.lib;opencv_calib3d453.lib;opencv_ccalib453.lib;opencv_core453.lib;opencv_cudaarithm453.lib;opencv_cudabgsegm453.lib;opencv_cudacodec453.lib;opencv_cudafeatures2d453.lib;opencv_cudafilters453.lib;opencv_cudaimgproc453.lib;opencv_cudalegacy453.lib;opencv_cudaobjdetect453.lib;opencv_cudaoptflow453.lib;opencv_cudastereo453.lib;opencv_cudawarping453.lib;opencv_cudev453.lib;opencv_datasets453.lib;opencv_dnn_objdetect453.lib;opencv_dnn_superres453.lib;opencv_dnn453.lib;opencv_dpm453.lib;opencv_face453.lib;opencv_features2d453.lib;opencv_flann453.lib;opencv_fuzzy453.lib;opencv_gapi453.lib;opencv_hfs453.lib;opencv_highgui453.lib;opencv_img_hash453.lib;opencv_imgcodecs453.lib;opencv_imgproc453.lib;opencv_intensity_transform453.lib;opencv_line_descriptor453.lib;opencv_mcc453.lib;opencv_ml453.lib;opencv_objdetect453.lib;opencv_optflow453.lib;opencv_phase_unwrapping453.lib;opencv_photo453.lib;opencv_plot453.lib;opencv_quality453.lib;opencv_rapid453.lib;opencv_reg453.lib;opencv_rgbd453.lib;opencv_saliency453.lib;opencv_shape453.lib;opencv_stereo453.lib;opencv_stitching453.lib;opencv_structured_light453.lib;opencv_superres453.lib;opencv_surface_matching453.lib;opencv_text453.lib;opencv_tracking453.lib;opencv_video453.lib;opencv_videoio453.lib;opencv_videostab453.lib;opencv_wechat_qrcode453.lib;opencv_xfeatures2d453.lib;opencv_ximgproc453.lib;opencv_xobjdetect453.lib;opencv_xphoto453.lib;opencv_aruco453.lib;opencv_barcode453.lib;opencv_bgsegm453.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>

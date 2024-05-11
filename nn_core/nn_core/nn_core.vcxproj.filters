@@ -51,10 +51,10 @@
     <ClCompile Include="cpp_source\nn_optimizer.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\nn_tensor.cpp">
+    <ClCompile Include="cpp_source\nn_base.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\nn_base.cpp">
+    <ClCompile Include="cpp_source\mnist.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
   </ItemGroup>
@@ -68,9 +68,6 @@
     <ClInclude Include="cpp_source\nn_layer.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
-    <ClInclude Include="cpp_source\nn_tensor.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
     <ClInclude Include="cpp_source\nn_model.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
@@ -78,9 +75,6 @@
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_optimizer.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
-    <ClInclude Include="cpp_source\cuda_common.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_base.h">
@@ -109,6 +103,12 @@
     </ClInclude>
     <ClInclude Include="cuda_source\matmul.cuh">
       <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\mnist.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\cuda_common.h">
+      <Filter>헤더 파일\h</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

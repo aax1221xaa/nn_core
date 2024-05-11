@@ -20,17 +20,18 @@ NN_Dense::NN_Dense(const int amounts, const char* name) :
 {
 }
 
-void NN_Dense::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
-	const NN_Shape& shape = input_shape[0];
+void NN_Dense::get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape) {
+	const nn_shape& shape = input_shape[0];
 
 	output_shape.push_back({ shape[0], _amounts });
 }
 
-void NN_Dense::build(const std::vector<NN_Shape>& input_shape) {
-	const NN_Shape& shape = input_shape[0];
+void NN_Dense::build(const std::vector<nn_shape>& input_shape) {
+	const nn_shape& shape = input_shape[0];
 
-	_weight.set({ shape[1], _amounts });
-	_bias = gpu_zeros<nn_type>({ _amounts });
+	
+	_weight = GpuMat({ shape[1], _amounts }, CV_32FC1);
+	_bias = GpuMat(std::vector<int>({ 1 }), CV_32FC(_amounts),);
 	set_random_uniform(_weight, 0.1f, -0.1f);
 
 }

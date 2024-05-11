@@ -1,119 +1,199 @@
 #include "mnist.h"
 
 
-MNIST::MNIST(const char* dir, int batch, bool do_shuffle) :
-	_do_shuffle(do_shuffle),
-	_batch(batch),
-	_train_max_iter(0),
-	_test_max_iter(0),
-	_train_iter_cnt(0),
-	_test_iter_cnt(0)
-{
-	try {
-		char train_image[128] = { '\0', };
-		char train_label[128] = { '\0', };
-		char test_image[128] = { '\0', };
-		char test_label[128] = { '\0', };
 
-		strcat_s(train_image, dir);
-		strcat_s(train_image, "\\train-images.idx3-ubyte");
-
-		strcat_s(train_label, dir);
-		strcat_s(train_label, "\\train-labels.idx1-ubyte");
-
-		strcat_s(test_image, dir);
-		strcat_s(test_image, "\\t10k-images.idx3-ubyte");
-
-		strcat_s(test_label, dir);
-		strcat_s(test_label, "\\t10k-labels.idx1-ubyte");
-
-		load_file(train_image, train_label, train_x, train_y);
-		load_file(test_image, test_label, test_x, test_y);
-
-		_train_max_iter =  (int)ceil((float)train_x._shape[0]._val / _batch);
-		_test_max_iter = (int)ceil((float)test_x._shape[0]._val / _batch);
-	}
-	catch (const Exception& e) {
-		e.Put();
-	}
-}
-
-void MNIST::load_file(const char* image_file, const char* label_file, Tensor<uchar>& image, Tensor<uchar>& truth) {
-	FILE* image_fp = NULL;
+MNIST::DataSet MNIST::read_file(const std::string& img_path, const std::string& label_path) {
+	FILE* img_fp = NULL;
 	FILE* label_fp = NULL;
 
+	errno_t err = fopen_s(&img_fp, img_path.c_str(), "rb");
+	if (err < 0) {
+		ErrorExcept(
+			"[MNIST::read_file] failed load image file [%s]",
+			img_path.c_str()
+		);
+	}
+
+	err = fopen_s(&label_fp, label_path.c_str(), "rb");
+	if (err < 0) {
+		fclose(img_fp);
+		ErrorExcept(
+			"[MNIST::read_file] failed load label file [%s]",
+			label_path.c_str()
+		);
+	}
+
+	union TransByte {
+		uchar _byte[4];
+		int _byte32;
+	}param;
+
+	int img_head[4];
+	int label_head[2];
+
+	for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			fread_s(&param._byte[3 - j], sizeof(uchar), sizeof(uchar), 1, img_fp);
+		}
+		img_head[i] = param._byte32;
+	}
+
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			fread_s(&param._byte[3 - j], sizeof(uchar), sizeof(uchar), 1, label_fp);
+		}
+		label_head[i] = param._byte32;
+	}
+
+	std::cout << "==============================================\n";
+	std::cout << "image path: " << img_path << std::endl;
+	std::cout << "magic num: " << std::hex << "0x" << img_head[0] << std::dec << std::endl;
+	std::cout << "amounts: " << img_head[1] << std::endl;
+	std::cout << "rows: " << img_head[2] << std::endl;
+	std::cout << "colums: " << img_head[3] << std::endl;
+
+	std::cout << "==============================================\n";
+	std::cout << "label path: " << label_path << std::endl;
+	std::cout << "magic num: " << std::hex << "0x" << label_head[0] << std::dec << std::endl;
+	std::cout << "amounts: " << label_head[1] << std::endl;
+	std::cout << std::endl;
+	
+	DataSet samples;
+
+	samples._x = cv::Mat(std::vector<int>({ img_head[1], img_head[2], img_head[3] }), CV_8UC1);
+	samples._y = cv::Mat(std::vector<int>({ label_head[1] }), CV_8UC1);
+
+	fread_s(
+		samples._x.data,
+		sizeof(uchar) * samples._x.total(),
+		sizeof(uchar),
+		samples._x.total(),
+		img_fp
+	);
+	fread_s(
+		samples._y.data,
+		sizeof(uchar) * samples._y.total(),
+		sizeof(uchar),
+		samples._y.total(),
+		label_fp
+	);
+
+	fclose(img_fp);
+	fclose(label_fp);
+
+	return samples;
+}
+
+MNIST::MNIST(const std::string& dir_path) {
+	std::string train_x = dir_path + "\\train-images.idx3-ubyte";
+	std::string train_y = dir_path + "\\train-labels.idx1-ubyte";
+	std::string test_x = dir_path + "\\t10k-images.idx3-ubyte";
+	std::string test_y = dir_path + "\\t10k-labels.idx1-ubyte";
+	
 	try {
-		errno_t err = fopen_s(&image_fp, image_file, "rb");
-
-		if (err < 0) {
-			ErrorExcept(
-				"[MNIST::MNIST] can't read file: %s",
-				image_file
-			);
-		}
-
-		err = fopen_s(&label_fp, label_file, "rb");
-
-		if (err < 0) {
-			ErrorExcept(
-				"[MNIST::MNIST] can't read file: %s",
-				label_file
-			);
-		}
-
-		union LittleEndian {
-			uchar buff8[4];
-			int buff32;
-		}image_param[4], label_param[2];
-
-		for (int i = 0; i < 4; ++i) {
-			for (int j = 0; j < 4; ++j) {
-				fread_s(&image_param[i].buff8[3 - j], sizeof(uchar), sizeof(uchar), 1, image_fp);
-			}
-		}
-		for (int i = 0; i < 2; ++i) {
-			for (int j = 0; j < 4; ++j) {
-				fread_s(&label_param[i].buff8[3 - j], sizeof(uchar), sizeof(uchar), 1, image_fp);
-			}
-		}
-
-		const int sample_cnt = image_param[1].buff32;
-		const int width = image_param[2].buff32;
-		const int height = image_param[3].buff32;
-
-		if (sample_cnt == label_param[1].buff32) {
-			ErrorExcept("[MNIST::MNIST()] mismatched image and label amounts. image: %d, label: %d", sample_cnt, label_param[1].buff32);
-		}
-
-		nn_shape shape({ sample_cnt, 1, height, width });
-		image.set(shape);
-		truth.set({ sample_cnt, 1 });
-
-		fread_s(image._data, sizeof(uchar) * image._len, sizeof(uchar), image._len, image_fp);
-		fread_s(truth._data, sizeof(uchar) * truth._len, sizeof(uchar), truth._len, label_fp);
-
-		fclose(image_fp);
-		fclose(label_fp);
-
-		std::cout << "======================================" << std::endl;
-		std::cout << "sample amounts: " << sample_cnt << std::endl;
-		std::cout << "image height: " << height << std::endl;
-		std::cout << "image width: " << width << std::endl;
+		_train = read_file(train_x, train_y);
+		_test = read_file(test_x, test_y);
 	}
 	catch (const Exception& e) {
-		fclose(image_fp);
-		fclose(label_fp);
-
-		throw e;
+		e.put();
 	}
 }
 
-/*
-std::vector<Tensor<uchar>> MNIST::train_iter() {
-	
+MNIST::Sample MNIST::get_train_samples(int n_batch, int n_iter, bool shuffle) const {
+	return MNIST::Sample(_train, n_batch, n_iter, shuffle);
 }
 
-std::vector<Tensor<uchar>> MNIST::test_iter() {
-
+MNIST::Sample MNIST::get_test_samples(int n_batch, int n_iter, bool shuffle) const {
+	return MNIST::Sample(_test, n_batch, n_iter, shuffle);
 }
-*/
+
+const MNIST::DataSet MNIST::Sample::get_batch_samples(const DataSet& origin, int index, int n_batch, bool shuffle) {
+	DataSet sample;
+
+	const int amounts = origin._x.size[0];
+	const int img_h = origin._x.size[1];
+	const int img_w = origin._x.size[2];
+
+	sample._x = cv::Mat(std::vector<int>({ n_batch, img_h, img_w }), CV_8UC1);
+	sample._y = cv::Mat(std::vector<int>({ n_batch }), CV_8UC1);
+
+	std::vector<int> batch_indice;
+
+	if (shuffle) {
+		batch_indice = random_choice(0, amounts, n_batch, false);
+	}
+	else {
+		batch_indice.resize(n_batch);
+
+		int start = (n_batch * index) % amounts;
+
+		for (int i = 0; i < n_batch; ++i) {
+			batch_indice[i] = (start + i) % amounts;
+		}
+	}
+
+	for (int i = 0; i < n_batch; ++i) {
+		cv::Mat src_img(img_h, img_w, CV_8UC1, (uchar*)origin._x.ptr<uchar>(batch_indice[i]));
+		cv::Mat dst_img(img_h, img_w, CV_8UC1, (uchar*)sample._x.ptr<uchar>(i));
+
+		cv::Mat src_label({ 1 }, CV_8UC1, (uchar*)origin._y.ptr<uchar>(batch_indice[i]));
+		cv::Mat dst_label({ 1 }, CV_8UC1, (uchar*)sample._y.ptr<uchar>(i));
+
+		src_img.copyTo(dst_img);
+		src_label.copyTo(dst_label);
+	}
+
+	return sample;
+}
+
+MNIST::Sample::Sample(const DataSet& current_samples, int n_batch, int n_iter, bool shuffle) :
+	_origin(current_samples),
+	_n_batch(n_batch),
+	_n_iter(n_iter),
+	_shuffle(shuffle)
+{
+}
+
+typename MNIST::Sample::Iterator MNIST::Sample::begin() const {
+	return MNIST::Sample::Iterator(*this, 0);
+}
+
+typename MNIST::Sample::Iterator MNIST::Sample::end() const {
+	return MNIST::Sample::Iterator(*this, _n_iter);
+}
+
+const MNIST::DataSet MNIST::Sample::operator[](int index) const {
+	if (index >= _n_iter) {
+		ErrorExcept(
+			"[MNIST::Sample::operator[]] Index[%d] is out of range. (%d ~ %d)",
+			index,
+			0, _n_iter
+		);
+	}
+
+	return get_batch_samples(_origin, index, _n_batch, _shuffle);
+}
+
+MNIST::Sample::Iterator::Iterator(const Sample& samples, int n_iter) :
+	_samples(samples),
+	_n_iter(n_iter)
+{
+}
+
+MNIST::Sample::Iterator::Iterator(const typename Iterator& p) :
+	_samples(p._samples),
+	_n_iter(p._n_iter)
+{
+}
+
+bool MNIST::Sample::Iterator::operator!=(const typename Iterator& p) const {
+	return _n_iter != p._n_iter;
+}
+
+void MNIST::Sample::Iterator::operator++() {
+	++_n_iter;
+}
+
+const MNIST::DataSet MNIST::Sample::Iterator::operator*() const {
+	return get_batch_samples(_samples._origin, _n_iter, _samples._n_batch, _samples._shuffle);
+}

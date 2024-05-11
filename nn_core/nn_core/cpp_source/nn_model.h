@@ -43,12 +43,12 @@ public:
 	/*************************************************************/
 
 	/************************** NN_Layer **************************/
-	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
-	void build(const std::vector<NN_Shape>& input_shape);
-	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
-	void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
+	void get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape);
+	void build(const std::vector<nn_shape>& input_shape);
+	void run_forward(NN_Stream& st, const std::vector<GpuMat>& input, std::vector<GpuMat>& output);
+	void run_backward(NN_Stream& st, const std::vector<GpuMat>& d_output, std::vector<GpuMat>& d_input);
 	/**************************************************************/
 
 	void summary();
-	std::vector<Tensor<nn_type>> predict(const std::vector<Tensor<nn_type>>& x);
+	std::vector<Mat> predict(const std::vector<Mat>& x);
 };

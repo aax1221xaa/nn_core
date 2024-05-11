@@ -1,4 +1,5 @@
 #include "nn_base.h"
+#include <random>
 
 
 
@@ -17,25 +18,31 @@ NN_Layer::~NN_Layer() {
 
 }
 
-void NN_Layer::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
+void NN_Layer::get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape) {
 	ErrorExcept(
 		"[NN_Layer::get_output_shape] Make this function."
 	);
 }
 
-void NN_Layer::build(const std::vector<NN_Shape>& input_shape) {
+void NN_Layer::build(const std::vector<nn_shape>& input_shape) {
 	ErrorExcept(
 		"[NN_Layer::build] Make this function."
 	);
 }
 
-void NN_Layer::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
+void NN_Layer::run_forward(NN_Stream& st, const std::vector<GpuTensor>& input, std::vector<GpuTensor>& output) {
 	ErrorExcept(
 		"[NN_Layer::run_forward] Make this function."
 	);
 }
 
-void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input) {
+void NN_Layer::run_forward(const Tensor& src, GpuTensor& dst) {
+	ErrorExcept(
+		"[NN_Layer::run_forward] Make this function."
+	);
+}
+
+void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor>& d_output, std::vector<GpuTensor>& d_input) {
 	ErrorExcept(
 		"[NN_Layer::run_backward] Make this function."
 	);
@@ -48,18 +55,18 @@ void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 /*                                            */
 /**********************************************/
 
-NN_Input::NN_Input(const NN_Shape& input_size, int batch, const char* _layer_name) :
+NN_Input::NN_Input(const nn_shape& input_size, int batch, const char* _layer_name) :
 	NN_Layer(_layer_name),
 	_shape(input_size)
 {
-	_shape.push_front(batch);
+	_shape.insert(_shape.begin(), batch);
 }
 
 NN_Input::~NN_Input() {
 
 }
 
-void NN_Input::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
+void NN_Input::get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape) {
 	if (input_shape.size() > 1) {
 		ErrorExcept(
 			"[NN_Input::get_output_shape] Input node can't take %ld tensor shapes.",
@@ -67,52 +74,46 @@ void NN_Input::get_output_shape(const std::vector<NN_Shape>& input_shape, std::v
 		);
 	}
 	else if (input_shape.size() == 0) {
-		NN_Shape out_shape;
-
-		_shape.copy_to(out_shape);
-		output_shape.push_back(out_shape);
+		output_shape.push_back(_shape);
 	}
 	else {
-		if (input_shape[0].get_size() != _shape.get_size()) {
+		if (input_shape[0].size() != _shape.size()) {
 			ErrorExcept(
 				"[NN_Input::get_output_shape] Input excpected dimensions are %s. but take dimensions are %s.",
-				put_shape(_shape),
-				put_shape(input_shape[0])
+				shape_to_str(_shape),
+				shape_to_str(input_shape[0])
 			);
 		}
 
-		NN_Shape out_shape(_shape.get_size());
-		const NN_Shape& input = input_shape[0];
+		nn_shape out_shape(_shape.size(), 0);
+		
+		if (!is_valid_shape(input_shape[0])) {
+			ErrorExcept(
+				"[NN_Input::get_output_shape] Input dimensions must be all grater than 0 but %s.",
+				shape_to_str(input_shape[0])
+			);
+		}
 
-		for (int i = 0; i < _shape.get_size(); ++i) {
-			if (input[i] < 1) {
-				ErrorExcept(
-					"[NN_Input::get_output_shape] Input dimensions must be all grater than 0 but %s.",
-					put_shape(input)
-				);
-			}
-			else {
-				if (_shape[i] < 0) out_shape[i] = input[i];
-				else if (_shape[i] > 0) out_shape[i] = _shape[i];
-				else {
-					ErrorExcept(
-						"[NN_Input::get_output_shape] Input was taking wrong dimensions %s.",
-						put_shape(_shape)
-					);
-				}
-			}
+		for (int i = 0; i < _shape.size(); ++i) {
+			if (_shape[i] < 0) out_shape[i] = input_shape[0][i];
+			else out_shape[i] = _shape[i];
 		}
 
 		output_shape.push_back(out_shape);
 	}
 }
 
-void NN_Input::build(const std::vector<NN_Shape>& input_shape) {
+void NN_Input::build(const std::vector<nn_shape>& input_shape) {
 	std::cout << "build: " << _layer_name << std::endl;
 }
 
-void NN_Input::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
+void NN_Input::run_forward(NN_Stream& st, const std::vector<GpuTensor>& input, std::vector<GpuTensor>& output) {
 	output = input;
+}
+
+void NN_Input::run_forward(const Tensor& src, GpuTensor& dst) {
+	dst.upload(src);
+	
 }
 
 
@@ -213,7 +214,7 @@ NN_Manager::~NN_Manager() {
 		_layers.clear();
 	}
 	catch (Exception& e) {
-		e.Put();
+		e.put();
 	}
 }
 
@@ -249,11 +250,11 @@ void NN_Manager::set_reserved_outputs() {
 	_outputs.resize(_nodes.size());
 }
 
-std::vector<NN_Shape>& NN_Manager::get_node_shape(int index) {
+std::vector<nn_shape>& NN_Manager::get_node_shape(int index) {
 	return _out_shapes[index];
 }
 
-std::vector<GpuTensor<nn_type>>& NN_Manager::get_node_output(int index) {
+std::vector<GpuMat>& NN_Manager::get_node_output(int index) {
 	return _outputs[index];
 }
 
@@ -265,7 +266,7 @@ void NN_Manager::clear_outputs() {
 	_outputs.clear();
 }
 
-Layer_t NN_Manager::input(const NN_Shape& input_size, int batch, const char* layer_name) {
+Layer_t NN_Manager::input(const nn_shape& input_size, int batch, const char* layer_name) {
 	NN_Layer* layer = new NN_Input(input_size, batch, layer_name);
 	NN_Link* node = new NN_Link;
 
@@ -275,4 +276,18 @@ Layer_t NN_Manager::input(const NN_Shape& input_size, int batch, const char* lay
 	_layers.push_back(layer);
 
 	return NN_Link::NN_Ptr({ 0, node });
+}
+
+
+/**********************************************/
+/*                                            */
+/*                    misc					  */
+/*                                            */
+/**********************************************/
+
+void set_random_uniform(GpuMat& g_mat) {
+	std::random_device rd;
+	cv::RNG rng(rd());
+
+	rng.fill(g_mat, g_mat.type(), -0.1f, 0.1f);
 }
