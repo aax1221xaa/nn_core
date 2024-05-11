@@ -54,6 +54,7 @@ public:
 
 	Tensor();
 	Tensor(const NN_Shape& shape);
+	Tensor(const std::initializer_list<int>& shape);
 	Tensor(const Tensor& p);
 	Tensor(Tensor&& p);
 
@@ -70,6 +71,9 @@ public:
 	NN_Shape get_shape();
 	std::shared_ptr<_T[]>& get_data();
 };
+
+template <typename _T>
+using tensor_t = std::shared_ptr<_T[]>;
 
 template <typename _T>
 std::vector<size_t> Tensor<_T>::calc_step(const NN_Shape& shape) {
@@ -187,6 +191,29 @@ Tensor<_T>::Tensor(const NN_Shape& shape) :
 }
 
 template <typename _T>
+Tensor<_T>::Tensor(const std::initializer_list<int>& shape) :
+	_count_op(0)
+{
+	_roi.resize(shape.size());
+
+	int i = 0;
+
+	for (const int& n : shape) {
+		ROI roi;
+
+		roi._begin = 0;
+		roi._end = n;
+		roi._step = 1;
+
+		_roi[i++] = roi;
+	}
+
+	const size_t size = NN_Shape(shape).total_size();
+	_steps = calc_step(shape);
+	_data = std::shared_ptr<_T[]>(new _T[size]);
+}
+
+template <typename _T>
 Tensor<_T>::Tensor(const Tensor& p) :
 	_count_op(p._count_op),
 	_data(p._data),
@@ -233,8 +260,8 @@ Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
 			for (size_t i = q.begin(); i < q.end(); ++i) {
-				const size_t src_idx = count_to_elem_index(_steps, _roi, i % src_size);
-				const size_t dst_idx = count_to_elem_index(p._steps, p._roi, i);
+				const size_t src_idx = count_to_elem_index(p._steps, p._roi, i % src_size);
+				const size_t dst_idx = count_to_elem_index(_steps, _roi, i);
 
 				_data[dst_idx] = p._data[src_idx];
 			}
@@ -287,8 +314,6 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) {
 	begin = begin < 0 ? begin - n : begin;
 	end = end < 0 ? end - n : end;
 
-	std::cout << _count_op << std::endl;
-
 	if (begin < 0 || begin >= n || end < 0 || end >= n) {
 		ErrorExcept(
 			"[Tensor<_T>::operator()] begin and end is out of range. begin: %d, end: %d, step: %d, count: %d",
@@ -302,6 +327,8 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) {
 	Tensor<_T> tensor = *this;
 	tensor._roi[_count_op] = ROI({ begin, end, step });
 	tensor._count_op = _count_op + 1;
+
+	_count_op = 0;
 
 	return tensor;
 }

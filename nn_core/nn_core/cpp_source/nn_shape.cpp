@@ -1,6 +1,7 @@
 #include "nn_shape.h"
 
 
+char str_buff[100];
 
 NN_Shape::NN_Shape() {
 
@@ -147,15 +148,16 @@ void NN_Shape::push_back(const std::initializer_list<int>& list) {
 const char* shape_to_str(const NN_Shape& shape) {
 	std::string buff = "[";
 
-	if (shape.is_empty()) {
+	if (!shape.is_empty()) {
 		for (const int& n : shape) {
 			buff += std::to_string(n) + ", ";
 		}
 	}
 
 	buff += "]";
+	strcpy_s(str_buff, buff.c_str());
 
-	return buff.c_str();
+	return str_buff;
 }
 
 std::ostream& operator<<(std::ostream& os, const NN_Shape& shape) {
