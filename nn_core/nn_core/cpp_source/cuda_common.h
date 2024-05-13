@@ -193,7 +193,7 @@ void List<_T>::put_list(std::ostream& os, List<_T>* list) {
 	if (list->_ptr) os << list->get_val() << ", ";
 	else if (list->_head != list) {
 		os << '[';
-		
+
 		List<_T>* tmp = list->_head->_next;
 		while (tmp != list->_head) {
 			put_list(os, tmp);
@@ -264,7 +264,7 @@ List<_T>::List(const std::initializer_list<_T>& list) :
 {
 	_head = new List<_T>;
 
-	for (const _T& val : list) 
+	for (const _T& val : list)
 		insert_node(_head->_prev, new List<_T>(val));
 }
 
@@ -329,7 +329,7 @@ List<_T>& List<_T>::operator=(const List<_T>& p) {
 template <class _T>
 List<_T>& List<_T>::operator[](uint index) {
 	List<_T>* tmp = _head != this ? _head->_next : this;
-		
+
 	for (uint i = 0; i < index; ++i) tmp = tmp->_next;
 
 	return *tmp;

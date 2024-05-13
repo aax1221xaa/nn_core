@@ -43,13 +43,13 @@
     <ClInclude Include="..\nn_core\cpp_source\CudaCheck.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="..\nn_core\cpp_source\nn_shape.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

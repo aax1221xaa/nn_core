@@ -54,7 +54,6 @@ public:
 
 	Tensor();
 	Tensor(const NN_Shape& shape);
-	Tensor(const std::initializer_list<int>& shape);
 	Tensor(const Tensor& p);
 	Tensor(Tensor&& p);
 
@@ -122,7 +121,7 @@ size_t Tensor<_T>::count_to_elem_index(const std::vector<size_t>& steps, const s
 		const ROI& m_roi = roi[i];
 		const size_t dim = (m_roi._end - m_roi._begin + m_roi._step - 1) / m_roi._step;
 
-		index += step * (m_roi._begin + (count % dim));
+		index += step * (m_roi._begin + (count % dim) * m_roi._step);
 
 		count /= dim;
 	}
@@ -188,29 +187,6 @@ Tensor<_T>::Tensor(const NN_Shape& shape) :
 
 	_steps = calc_step(shape);
 	_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
-}
-
-template <typename _T>
-Tensor<_T>::Tensor(const std::initializer_list<int>& shape) :
-	_count_op(0)
-{
-	_roi.resize(shape.size());
-
-	int i = 0;
-
-	for (const int& n : shape) {
-		ROI roi;
-
-		roi._begin = 0;
-		roi._end = n;
-		roi._step = 1;
-
-		_roi[i++] = roi;
-	}
-
-	const size_t size = NN_Shape(shape).total_size();
-	_steps = calc_step(shape);
-	_data = std::shared_ptr<_T[]>(new _T[size]);
 }
 
 template <typename _T>
@@ -314,13 +290,9 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) {
 	begin = begin < 0 ? begin - n : begin;
 	end = end < 0 ? end - n : end;
 
-	if (begin < 0 || begin >= n || end < 0 || end >= n) {
+	if (begin < 0 || begin > n || end < 0 || end > n || end < begin) {
 		ErrorExcept(
-			"[Tensor<_T>::operator()] begin and end is out of range. begin: %d, end: %d, step: %d, count: %d",
-			roi._begin,
-			roi._end,
-			roi._step,
-			_count_op
+			"[Tensor<_T>::operator()] begin and end is out of range."
 		);
 	}
 
@@ -347,16 +319,17 @@ Tensor<_T> Tensor<_T>::operator()(int index) {
 
 	index = index < 0 ? n - index : index;
 
-	if (index < 0 || index >= n) {
+	if (index < 0 || index > n) {
 		ErrorExcept(
 			"[Tensor<_T>::operator()] begin and end is out of range."
 		);
 	}
 
 	Tensor<_T> tensor = *this;
-	tensor._roi[_count_op] = ROI({ index, index, 1 });
+	tensor._roi[_count_op] = ROI({ index, index + 1, 1 });
+	tensor._count_op = _count_op + 1;
 
-	++_count_op;
+	_count_op = 0;
 
 	return tensor;
 }
@@ -365,7 +338,7 @@ template <typename _T>
 Tensor<_T> Tensor<_T>::operator[](int index) {
 	if (_count_op >= _roi.size()) {
 		ErrorExcept(
-			"[Tensor<_T>::operator()] %d rank is empty.",
+			"[Tensor<_T>::operator[]] %d rank is empty.",
 			_count_op
 		);
 	}
@@ -377,14 +350,15 @@ Tensor<_T> Tensor<_T>::operator[](int index) {
 
 	if (index < 0 || index >= n) {
 		ErrorExcept(
-			"[Tensor<_T>::operator()] begin and end is out of range."
+			"[Tensor<_T>::operator[]] begin and end is out of range."
 		);
 	}
 
 	Tensor<_T> tensor = *this;
-	tensor._roi[_count_op] = ROI({ index, index, 1 });
+	tensor._roi[_count_op] = ROI({ index, index + 1, 1 });
+	tensor._count_op = _count_op + 1;
 
-	++_count_op;
+	_count_op = 0;
 
 	return tensor;
 }

@@ -9,23 +9,22 @@
 
 int main() {
 	try {
-		Tensor<int> test({ 5, 5, 5 });
-		Tensor<int> test2({ 3, 3 });
+		Tensor<int> test(NN_Shape({ 3, 3, 3 }));
 
-		tensor_t<int>& val1 = test.get_data();
-		tensor_t<int>& val2 = test2.get_data();
+		for (int c = 0; c < 3; ++c) {
+			for (int h = 0; h < 3; ++h) {
+				for (int w = 0; w < 3; ++w) {
+					test[c][h][w] = 1;
+				}
+			}
+		}
 
-		printf("%s\n", shape_to_str(test2.get_shape()));
+		tensor_t<int> data = test.get_data();
 
-		for (int i = 0; i < 125; ++i) val1[i] = 0;
-		for (int i = 0; i < 9; ++i) val2[i] = i / 3;
-
-		test(1, 4)(1, 4)(1, 4) = test2;
-
-		for (int k = 0; k < 5; ++k) {
-			for (int i = 0; i < 5; ++i) {
-				for (int j = 0; j < 5; ++j) {
-					std::cout << val1[k * 25 + i * 5 + j] << ' ';
+		for (int c = 0; c < 3; ++c) {
+			for (int h = 0; h < 3; ++h) {
+				for (int w = 0; w < 3; ++w) {
+					std::cout << data[c * 9 + h * 3 + w] << ' ';
 				}
 				std::cout << std::endl;
 			}
