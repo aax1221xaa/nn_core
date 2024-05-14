@@ -7,6 +7,9 @@ private:
 	std::vector<int> _dims;
 
 public:
+	typedef std::vector<int>::const_iterator c_iterator;
+	typedef std::vector<int>::iterator iterator;
+
 	NN_Shape();
 	NN_Shape(int len);
 	NN_Shape(const std::initializer_list<int>& list);
