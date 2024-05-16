@@ -1,25 +1,18 @@
 #include "mnist.h"
-
+#include <fstream>
+#include <opencv2/opencv.hpp>
 
 
 MNIST::DataSet MNIST::read_file(const std::string& img_path, const std::string& label_path) {
-	FILE* img_fp = NULL;
-	FILE* label_fp = NULL;
+	std::ifstream img_fp(img_path, std::ios::binary);
+	std::ifstream label_fp(label_path, std::ios::binary);
 
-	errno_t err = fopen_s(&img_fp, img_path.c_str(), "rb");
-	if (err < 0) {
-		ErrorExcept(
-			"[MNIST::read_file] failed load image file [%s]",
-			img_path.c_str()
-		);
-	}
+	if (!img_fp.is_open() || !label_fp.is_open()) {
+		img_fp.close();
+		label_fp.close();
 
-	err = fopen_s(&label_fp, label_path.c_str(), "rb");
-	if (err < 0) {
-		fclose(img_fp);
 		ErrorExcept(
-			"[MNIST::read_file] failed load label file [%s]",
-			label_path.c_str()
+			"[MNIST::read_file] failed load files."
 		);
 	}
 
@@ -33,14 +26,14 @@ MNIST::DataSet MNIST::read_file(const std::string& img_path, const std::string& 
 
 	for (int i = 0; i < 4; ++i) {
 		for (int j = 0; j < 4; ++j) {
-			fread_s(&param._byte[3 - j], sizeof(uchar), sizeof(uchar), 1, img_fp);
+			img_fp >> param._byte[3 - j];
 		}
 		img_head[i] = param._byte32;
 	}
 
 	for (int i = 0; i < 2; ++i) {
 		for (int j = 0; j < 4; ++j) {
-			fread_s(&param._byte[3 - j], sizeof(uchar), sizeof(uchar), 1, label_fp);
+			label_fp >> param._byte[3 - j];
 		}
 		label_head[i] = param._byte32;
 	}
@@ -60,26 +53,14 @@ MNIST::DataSet MNIST::read_file(const std::string& img_path, const std::string& 
 	
 	DataSet samples;
 
-	samples._x = cv::Mat(std::vector<int>({ img_head[1], img_head[2], img_head[3] }), CV_8UC1);
-	samples._y = cv::Mat(std::vector<int>({ label_head[1] }), CV_8UC1);
+	samples._x.resize({ img_head[1], img_head[2], img_head[3] });
+	samples._y.resize({ img_head[1] });
 
-	fread_s(
-		samples._x.data,
-		sizeof(uchar) * samples._x.total(),
-		sizeof(uchar),
-		samples._x.total(),
-		img_fp
-	);
-	fread_s(
-		samples._y.data,
-		sizeof(uchar) * samples._y.total(),
-		sizeof(uchar),
-		samples._y.total(),
-		label_fp
-	);
+	img_fp.read((char*)samples._x.get_ptr(), sizeof(uchar) * samples._x.get_shape().total_size());
+	label_fp.read((char*)samples._y.get_ptr(), sizeof(uchar) * samples._y.get_shape().total_size());
 
-	fclose(img_fp);
-	fclose(label_fp);
+	img_fp.close();
+	label_fp.close();
 
 	return samples;
 }
@@ -110,12 +91,14 @@ MNIST::Sample MNIST::get_test_samples(int n_batch, int n_iter, bool shuffle) con
 const MNIST::DataSet MNIST::Sample::get_batch_samples(const DataSet& origin, int index, int n_batch, bool shuffle) {
 	DataSet sample;
 
-	const int amounts = origin._x.size[0];
-	const int img_h = origin._x.size[1];
-	const int img_w = origin._x.size[2];
+	const NN_Shape& shape = origin._x.get_shape();
 
-	sample._x = cv::Mat(std::vector<int>({ n_batch, img_h, img_w }), CV_8UC1);
-	sample._y = cv::Mat(std::vector<int>({ n_batch }), CV_8UC1);
+	const int amounts = shape[0];
+	const int img_h = shape[1];
+	const int img_w = shape[2];
+
+	sample._x.resize({ n_batch, img_h, img_w });
+	sample._y.resize({ n_batch });
 
 	std::vector<int> batch_indice;
 
@@ -132,16 +115,7 @@ const MNIST::DataSet MNIST::Sample::get_batch_samples(const DataSet& origin, int
 		}
 	}
 
-	for (int i = 0; i < n_batch; ++i) {
-		cv::Mat src_img(img_h, img_w, CV_8UC1, (uchar*)origin._x.ptr<uchar>(batch_indice[i]));
-		cv::Mat dst_img(img_h, img_w, CV_8UC1, (uchar*)sample._x.ptr<uchar>(i));
-
-		cv::Mat src_label({ 1 }, CV_8UC1, (uchar*)origin._y.ptr<uchar>(batch_indice[i]));
-		cv::Mat dst_label({ 1 }, CV_8UC1, (uchar*)sample._y.ptr<uchar>(i));
-
-		src_img.copyTo(dst_img);
-		src_label.copyTo(dst_label);
-	}
+	sample._x = origin._x(batch_indice);
 
 	return sample;
 }

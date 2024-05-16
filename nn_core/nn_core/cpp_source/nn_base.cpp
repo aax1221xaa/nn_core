@@ -18,31 +18,31 @@ NN_Layer::~NN_Layer() {
 
 }
 
-void NN_Layer::get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape) {
+void NN_Layer::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
 	ErrorExcept(
 		"[NN_Layer::get_output_shape] Make this function."
 	);
 }
 
-void NN_Layer::build(const std::vector<nn_shape>& input_shape) {
+void NN_Layer::build(const std::vector<NN_Shape>& input_shape) {
 	ErrorExcept(
 		"[NN_Layer::build] Make this function."
 	);
 }
 
-void NN_Layer::run_forward(NN_Stream& st, const std::vector<GpuTensor>& input, std::vector<GpuTensor>& output) {
+void NN_Layer::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
 	ErrorExcept(
 		"[NN_Layer::run_forward] Make this function."
 	);
 }
 
-void NN_Layer::run_forward(const Tensor& src, GpuTensor& dst) {
+void NN_Layer::run_forward(const Tensor<nn_type>& src, GpuTensor<nn_type>& dst) {
 	ErrorExcept(
 		"[NN_Layer::run_forward] Make this function."
 	);
 }
 
-void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor>& d_output, std::vector<GpuTensor>& d_input) {
+void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input) {
 	ErrorExcept(
 		"[NN_Layer::run_backward] Make this function."
 	);
@@ -55,18 +55,18 @@ void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor>& d_outpu
 /*                                            */
 /**********************************************/
 
-NN_Input::NN_Input(const nn_shape& input_size, int batch, const char* _layer_name) :
+NN_Input::NN_Input(const NN_Shape& input_size, int batch, const char* _layer_name) :
 	NN_Layer(_layer_name),
 	_shape(input_size)
 {
-	_shape.insert(_shape.begin(), batch);
+	_shape.push_front(batch);
 }
 
 NN_Input::~NN_Input() {
 
 }
 
-void NN_Input::get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape) {
+void NN_Input::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
 	if (input_shape.size() > 1) {
 		ErrorExcept(
 			"[NN_Input::get_output_shape] Input node can't take %ld tensor shapes.",
@@ -77,25 +77,28 @@ void NN_Input::get_output_shape(const std::vector<nn_shape>& input_shape, std::v
 		output_shape.push_back(_shape);
 	}
 	else {
-		if (input_shape[0].size() != _shape.size()) {
+		const NN_Shape& in_shape = input_shape[0];
+
+		if (in_shape.get_len() != _shape.get_len()) {
 			ErrorExcept(
 				"[NN_Input::get_output_shape] Input excpected dimensions are %s. but take dimensions are %s.",
 				shape_to_str(_shape),
-				shape_to_str(input_shape[0])
+				shape_to_str(in_shape)
 			);
 		}
 
-		nn_shape out_shape(_shape.size(), 0);
+		NN_Shape out_shape(_shape.get_len());
 		
-		if (!is_valid_shape(input_shape[0])) {
-			ErrorExcept(
-				"[NN_Input::get_output_shape] Input dimensions must be all grater than 0 but %s.",
-				shape_to_str(input_shape[0])
-			);
-		}
-
-		for (int i = 0; i < _shape.size(); ++i) {
-			if (_shape[i] < 0) out_shape[i] = input_shape[0][i];
+		int i = 0;
+		for (const int& n : in_shape) {
+			if (n < 0) {
+				ErrorExcept(
+					"[NN_Input::get_output_shape] The dimensions of inputs must be greater than 0. %s",
+					shape_to_str(in_shape)
+				);
+			}
+			
+			if (_shape[i] < 0) out_shape[i] = n;
 			else out_shape[i] = _shape[i];
 		}
 
@@ -103,15 +106,15 @@ void NN_Input::get_output_shape(const std::vector<nn_shape>& input_shape, std::v
 	}
 }
 
-void NN_Input::build(const std::vector<nn_shape>& input_shape) {
+void NN_Input::build(const std::vector<NN_Shape>& input_shape) {
 	std::cout << "build: " << _layer_name << std::endl;
 }
 
-void NN_Input::run_forward(NN_Stream& st, const std::vector<GpuTensor>& input, std::vector<GpuTensor>& output) {
+void NN_Input::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
 	output = input;
 }
 
-void NN_Input::run_forward(const Tensor& src, GpuTensor& dst) {
+void NN_Input::run_forward(const Tensor<nn_type>& src, GpuTensor<nn_type>& dst) {
 	dst.upload(src);
 	
 }

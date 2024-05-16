@@ -61,6 +61,22 @@ int& NN_Shape::operator[](int index) {
 	return _dims[index];
 }
 
+bool NN_Shape::operator!=(const NN_Shape& shape) const {
+	bool is_not_equal = false;
+
+	if (_dims.size() != shape._dims.size()) is_not_equal = true;
+	else {
+		for (int i = 0; i < _dims.size(); ++i) {
+			if (_dims[i] != shape._dims[i]) {
+				is_not_equal = true;
+				break;
+			}
+		}
+	}
+
+	return is_not_equal;
+}
+
 const int& NN_Shape::operator[](int index) const {
 	if (index >= (int)_dims.size() || index < 0) {
 		ErrorExcept(

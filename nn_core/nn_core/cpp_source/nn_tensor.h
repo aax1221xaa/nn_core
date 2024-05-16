@@ -4,13 +4,20 @@
 #include <memory>
 
 
+
+enum { boolean, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float16, float32, float64 };
+
+template <typename _T>
+class GpuTensor;
+
 template <typename _T>
 class Tensor {
+
 	std::shared_ptr<_T[]> _data;
 	std::vector<size_t> _steps;
 	std::vector<std::vector<size_t>> _indice;
 
-	int _count_op;
+	static int _rank_cnt;
 
 	static std::vector<size_t> calc_step(const NN_Shape& shape);
 	static size_t calc_size(const std::vector<std::vector<size_t>>& indice);
@@ -18,19 +25,22 @@ class Tensor {
 	static NN_Shape calc_shape(const std::vector<std::vector<size_t>>& indice);
 	static bool is_valid_src_shape(const NN_Shape& dst_shape, const NN_Shape& src_shape);
 	static void count_indice(std::vector<size_t>& indice, int begin, int end, int step);
+	static void put_tensor(std::ostream& os, const Tensor& tensor, size_t offset, int& rank);
 
 public:
 
 	Tensor();
 	Tensor(const NN_Shape& shape);
-	Tensor(const std::initializer_list<int>& shape);
+//	Tensor(const std::initializer_list<int>& shape);
 	Tensor(const Tensor& p);
 	Tensor(Tensor&& p);
 
 	Tensor& operator=(const Tensor& p);
+	Tensor& operator=(const GpuTensor<_T>& p);
 	Tensor& operator=(_T scalar);
 	Tensor operator()(int begin, int end, int step = 1);
 	Tensor operator()(int index);
+	Tensor operator()(const std::vector<int>& indice) const;
 	Tensor operator[](int index);
 
 	_T& val();
@@ -38,11 +48,27 @@ public:
 
 	void clear();
 	NN_Shape get_shape();
-	std::shared_ptr<_T[]>& get_data();
+	NN_Shape get_shape() const;
+	_T* get_ptr();
+	const _T* get_ptr() const;
+
+	std::ostream& put(std::ostream& os);
+
+	void resize(const NN_Shape& shape);
 };
 
 template <typename _T>
 using tensor_t = std::shared_ptr<_T[]>;
+
+template <typename _T>
+int Tensor<_T>::_rank_cnt = 0;
+
+template <typename _T>
+std::ostream& operator<<(std::ostream& os, Tensor<_T>& tensor) {
+	tensor.put(os);
+
+	return os;
+}
 
 template <typename _T>
 std::vector<size_t> Tensor<_T>::calc_step(const NN_Shape& shape) {
@@ -131,14 +157,31 @@ void Tensor<_T>::count_indice(std::vector<size_t>& indice, int begin, int end, i
 }
 
 template <typename _T>
-Tensor<_T>::Tensor() :
-	_count_op(0)
+void Tensor<_T>::put_tensor(std::ostream& os, const Tensor& tensor, size_t offset, int& rank) {
+	const size_t step = tensor._steps[rank];
+
+	if (rank < tensor._indice.size() - 1) {
+		for (const size_t& index : tensor._indice[rank]) {
+			os << '[';
+			put_tensor(os, tensor, offset + (index * step), ++rank);
+			--rank;
+			os << ']' << std::endl;
+		}
+	}
+	else {
+		for (const size_t& index : tensor._indice[rank]) {
+			os << tensor._data[offset + (index * step)] << ", ";
+		}
+	}
+}
+
+template <typename _T>
+Tensor<_T>::Tensor()
 {
 }
 
 template <typename _T>
 Tensor<_T>::Tensor(const NN_Shape& shape) :
-	_count_op(0),
 	_indice(shape.get_len())
 {
 	int i = 0;
@@ -162,9 +205,9 @@ Tensor<_T>::Tensor(const NN_Shape& shape) :
 	_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
 }
 
+/*
 template <typename _T>
 Tensor<_T>::Tensor(const std::initializer_list<int>& shape) :
-	_count_op(0),
 	_indice(shape.size())
 {
 	int i = 0;
@@ -187,10 +230,9 @@ Tensor<_T>::Tensor(const std::initializer_list<int>& shape) :
 	_steps = calc_step(shape);
 	_data = std::shared_ptr<_T[]>(new _T[NN_Shape(shape).total_size()]);
 }
-
+*/
 template <typename _T>
 Tensor<_T>::Tensor(const Tensor& p) :
-	_count_op(p._count_op),
 	_data(p._data),
 	_steps(p._steps),
 	_indice(p._indice)
@@ -199,7 +241,6 @@ Tensor<_T>::Tensor(const Tensor& p) :
 
 template <typename _T>
 Tensor<_T>::Tensor(Tensor&& p) :
-	_count_op(p._count_op),
 	_data(std::move(p._data)),
 	_steps(std::move(p._steps)),
 	_indice(std::move(p._indice))
@@ -210,7 +251,7 @@ template <typename _T>
 Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 	if (this == &p) return *this;
 
-	_count_op = 0;
+	_rank_cnt = 0;
 
 	if (_steps.empty()) {
 		_data = p._data;
@@ -248,8 +289,32 @@ Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 }
 
 template <typename _T>
+Tensor<_T>& Tensor<_T>::operator=(const GpuTensor<_T>& p) {
+	const NN_Shape h_shape = calc_shape(_indice);
+	const NN_Shape& g_shape = p.get_shape();
+
+	if (h_shape != g_shape) {
+		ErrorExcept(
+			"[Tensor<_T>::operator=] GPU tensor and Host tensor shape is different. GPU: %s, Host: %s",
+			shape_to_str(g_shape),
+			shape_to_str(h_shape)
+		);
+	}
+
+	Tensor tmp(g_shape);
+	_T* g_ptr = p.get_ptr();
+	_T* h_ptr = tmp.get_ptr();
+
+	check_cuda(cudaMemcpy(h_ptr, g_ptr, sizeof(_T) * h_shape.total_size(), cudaMemcpyDeviceToHost));
+
+	*this = tmp;
+
+	return *this;
+}
+
+template <typename _T>
 Tensor<_T>& Tensor<_T>::operator=(_T scalar) {
-	_count_op = 0;
+	_rank_cnt = 0;
 
 	if (_steps.empty()) {
 		_data = std::shared_ptr<_T[]>(new _T[1]);
@@ -276,19 +341,19 @@ Tensor<_T>& Tensor<_T>::operator=(_T scalar) {
 
 template <typename _T>
 Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) {
-	if (_count_op >= _indice.size()) {
+	if (_rank_cnt >= _indice.size()) {
 		ErrorExcept(
 			"[Tensor<_T>::operator()] %d rank is empty.",
-			_count_op
+			_rank_cnt
 		);
 	}
 
-	const int n = (int)_indice[_count_op].size();
+	const int n = (int)_indice[_rank_cnt].size();
 
-	begin = begin < 0 ? begin - n : begin;
-	end = end < 0 ? end - n : end;
+	begin = begin < 0 ? n + begin : begin;
+	end = end < 0 ? n + end : end;
 
-	if (begin < 0 || begin >= n || end < 0 || end >= n) {
+	if (begin < 0 || begin >= n || end < 0 || end > n) {
 		ErrorExcept(
 			"[Tensor<_T>::operator()] begin and end is out of range. begin: %d, end: %d, step: %d",
 			begin, end, step
@@ -296,54 +361,80 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) {
 	}
 
 	Tensor<_T> tensor = *this;
-	count_indice(tensor._indice[_count_op], begin, end, step);
-	tensor._count_op = _count_op + 1;
-
-	_count_op = 0;
+	count_indice(tensor._indice[_rank_cnt++], begin, end, step);
 
 	return tensor;
 }
 
 template <typename _T>
 Tensor<_T> Tensor<_T>::operator()(int index) {
-	if (_count_op >= _indice.size()) {
+	if (_rank_cnt >= _indice.size()) {
 		ErrorExcept(
 			"[Tensor<_T>::operator()] %d rank is empty.",
-			_count_op
+			_rank_cnt
 		);
 	}
 
-	const int n = (int)_indice[_count_op].size();
+	const int n = (int)_indice[_rank_cnt].size();
 
-	index = index < 0 ? n - index : index;
+	index = index < 0 ? n + index : index;
 
 	if (index < 0 || index >= n) {
 		ErrorExcept(
-			"[Tensor<_T>::operator()] begin and end is out of range."
+			"[Tensor<_T>::operator()] index is out of range."
 		);
 	}
 
 	Tensor<_T> tensor = *this;
-	count_indice(tensor._indice[_count_op], index, index + 1, 1);
-	tensor._count_op = _count_op + 1;
+	count_indice(tensor._indice[_rank_cnt++], index, index + 1, 1);
 
-	_count_op = 0;
+	return tensor;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator()(const std::vector<int>& indice) const {
+	if (_rank_cnt >= _indice.size()) {
+		ErrorExcept(
+			"[Tensor<_T>::operator()] %d rank is empty.",
+			_rank_cnt
+		);
+	}
+
+	const std::vector<size_t>& curr_indice = _indice[_rank_cnt];
+	const int n = (int)curr_indice.size();
+	std::vector<size_t> m_indice(indice.size(), 0);
+
+	int i = 0;
+	for (const int& m : indice) {
+		int index = m < 0 ? n + m : m;
+
+		if (index < 0 || index >= n) {
+			ErrorExcept(
+				"[Tensor<_T>::operator()] indice is out of range."
+			);
+		}
+
+		m_indice[i++] = curr_indice[index];
+	}
+
+	Tensor<_T> tensor = *this;
+	tensor._indice[_rank_cnt++] = m_indice;
 
 	return tensor;
 }
 
 template <typename _T>
 Tensor<_T> Tensor<_T>::operator[](int index) {
-	if (_count_op >= _indice.size()) {
+	if (_rank_cnt >= _indice.size()) {
 		ErrorExcept(
 			"[Tensor<_T>::operator()] %d rank is empty.",
-			_count_op
+			_rank_cnt
 		);
 	}
 
-	const int n = (int)_indice[_count_op].size();
+	const int n = (int)_indice[_rank_cnt].size();
 
-	index = index < 0 ? n - index : index;
+	index = index < 0 ? n + index : index;
 
 	if (index < 0 || index >= n) {
 		ErrorExcept(
@@ -352,16 +443,15 @@ Tensor<_T> Tensor<_T>::operator[](int index) {
 	}
 
 	Tensor<_T> tensor = *this;
-	count_indice(tensor._indice[_count_op], index, index + 1, 1);
-	tensor._count_op = _count_op + 1;
-
-	_count_op = 0;
+	count_indice(tensor._indice[_rank_cnt++], index, index + 1, 1);
 
 	return tensor;
 }
 
 template <typename _T>
 _T& Tensor<_T>::val() {
+	_rank_cnt = 0;
+
 	if (calc_size(_indice) > 1) {
 		ErrorExcept(
 			"[Tensor<_T>::val] This value is not scalar."
@@ -391,15 +481,195 @@ void Tensor<_T>::clear() {
 	_data.reset();
 	_steps.clear();
 	_indice.clear();
-	_count_op = 0;
+	_rank_cnt = 0;
 }
 
 template <typename _T>
 NN_Shape Tensor<_T>::get_shape() {
+	_rank_cnt = 0;
+
 	return calc_shape(_indice);
 }
 
 template <typename _T>
-std::shared_ptr<_T[]>& Tensor<_T>::get_data() {
-	return _data;
+NN_Shape Tensor<_T>::get_shape() const {
+	return calc_shape(_indice);
+}
+
+template <typename _T>
+_T* Tensor<_T>::get_ptr() {
+	_rank_cnt = 0;
+
+	return _data.get();
+}
+
+template <typename _T>
+const _T* Tensor<_T>::get_ptr() const{
+	_rank_cnt = 0;
+
+	return _data.get();
+}
+
+template <typename _T>
+std::ostream& Tensor<_T>::put(std::ostream& os) {
+	_rank_cnt = 0;
+
+	if (_indice.size() > 0) {
+		int i = 0;
+
+		put_tensor(os, *this, 0, i);
+		os << shape_to_str(calc_shape(_indice)) << std::endl;
+	}
+	else os << "[]" << std::endl;
+
+	return os;
+}
+
+template <typename _T>
+void Tensor<_T>::resize(const NN_Shape& shape) {
+	_rank_cnt = 0;
+	
+	if ((int)_indice.size() != shape.get_len()) _indice.resize(shape.get_len());
+
+	int i = 0;
+	for (const int& n : shape) {
+		if (n < 1) {
+			ErrorExcept(
+				"[Tensor<_T>::Tensor] Shape must be greater than 0. but %s",
+				shape_to_str(shape)
+			);
+		}
+
+		std::vector<size_t> m_indice(n, 0);
+
+		size_t j = 0;
+		for (size_t& m : m_indice) m = j++;
+
+		_indice[i++] = m_indice;
+	}
+
+	_steps = calc_step(shape);
+	_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
+}
+
+
+/**********************************************/
+/*                                            */
+/*                  GpuTensor                 */
+/*                                            */
+/**********************************************/
+
+template <typename _T>
+class GpuTensor {
+	std::shared_ptr<_T> _data;
+	NN_Shape _shape;
+
+	static void del_func(_T* ptr);
+
+public:
+	GpuTensor();
+	GpuTensor(const NN_Shape& shape);
+	GpuTensor(const GpuTensor& p);
+	GpuTensor(GpuTensor&& p);
+	~GpuTensor();
+
+	GpuTensor& operator=(const GpuTensor& p);
+	GpuTensor& operator=(GpuTensor&& p);
+	GpuTensor& operator=(Tensor<_T>& p);
+
+	const NN_Shape& get_shape() const;
+	_T* get_ptr() const;
+};
+
+template <typename _T>
+void GpuTensor<_T>::del_func(_T* ptr) {
+	cudaFree(ptr);
+}
+
+template <typename _T>
+GpuTensor<_T>::GpuTensor() {
+}
+
+template <typename _T>
+GpuTensor<_T>::GpuTensor(const NN_Shape& shape) :
+	_shape(shape)
+{
+	_T* ptr = NULL;
+
+	check_cuda(cudaMalloc(&ptr, sizeof(_T) * _shape.total_size()));
+
+	_data.reset(ptr, del_func);
+}
+
+template <typename _T>
+GpuTensor<_T>::GpuTensor(const GpuTensor& p) :
+	_data(p._data),
+	_shape(p._shape)
+{
+}
+
+template <typename _T>
+GpuTensor<_T>::GpuTensor(GpuTensor&& p) :
+	_data(std::move(p._data)),
+	_shape(std::move(p._shape))
+{
+}
+
+template <typename _T>
+GpuTensor<_T>::~GpuTensor() {
+
+}
+
+template <typename _T>
+GpuTensor<_T>& GpuTensor<_T>::operator=(const GpuTensor& p) {
+	if (this == &p) return *this;
+
+	_data = p._data;
+	_shape = p._shape;
+
+	return *this;
+}
+
+template <typename _T>
+GpuTensor<_T>& GpuTensor<_T>::operator=(GpuTensor&& p) {
+	if (this == &p) return *this;
+
+	_data = std::move(p._data);
+	_shape = std::move(p._shape);
+
+	return *this;
+}
+
+template <typename _T>
+GpuTensor<_T>& GpuTensor<_T>::operator=(Tensor<_T>& p) {
+	const NN_Shape h_shape = p.get_shape();
+
+	if (h_shape != _shape) {
+		ErrorExcept(
+			"[GpuTensor<_T>::operator=] GPU and Host shape are different. GPU: %s, Host: %s",
+			shape_to_str(_shape),
+			shape_to_str(h_shape)
+		);
+	}
+
+	Tensor<_T> tmp(h_shape);
+	
+	tmp = p;
+
+	_T* h_ptr = tmp.get_ptr();
+	_T* g_ptr = get_ptr();
+
+	check_cuda(cudaMemcpy(g_ptr, h_ptr, sizeof(_T) * h_shape.total_size(), cudaMemcpyHostToDevice));
+
+	return *this;
+}
+
+template <typename _T>
+const NN_Shape& GpuTensor<_T>::get_shape() const {
+	return _shape;
+}
+
+template <typename _T>
+_T* GpuTensor<_T>::get_ptr() const {
+	return _data.get();
 }

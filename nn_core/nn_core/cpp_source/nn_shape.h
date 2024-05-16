@@ -20,6 +20,7 @@ public:
 	NN_Shape& operator=(NN_Shape&& p);
 	int& operator[](int index);
 	const int& operator[](int index) const;
+	bool operator!=(const NN_Shape& shape) const;
 
 	const int get_len() const;
 	size_t total_size() const;

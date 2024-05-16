@@ -40,12 +40,14 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\CUDA_11_DEBUG.props" />
     <Import Project="..\OpenCV_453D.props" />
+    <Import Project="..\TBB_DEBUG.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\..\..\OpenCV_Release.props" />
     <Import Project="..\..\..\..\CUDA_11_RELEASE.props" />
     <Import Project="..\OpenCV_453.props" />
+    <Import Project="..\TBB.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
@@ -85,6 +87,8 @@
     <ClCompile Include="cpp_source\nn_loss.cpp" />
     <ClCompile Include="cpp_source\nn_model.cpp" />
     <ClCompile Include="cpp_source\nn_optimizer.cpp" />
+    <ClCompile Include="cpp_source\nn_shape.cpp" />
+    <ClCompile Include="cpp_source\nn_tensor.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -97,6 +101,8 @@
     <ClInclude Include="cpp_source\nn_loss.h" />
     <ClInclude Include="cpp_source\nn_model.h" />
     <ClInclude Include="cpp_source\nn_optimizer.h" />
+    <ClInclude Include="cpp_source\nn_shape.h" />
+    <ClInclude Include="cpp_source\nn_tensor.h" />
     <ClInclude Include="cuda_source\cast.cuh" />
     <ClInclude Include="cuda_source\convolution.cuh" />
     <ClInclude Include="cuda_source\cuda_indice.cuh" />
