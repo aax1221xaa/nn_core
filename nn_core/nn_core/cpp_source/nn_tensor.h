@@ -31,7 +31,7 @@ public:
 
 	Tensor();
 	Tensor(const NN_Shape& shape);
-//	Tensor(const std::initializer_list<int>& shape);
+	Tensor(const std::initializer_list<int>& shape);
 	Tensor(const Tensor& p);
 	Tensor(Tensor&& p);
 
@@ -504,7 +504,7 @@ _T* Tensor<_T>::get_ptr() {
 }
 
 template <typename _T>
-const _T* Tensor<_T>::get_ptr() const{
+const _T* Tensor<_T>::get_ptr() const {
 	_rank_cnt = 0;
 
 	return _data.get();
@@ -528,7 +528,7 @@ std::ostream& Tensor<_T>::put(std::ostream& os) {
 template <typename _T>
 void Tensor<_T>::resize(const NN_Shape& shape) {
 	_rank_cnt = 0;
-	
+
 	if ((int)_indice.size() != shape.get_len()) _indice.resize(shape.get_len());
 
 	int i = 0;
@@ -577,8 +577,14 @@ public:
 	GpuTensor& operator=(GpuTensor&& p);
 	GpuTensor& operator=(Tensor<_T>& p);
 
+	NN_Shape& get_shape();
 	const NN_Shape& get_shape() const;
 	_T* get_ptr() const;
+
+	void reshape(const NN_Shape& shape);
+	void resize(const NN_Shape& shape);
+
+	static GpuTensor<_T> zeros(const NN_Shape& shape);
 };
 
 template <typename _T>
@@ -653,7 +659,7 @@ GpuTensor<_T>& GpuTensor<_T>::operator=(Tensor<_T>& p) {
 	}
 
 	Tensor<_T> tmp(h_shape);
-	
+
 	tmp = p;
 
 	_T* h_ptr = tmp.get_ptr();
@@ -665,6 +671,11 @@ GpuTensor<_T>& GpuTensor<_T>::operator=(Tensor<_T>& p) {
 }
 
 template <typename _T>
+NN_Shape& GpuTensor<_T>::get_shape() {
+	return _shape;
+}
+
+template <typename _T>
 const NN_Shape& GpuTensor<_T>::get_shape() const {
 	return _shape;
 }
@@ -672,4 +683,40 @@ const NN_Shape& GpuTensor<_T>::get_shape() const {
 template <typename _T>
 _T* GpuTensor<_T>::get_ptr() const {
 	return _data.get();
+}
+
+template <typename _T>
+void GpuTensor<_T>::reshape(const NN_Shape& shape) {
+	if (_shape.total_size() != shape.total_size()) {
+		ErrorExcept(
+			"[GpuTensor<_T>::reshape] Can't reshape tensor. %s != %s",
+			shape_to_str(_shape),
+			shape_to_str(shape)
+		);
+	}
+
+	_shape = shape;
+}
+
+template <typename _T>
+void GpuTensor<_T>::resize(const NN_Shape& shape) {
+	const size_t size = shape.total_size();
+
+	if (size == 0) {
+		ErrorExcept(
+			"[GpuTensor<_T>::resize] Can't resize this shape. %s",
+			shape_to_str(shape)
+		);
+	}
+
+	_T* ptr = NULL;
+
+	_shape = shape;
+	check_cuda(cudaMalloc(&ptr, sizeof(_T) * size));
+	_data = std::shared_ptr<_T>(ptr, del_func);
+}
+
+template <typename _T>
+std::shared_ptr<_T[]>& Tensor<_T>::get_data() {
+	return _data;
 }
