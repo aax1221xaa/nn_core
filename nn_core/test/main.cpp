@@ -1,5 +1,4 @@
-#include "../nn_core/cpp_source/nn_tensor.h"
-
+#include "../nn_core/cpp_source/mnist.h"
 
 #ifdef _DEBUG
 #include "vld.h"

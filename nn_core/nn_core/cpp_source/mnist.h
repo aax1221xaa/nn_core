@@ -1,13 +1,13 @@
 #pragma once
 
-#include "cuda_common.h"
+#include "nn_tensor.h"
 
 
 class MNIST {
 public:
 	struct DataSet {
-		cv::Mat _x;
-		cv::Mat _y;
+		Tensor<uchar> _x;
+		Tensor<uchar> _y;
 	}_train, _test;
 
 private:

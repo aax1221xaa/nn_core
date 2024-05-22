@@ -3,9 +3,10 @@
 #include "nn_optimizer.h"
 
 
-struct NN_Ptr;
 
-typedef	List<NN_Ptr> Layer_t;
+class NN_Link;
+
+typedef	List<NN_Link::NN_Ptr> Layer_t;
 
 
 /**********************************************/
@@ -24,6 +25,7 @@ public:
 	virtual void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
 	virtual void build(const std::vector<NN_Shape>& input_shape);
 	virtual void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	virtual void run_forward(const Tensor<nn_type>& src, GpuTensor<nn_type>& dst);
 	virtual void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
 };
 
@@ -42,6 +44,9 @@ public:
 	~NN_Input();
 
 	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
+	void build(const std::vector<NN_Shape>& input_shape);
+	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	void run_forward(const Tensor<nn_type>& src, GpuTensor<nn_type>& dst);
 };
 
 
@@ -61,6 +66,11 @@ private:
 	NN_Layer* _layer;
 
 public:
+	struct NN_Ptr {
+		int _index;
+		NN_Link* _node;
+	};
+
 	bool trainable;
 
 	NN_Link();
@@ -68,7 +78,7 @@ public:
 
 	const std::vector<NN_Link*>& get_prev_nodes() const;
 	const std::vector<NN_Link*>& get_next_nodes() const;
-
+	
 	void set_prev_node(NN_Link* node);
 	void set_next_node(NN_Link* node);
 
@@ -84,11 +94,6 @@ public:
 	virtual void set_next_link(NN_Link* node, int index);
 };
 
-struct NN_Ptr {
-	int _index;
-	NN_Link* _node;
-};
-
 
 /**********************************************/
 /*                                            */
@@ -100,7 +105,6 @@ class NN_Manager {
 	NN_Stream _stream;
 
 	std::vector<bool> _is_static;
-	std::vector<NN_Input*> _input_layers;
 	std::vector<NN_Link*> _nodes;
 	std::vector<NN_Layer*> _layers;
 
@@ -114,10 +118,9 @@ public:
 	~NN_Manager();
 
 	NN_Stream& get_streams();
-
+	
 	std::vector<NN_Link*>& get_nodes();
 	std::vector<NN_Layer*>& get_layers();
-	const std::vector<NN_Input*>& get_input_layers();
 
 	void set_nodes(NN_Link* node);
 	void set_static_node(NN_Link* const node);
@@ -157,4 +160,4 @@ NN_Link& NN_Manager::operator()(const _T& layer) {
 /*                                            */
 /**********************************************/
 
-void set_random_uniform(GpuTensor<nn_type>& tensor, nn_type a, nn_type b);
+void set_random_uniform(GpuTensor<nn_type>& g_mat);

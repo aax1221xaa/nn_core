@@ -33,16 +33,6 @@ std::vector<int> random_choice(int min, int max, int amounts, bool replace = tru
 enum class Pad { VALID, SAME };
 
 
-
-/**********************************************/
-/*                                            */
-/*                   nn_type                  */
-/*                                            */
-/**********************************************/
-
-typedef float nn_type;
-
-
 /**********************************************/
 /*                                            */
 /*                  NN_Stream                 */

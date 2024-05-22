@@ -35,6 +35,9 @@
     <ClCompile Include="..\nn_core\cpp_source\nn_tensor.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="..\nn_core\cpp_source\mnist.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\nn_core\cpp_source\Exception.h">
@@ -46,10 +49,13 @@
     <ClInclude Include="..\nn_core\cpp_source\nn_shape.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h">
+    <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
+    <ClInclude Include="..\nn_core\cpp_source\mnist.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
