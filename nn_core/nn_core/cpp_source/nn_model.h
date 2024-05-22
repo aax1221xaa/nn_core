@@ -20,6 +20,7 @@ private:
 
 	NN_Manager& _manager;
 
+	const NN_Input* get_input_layer(NN_Link* link);
 	void find_path(Layer_t& inputs, Layer_t& outputs, std::vector<int>& find_mask);
 	void count_branch(std::vector<int>& mask);
 	void set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask);
@@ -43,12 +44,12 @@ public:
 	/*************************************************************/
 
 	/************************** NN_Layer **************************/
-	void get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape);
-	void build(const std::vector<nn_shape>& input_shape);
-	void run_forward(NN_Stream& st, const std::vector<GpuMat>& input, std::vector<GpuMat>& output);
-	void run_backward(NN_Stream& st, const std::vector<GpuMat>& d_output, std::vector<GpuMat>& d_input);
+	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
+	void build(const std::vector<NN_Shape>& input_shape);
+	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
 	/**************************************************************/
 
 	void summary();
-	std::vector<Mat> predict(const std::vector<Mat>& x);
+	std::vector<Tensor<nn_type>> predict(const std::vector<Tensor<nn_type>>& x);
 };

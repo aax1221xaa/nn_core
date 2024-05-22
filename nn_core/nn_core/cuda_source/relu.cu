@@ -4,7 +4,7 @@
 #define __CUDACC__
 #endif
 
-//#include <device_functions.h>
+#include <device_functions.h>
 #include <device_launch_parameters.h>
 
 
@@ -39,23 +39,34 @@ __global__ void __d_relu(
 }
 */
 
-/**********************************************
+/**********************************************/
+/*                                            */
+/*                   NN_ReLU                  */
+/*                                            */
+/**********************************************/
 
-					  ReLU
+NN_ReLU::NN_ReLU(const char* name) :
+	NN_Layer(name)
+{
+}
 
-**********************************************/
+void NN_ReLU::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
+	output_shape.push_back(input_shape[0]);
+}
 
-void relu(
-	const nn_type* input,
-	nn_type* output,
-	cuint len
-) {
+void NN_ReLU::build(const std::vector<NN_Shape>& input_shape) {
+
+}
+
+void NN_ReLU::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
+	cuint size = (cuint)input[0].get_shape().total_size();
+
 	dim3 threads(BLOCK_1024);
-	dim3 blocks = get_grid_size(threads, len);
+	dim3 blocks = get_grid_size(threads, size);
 
 	__relu<<<blocks, threads>>>(
-		input,
-		output,
-		len
+		input[0].get_ptr(),
+		output[0].get_ptr(),
+		size
 	);
 }

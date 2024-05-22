@@ -154,6 +154,100 @@ void maxpool2d(
 	);
 }
 
+/**********************************************/
+/*                                            */
+/*                NN_Maxpool2D                */
+/*                                            */
+/**********************************************/
+
+NN_Maxpool2D::NN_Maxpool2D(const NN_Shape& k_size, const NN_Shape& stride, const Pad pad, const char* name) :
+	_pad(pad),
+	_k_size(k_size),
+	_stride(stride),
+	NN_Layer(name)
+{
+}
+
+void NN_Maxpool2D::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
+	const NN_Shape& shape = input_shape[0];
+
+	int n = shape[0];
+	int c = shape[1];
+	int h = 0;
+	int w = 0;
+
+	if (_pad == Pad::SAME) {
+		h = (int)ceil((float)(shape[2] - _k_size[0]) / _stride[0] + 1);
+		w = (int)ceil((float)(shape[3] - _k_size[1]) / _stride[1] + 1);
+	}
+	else {
+		h = (int)floorf((float)(shape[2] - _k_size[0]) / _stride[0] + 1);
+		w = (int)floorf((float)(shape[3] - _k_size[1]) / _stride[1] + 1);
+	}
+
+	output_shape.push_back({ n, c, h, w });
+}
+
+void NN_Maxpool2D::build(const std::vector<NN_Shape>& input_shape) {
+	const NN_Shape& shape = input_shape[0];
+
+	int n = shape[0];
+	int c = shape[1];
+	int h = 0;
+	int w = 0;
+
+	if (_pad == Pad::SAME) {
+		h = (int)ceil((float)(shape[2] - _k_size[0]) / _stride[0] + 1);
+		w = (int)ceil((float)(shape[3] - _k_size[1]) / _stride[1] + 1);
+	}
+	else {
+		h = (int)floorf((float)(shape[2] - _k_size[0]) / _stride[0] + 1);
+		w = (int)floorf((float)(shape[3] - _k_size[1]) / _stride[1] + 1);
+	}
+
+	_indice = GpuTensor<uint>::zeros({ n, c, h, w });
+}
+
+void NN_Maxpool2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
+	const nn_type* m_input = input[0].get_ptr();
+	nn_type* m_output = output[0].get_ptr();
+	uint* m_indice = _indice.get_ptr();
+
+	const NCHW in = input[0].get_shape().get_nchw();
+	const NCHW out = output[0].get_shape().get_nchw();
+
+	int tile_h = (BLOCK_32 - 1) * _stride[0] + _k_size[0];
+	int tile_w = (BLOCK_32 - 1) * _stride[1] + _k_size[1];
+
+	size_t smem_size = sizeof(nn_type) * tile_h * tile_w;
+	dim3 threads(BLOCK_32, BLOCK_32);
+	dim3 blocks = get_grid_size(threads, in.w, in.h);
+
+	for (int n = 0; n < in.n; ++n) {
+		for (int c = 0; c < in.c; ++c) {
+			const nn_type* in_data = m_input + (n * in.c * in.h * in.w) + (c * in.h * in.w);
+			nn_type* out_data = m_output + (n * out.c * out.h * out.w) + (c * out.h * out.w);
+			uint* indice = m_indice + (n * out.c * out.h * out.w) + (c * out.h * out.w);
+
+			__maxpool_2d<<<blocks, threads, smem_size, st[(n * in.c + c) % STREAMS]>>>(
+				in_data,
+				out_data,
+				indice,
+				in.h,
+				in.w,
+				out.h,
+				out.w,
+				_k_size[0],
+				_k_size[1],
+				_stride[0],
+				_stride[1],
+				tile_h,
+				tile_w
+			);
+		}
+	}
+}
+
 /**********************************************
 
 				  D_Maxpool2d

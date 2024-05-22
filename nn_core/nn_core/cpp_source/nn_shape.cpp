@@ -61,6 +61,22 @@ int& NN_Shape::operator[](int index) {
 	return _dims[index];
 }
 
+bool NN_Shape::operator!=(const NN_Shape& shape) const {
+	bool is_not_equal = false;
+
+	if (_dims.size() != shape._dims.size()) is_not_equal = true;
+	else {
+		for (int i = 0; i < _dims.size(); ++i) {
+			if (_dims[i] != shape._dims[i]) {
+				is_not_equal = true;
+				break;
+			}
+		}
+	}
+
+	return is_not_equal;
+}
+
 const int& NN_Shape::operator[](int index) const {
 	if (index >= (int)_dims.size() || index < 0) {
 		ErrorExcept(
@@ -71,7 +87,7 @@ const int& NN_Shape::operator[](int index) const {
 	return _dims[index];
 }
 
-const int NN_Shape::get_len() const {
+int NN_Shape::get_len() const {
 	return (int)_dims.size();
 }
 
@@ -143,6 +159,66 @@ void NN_Shape::push_back(const NN_Shape& p) {
 
 void NN_Shape::push_back(const std::initializer_list<int>& list) {
 	_dims.insert(_dims.end(), list);
+}
+
+const std::vector<int>& NN_Shape::get_vector() {
+	return _dims;
+}
+
+NCHW NN_Shape::get_nchw() {
+	int arr[4] = { 1, 1, 1, 1 };
+	int i = 0;
+
+	for (std::vector<int>::reverse_iterator n = _dims.rbegin(); n != _dims.rend(); ++n, ++i) {
+		if (i < 4) arr[3 - i] = *n;
+		else {
+			arr[0] *= *n;
+		}
+	}
+
+	return { arr[0], arr[1], arr[2], arr[3] };
+}
+
+NC NN_Shape::get_nc() {
+	int arr[2] = { 1, 1 };
+	int i = 0;
+
+	for (std::vector<int>::iterator n = _dims.begin(); n != _dims.end(); ++n, ++i) {
+		if (i < 1) arr[i] = *n;
+		else {
+			arr[1] *= *n;
+		}
+	}
+
+	return { arr[0], arr[1] };
+}
+
+NCHW NN_Shape::get_nchw() const {
+	int arr[4] = { 1, 1, 1, 1 };
+	int i = 0;
+
+	for (std::vector<int>::const_reverse_iterator n = _dims.rbegin(); n != _dims.rend(); ++n, ++i) {
+		if (i < 4) arr[3 - i] = *n;
+		else {
+			arr[0] *= *n;
+		}
+	}
+
+	return { arr[0], arr[1], arr[2], arr[3] };
+}
+
+NC NN_Shape::get_nc() const {
+	int arr[2] = { 1, 1 };
+	int i = 0;
+
+	for (NN_Shape::c_iterator n = _dims.begin(); n != _dims.end(); ++n, ++i) {
+		if (i < 1) arr[i] = *n;
+		else {
+			arr[1] *= *n;
+		}
+	}
+
+	return { arr[0], arr[1] };
 }
 
 const char* shape_to_str(const NN_Shape& shape) {

@@ -218,20 +218,21 @@ __global__ void __sum_gradient_2d(
 *******************************************/
 
 void transpose(
-	const nn_type* input,
-	nn_type* output,
-	cuint n,
-	cuint c,
-	cuint h,
-	cuint w
+	const GpuTensor<nn_type>& input,
+	GpuTensor<nn_type>& output
 ) {
+	const NCHW in = input.get_shape().get_nchw();
+
 	dim3 threads(BLOCK_1024);
-	dim3 blocks = get_grid_size(threads, n * c * h * w);
+	dim3 blocks = get_grid_size(threads, in.n * in.c * in.h * in.w);
 
 	__transpose<<<blocks, threads>>>(
-		input,
-		output,
-		n, c, h, w
+		input.get_ptr(),
+		output.get_ptr(),
+		in.n,
+		in.c,
+		in.h,
+		in.w
 	);
 }
 
@@ -239,27 +240,24 @@ void padding_dilation(
 	cudaStream_t s,
 	const nn_type* input,
 	nn_type* output,
-	cuint c,
-	cuint in_h,
-	cuint in_w,
-	cuint out_h,
-	cuint out_w,
+	const NCHW in,
+	const NCHW out,
 	cuint offset_x,
 	cuint offset_y,
 	cuint stride_x,
 	cuint stride_y
 ) {
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, in_w, in_h, c);
+	dim3 blocks = get_grid_size(threads, in.w, in.h, in.c);
 
 	__padding_dilation_2d<<<blocks, threads, 0, s>>>(
 		input,
 		output,
-		in_w,
-		in_h,
-		c,
-		out_w,
-		out_h,
+		in.w,
+		in.h,
+		in.c,
+		out.w,
+		out.h,
 		stride_x,
 		stride_y,
 		offset_x,
@@ -268,98 +266,102 @@ void padding_dilation(
 }
 
 void add_bias_1d(
-	const nn_type* input,
-	const nn_type* bias,
-	nn_type* output,
-	cuint n,
-	cuint c
+	const GpuTensor<nn_type>& input,
+	const GpuTensor<nn_type>& bias,
+	GpuTensor<nn_type>& output
 ) {
+	const NC in = input.get_shape().get_nc();
+
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, c, n);
+	dim3 blocks = get_grid_size(threads, in.c, in.n);
 
 	__add_bias_32x32<<<blocks, threads>>>(
-		input,
-		bias,
-		output,
-		n, c
+		input.get_ptr(),
+		bias.get_ptr(),
+		output.get_ptr(),
+		in.n,
+		in.c
 	);
 }
 
 void add_bias_2d(
 	NN_Stream& s,
-	const nn_type* input,
-	const nn_type* bias,
-	nn_type* output,
-	cuint n,
-	cuint c,
-	cuint h,
-	cuint w
+	const GpuTensor<nn_type>& input,
+	const GpuTensor<nn_type>& bias,
+	GpuTensor<nn_type>& output
 ) {
+	const NCHW in = input.get_shape().get_nchw();
 
-	if (h >= BLOCK_16 && w >= BLOCK_16 || c <= BLOCK_4) {
+	if (in.h >= BLOCK_16 && in.w >= BLOCK_16 || in.c <= BLOCK_4) {
 		dim3 threads(BLOCK_16, BLOCK_16, BLOCK_4);
-		dim3 blocks = get_grid_size(threads, w, h, c);
+		dim3 blocks = get_grid_size(threads, in.w, in.h, in.c);
 
-		for (uint i = 0; i < n; ++i) {
-			const nn_type* d_in = input + (i * c * h * w);
-			nn_type* d_out = output + (i * c * h * w);
+		for (uint i = 0; i < in.n; ++i) {
+			const nn_type* d_in = input.get_ptr() + (i * in.c * in.h * in.w);
+			nn_type* d_out = output.get_ptr() + (i * in.c * in.h * in.w);
 			
 			__add_bias_16x16x4<<<blocks, threads, 0, s[i % STREAMS]>>>(
 				d_in,
-				bias,
+				bias.get_ptr(),
 				d_out,
-				c, h, w
+				in.c, 
+				in.h, 
+				in.w
 			);
 		}
 	}
 	else {
 		dim3 threads(BLOCK_8, BLOCK_8, BLOCK_16);
-		dim3 blocks = get_grid_size(threads, w, h, c);
+		dim3 blocks = get_grid_size(threads, in.w, in.h, in.c);
 
-		for (uint i = 0; i < n; ++i) {
-			const nn_type* d_in = input + (i * c * h * w);
-			nn_type* d_out = output + (i * c * h * w);
+		for (uint i = 0; i < in.n; ++i) {
+			const nn_type* d_in = input.get_ptr() + (i * in.c * in.h * in.w);
+			nn_type* d_out = output.get_ptr() + (i * in.c * in.h * in.w);
 
 			__add_bias_8x8x16<<<blocks, threads, 0, s[i % STREAMS]>>>(
 				d_in,
-				bias,
+				bias.get_ptr(),
 				d_out,
-				c, h, w
+				in.c,
+				in.h,
+				in.w
 			);
 		}
 	}
 }
 
 void sum_gradient_1d(
-	const nn_type* input,
-	nn_type* output,
-	cuint n,
-	cuint c
+	const GpuTensor<nn_type>& input,
+	GpuTensor<nn_type>& output
 ) {
+	const NC in = input.get_shape().get_nc();
+
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, c);
+	dim3 blocks = get_grid_size(threads, in.c);
 
 	__sum_gradient_1d<<<blocks, threads>>>(
-		input,
-		output,
-		n, c
+		input.get_ptr(),
+		output.get_ptr(),
+		in.n,
+		in.c
 	);
 }
 
 void sum_gradient_2d(
-	const nn_type* input,
-	nn_type* output,
-	cuint n,
-	cuint c,
-	cuint h,
-	cuint w
+	const GpuTensor<nn_type>& input,
+	GpuTensor<nn_type>& output
 ) {
+	const NCHW in = input.get_shape().get_nchw();
+
 	dim3 threads(BLOCK_16, BLOCK_16, BLOCK_4);
-	dim3 blocks(c);
+	dim3 blocks(in.c);
 
 	__sum_gradient_2d<<<blocks, threads>>>(
-		input,
-		output,
-		n, c, h, w
+		input.get_ptr(),
+		output.get_ptr(),
+		in.n,
+		in.c,
+		in.h,
+		in.w
 	);
 }

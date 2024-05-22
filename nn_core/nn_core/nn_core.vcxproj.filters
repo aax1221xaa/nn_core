@@ -57,6 +57,12 @@
     <ClCompile Include="cpp_source\mnist.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
+    <ClCompile Include="cpp_source\nn_tensor.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\nn_shape.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpp_source\CudaCheck.h">
@@ -108,6 +114,12 @@
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\cuda_common.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\nn_tensor.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\nn_shape.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
   </ItemGroup>

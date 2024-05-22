@@ -2,7 +2,7 @@
 
 #include "cpp_source/nn_model.h"
 #include "cpp_source/nn_layer.h"
-#include "cuda_source/convolution.cuh"
+
 
 int main() {
 	try {
@@ -32,7 +32,7 @@ int main() {
 		model.summary();
 	}
 	catch (Exception& e) {
-		e.Put();
+		e.put();
 	}
 
 	cudaDeviceReset();

@@ -2,6 +2,18 @@
 #include "cuda_common.h"
 
 
+struct NCHW {
+	int n;
+	int c;
+	int h;
+	int w;
+};
+
+struct NC {
+	int n;
+	int c;
+};
+
 class NN_Shape {
 private:
 	std::vector<int> _dims;
@@ -20,8 +32,9 @@ public:
 	NN_Shape& operator=(NN_Shape&& p);
 	int& operator[](int index);
 	const int& operator[](int index) const;
+	bool operator!=(const NN_Shape& shape) const;
 
-	const int get_len() const;
+	int get_len() const;
 	size_t total_size() const;
 	std::ostream& put_shape(std::ostream& os) const;
 	bool is_empty() const;
@@ -40,6 +53,14 @@ public:
 	void push_back(int n);
 	void push_back(const NN_Shape& p);
 	void push_back(const std::initializer_list<int>& list);
+
+	const std::vector<int>& get_vector();
+
+	NCHW get_nchw();
+	NC get_nc();
+
+	NCHW get_nchw() const;
+	NC get_nc() const;
 };
 
 const char* shape_to_str(const NN_Shape& shape);

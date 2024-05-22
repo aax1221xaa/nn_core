@@ -1,32 +1,33 @@
 ﻿#ifndef _CONVOLUTION_CUH_
 #define _CONVULUTION_CUH_
 
-#include "../cpp_source/cuda_common.h"
+#include "../cpp_source/nn_base.h"
 
 
-/**********************************************
+/**********************************************/
+/*                                            */
+/*                 NN_Conv2D                  */
+/*                                            */
+/**********************************************/
 
-				    Conv2d
+class NN_Conv2D : public NN_Layer {
+public:
+	const int _amounts;
+	const NN_Shape _filter_size;
+	const NN_Shape _stride;
+	const Pad _pad;
 
-**********************************************/
+	GpuTensor<nn_type> _filter;
+	GpuTensor<nn_type> _bias;
 
-void conv2d(
-	cudaStream_t s,
-	cuint* indice,
-	const nn_type* input,
-	const nn_type* kernel,
-	nn_type* output,
-	cuint in_c,
-	cuint in_h,
-	cuint in_w,
-	cuint k_h,
-	cuint k_w,
-	cuint out_c,
-	cuint out_h,
-	cuint out_w,
-	cuint h_stride,
-	cuint w_stride
-);
+	static cuint* get_indice(const NCHW& in, const NCHW& k);
+
+	NN_Conv2D(int amounts, const NN_Shape& filter_size, const NN_Shape& stride, Pad pad, const char* name);
+
+	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
+	void build(const std::vector<NN_Shape>& input_shape);
+	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+};
 
 /**********************************************
 

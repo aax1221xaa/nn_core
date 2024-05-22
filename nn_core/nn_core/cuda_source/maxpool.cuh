@@ -1,31 +1,30 @@
 #ifndef MAXPOOL_CUH
 #define MAXPOOL_CUH
 
-#include "../cpp_source/cuda_common.h"
+#include "../cpp_source/nn_base.h"
 
 
-/**********************************************
+/**********************************************/
+/*                                            */
+/*                NN_Maxpool2D                */
+/*                                            */
+/**********************************************/
 
-				    Maxpool2d
+class NN_Maxpool2D : public NN_Layer {
+public:
+	const Pad _pad;
 
-**********************************************/
+	const NN_Shape _k_size;
+	const NN_Shape _stride;
 
-void maxpool2d(
-	cudaStream_t s,
-	const nn_type* input,
-	nn_type* output,
-	uint* max_indice,
-	cuint in_h,
-	cuint in_w,
-	cuint out_h,
-	cuint out_w,
-	cuint h_kernel,
-	cuint w_kernel,
-	cuint h_stride,
-	cuint w_stride,
-	cuint h_tile,
-	cuint w_tile
-);
+	GpuTensor<uint> _indice;
+
+	NN_Maxpool2D(const NN_Shape& k_size, const NN_Shape& stride, const Pad pad, const char* name);
+
+	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
+	void build(const std::vector<NN_Shape>& input_shape);
+	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+};
 
 /**********************************************
 
