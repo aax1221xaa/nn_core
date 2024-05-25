@@ -275,6 +275,9 @@ void add_bias_1d(
 	dim3 threads(BLOCK_32, BLOCK_32);
 	dim3 blocks = get_grid_size(threads, in.c, in.n);
 
+	check_cuda(cudaDeviceSynchronize());
+	check_cuda(cudaGetLastError());
+
 	__add_bias_32x32<<<blocks, threads>>>(
 		input.get_ptr(),
 		bias.get_ptr(),
@@ -282,6 +285,9 @@ void add_bias_1d(
 		in.n,
 		in.c
 	);
+
+	check_cuda(cudaDeviceSynchronize());
+	check_cuda(cudaGetLastError());
 }
 
 void add_bias_2d(

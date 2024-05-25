@@ -4,9 +4,6 @@
 #include <memory>
 
 
-
-enum { boolean, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float16, float32, float64 };
-
 template <typename _T>
 class GpuTensor;
 
@@ -31,7 +28,7 @@ public:
 
 	Tensor();
 	Tensor(const NN_Shape& shape);
-	Tensor(const std::initializer_list<int>& shape);
+	//	Tensor(const std::initializer_list<int>& shape);
 	Tensor(const Tensor& p);
 	Tensor(Tensor&& p);
 
@@ -55,6 +52,9 @@ public:
 	std::ostream& put(std::ostream& os);
 
 	void resize(const NN_Shape& shape);
+
+	template <typename _cT>
+	Tensor<_cT> cast() const;
 };
 
 template <typename _T>
@@ -552,6 +552,30 @@ void Tensor<_T>::resize(const NN_Shape& shape) {
 	_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
 }
 
+template <typename _T>
+template <typename _cT>
+Tensor<_cT> Tensor<_T>::cast() const {
+	Tensor<_cT> dst(calc_shape(_indice));
+	Tensor<_T> src(calc_shape(_indice));
+
+	src = *this;
+	
+	tbb::parallel_for(
+		tbb::blocked_range<size_t>(0, calc_size(_indice)),
+		[&](const tbb::blocked_range<size_t>& q) {
+
+		const _T* p_src = src.get_ptr();
+		_cT* p_dst = dst.get_ptr();
+
+		for (size_t i = q.begin(); i < q.end(); ++i) {
+			p_dst[i] = (_cT)(p_src[i]);
+		}
+	}
+	);
+
+	return dst;
+}
+
 
 /**********************************************/
 /*                                            */
@@ -717,6 +741,10 @@ void GpuTensor<_T>::resize(const NN_Shape& shape) {
 }
 
 template <typename _T>
-std::shared_ptr<_T[]>& Tensor<_T>::get_data() {
-	return _data;
+GpuTensor<_T> GpuTensor<_T>::zeros(const NN_Shape& shape) {
+	GpuTensor<_T> tmp(shape);
+
+	check_cuda(cudaMemset(tmp.get_ptr(), 0, sizeof(_T) * shape.total_size()));
+
+	return tmp;
 }

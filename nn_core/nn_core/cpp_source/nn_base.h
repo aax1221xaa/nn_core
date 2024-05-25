@@ -3,7 +3,9 @@
 #include "nn_optimizer.h"
 
 
-#define Layer_t	List<NN_Link::NN_Ptr>
+struct NN_Ptr;
+
+typedef	List<NN_Ptr> Layer_t;
 
 
 /**********************************************/
@@ -19,11 +21,10 @@ public:
 	NN_Layer(const char* layer_name);
 	virtual ~NN_Layer();
 
-	virtual void get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape);
-	virtual void build(const std::vector<nn_shape>& input_shape);
-	virtual void run_forward(NN_Stream& st, const std::vector<GpuTensor>& input, std::vector<GpuTensor>& output);
-	virtual void run_forward(const Tensor& src, GpuTensor& dst);
-	virtual void run_backward(NN_Stream& st, const std::vector<GpuTensor>& d_output, std::vector<GpuTensor>& d_input);
+	virtual void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
+	virtual void build(const std::vector<NN_Shape>& input_shape);
+	virtual void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	virtual void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
 };
 
 
@@ -40,11 +41,34 @@ public:
 	NN_Input(const NN_Shape& input_size, int batch = -1, const char* _layer_name = "Input");
 	~NN_Input();
 
-	void get_output_shape(const std::vector<nn_shape>& input_shape, std::vector<nn_shape>& output_shape);
-	void build(const std::vector<nn_shape>& input_shape);
-	void run_forward(NN_Stream& st, const std::vector<GpuTensor>& input, std::vector<GpuTensor>& output);
-	void run_forward(const Tensor& src, GpuTensor& dst);
+	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
+	void build(const std::vector<NN_Shape>& input_shape);
+	template <typename _sT, typename _dT>
+	void trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) const;
 };
+
+template <typename _sT, typename _dT>
+void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) const {
+	Tensor<_sT> src(sample.get_shape());
+	Tensor<_dT> dst(output.get_shape());
+
+	src = sample;
+
+	tbb::parallel_for(
+		tbb::blocked_range<size_t>(0, src.get_shape().get_len()),
+		[&](const tbb::blocked_range<size_t>& q) {
+		
+		const _sT* p_src = src.get_ptr();
+		_dT* p_dst = dst.get_ptr();
+
+		for (size_t i = q.begin(); i < q.end(); ++i) {
+			p_dst[i] = (_dT)(p_src[i]);
+		}
+	}
+	);
+
+	output = dst;
+}
 
 
 /**********************************************/
@@ -159,4 +183,4 @@ NN_Link& NN_Manager::operator()(const _T& layer) {
 /*                                            */
 /**********************************************/
 
-void set_random_uniform(GpuTensor& g_mat);
+void set_random_uniform(GpuTensor<nn_type>& tensor, nn_type a, nn_type b);

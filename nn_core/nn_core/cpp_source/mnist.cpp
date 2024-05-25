@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 
 
-MNIST::DataSet MNIST::read_file(const std::string& img_path, const std::string& label_path) {
+DataSet<uchar, uchar> MNIST::read_file(const std::string& img_path, const std::string& label_path) {
 	std::ifstream img_fp(img_path, std::ios::binary);
 	std::ifstream label_fp(label_path, std::ios::binary);
 
@@ -51,7 +51,7 @@ MNIST::DataSet MNIST::read_file(const std::string& img_path, const std::string& 
 	std::cout << "amounts: " << label_head[1] << std::endl;
 	std::cout << std::endl;
 	
-	DataSet samples;
+	DataSet<uchar, uchar> samples;
 
 	samples._x.resize({ img_head[1], img_head[2], img_head[3] });
 	samples._y.resize({ img_head[1] });
@@ -80,94 +80,10 @@ MNIST::MNIST(const std::string& dir_path) {
 	}
 }
 
-MNIST::Sample MNIST::get_train_samples(int n_batch, int n_iter, bool shuffle) const {
-	return MNIST::Sample(_train, n_batch, n_iter, shuffle);
+Sample<uchar, uchar> MNIST::get_train_samples(int n_batch, int n_iter, bool shuffle) const {
+	return Sample<uchar, uchar>(_train, n_batch, n_iter, shuffle);
 }
 
-MNIST::Sample MNIST::get_test_samples(int n_batch, int n_iter, bool shuffle) const {
-	return MNIST::Sample(_test, n_batch, n_iter, shuffle);
-}
-
-const MNIST::DataSet MNIST::Sample::get_batch_samples(const DataSet& origin, int index, int n_batch, bool shuffle) {
-	DataSet sample;
-
-	const NN_Shape& shape = origin._x.get_shape();
-
-	const int amounts = shape[0];
-	const int img_h = shape[1];
-	const int img_w = shape[2];
-
-	sample._x.resize({ n_batch, img_h, img_w });
-	sample._y.resize({ n_batch });
-
-	std::vector<int> batch_indice;
-
-	if (shuffle) {
-		batch_indice = random_choice(0, amounts, n_batch, false);
-	}
-	else {
-		batch_indice.resize(n_batch);
-
-		int start = (n_batch * index) % amounts;
-
-		for (int i = 0; i < n_batch; ++i) {
-			batch_indice[i] = (start + i) % amounts;
-		}
-	}
-
-	sample._x = origin._x(batch_indice);
-
-	return sample;
-}
-
-MNIST::Sample::Sample(const DataSet& current_samples, int n_batch, int n_iter, bool shuffle) :
-	_origin(current_samples),
-	_n_batch(n_batch),
-	_n_iter(n_iter),
-	_shuffle(shuffle)
-{
-}
-
-typename MNIST::Sample::Iterator MNIST::Sample::begin() const {
-	return MNIST::Sample::Iterator(*this, 0);
-}
-
-typename MNIST::Sample::Iterator MNIST::Sample::end() const {
-	return MNIST::Sample::Iterator(*this, _n_iter);
-}
-
-const MNIST::DataSet MNIST::Sample::operator[](int index) const {
-	if (index >= _n_iter) {
-		ErrorExcept(
-			"[MNIST::Sample::operator[]] Index[%d] is out of range. (%d ~ %d)",
-			index,
-			0, _n_iter
-		);
-	}
-
-	return get_batch_samples(_origin, index, _n_batch, _shuffle);
-}
-
-MNIST::Sample::Iterator::Iterator(const Sample& samples, int n_iter) :
-	_samples(samples),
-	_n_iter(n_iter)
-{
-}
-
-MNIST::Sample::Iterator::Iterator(const typename Iterator& p) :
-	_samples(p._samples),
-	_n_iter(p._n_iter)
-{
-}
-
-bool MNIST::Sample::Iterator::operator!=(const typename Iterator& p) const {
-	return _n_iter != p._n_iter;
-}
-
-void MNIST::Sample::Iterator::operator++() {
-	++_n_iter;
-}
-
-const MNIST::DataSet MNIST::Sample::Iterator::operator*() const {
-	return get_batch_samples(_samples._origin, _n_iter, _samples._n_batch, _samples._shuffle);
+Sample<uchar, uchar> MNIST::get_test_samples(int n_batch, int n_iter, bool shuffle) const {
+	return Sample<uchar, uchar>(_test, n_batch, n_iter, shuffle);
 }

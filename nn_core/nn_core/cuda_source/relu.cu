@@ -69,4 +69,7 @@ void NN_ReLU::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& 
 		output[0].get_ptr(),
 		size
 	);
+
+	//check_cuda(cudaDeviceSynchronize());
+	//check_cuda(cudaGetLastError());
 }

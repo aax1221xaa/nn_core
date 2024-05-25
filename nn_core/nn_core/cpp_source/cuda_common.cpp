@@ -95,7 +95,7 @@ NN_Stream::NN_Stream(int amounts) {
 
 		NN_Check::set_flag(false);
 
-		e.put();
+		throw e;
 	}
 }
 

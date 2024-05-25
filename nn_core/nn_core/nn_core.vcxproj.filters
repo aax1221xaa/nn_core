@@ -63,6 +63,9 @@
     <ClCompile Include="cpp_source\nn_shape.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
+    <ClCompile Include="cpp_source\nn_sample.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpp_source\CudaCheck.h">
@@ -120,6 +123,9 @@
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_shape.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\nn_sample.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
   </ItemGroup>

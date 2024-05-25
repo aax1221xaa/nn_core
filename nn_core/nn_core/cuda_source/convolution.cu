@@ -194,7 +194,7 @@ void NN_Conv2D::build(const std::vector<NN_Shape>& input_shape) {
 	_filter.resize({ _amounts, shape[1], _filter_size[0], _filter_size[1] });
 	_bias = GpuTensor<nn_type>::zeros({ _amounts });
 
-	set_random_uniform(_filter, -0.1, 0.1);
+	set_random_uniform(_filter, -0.1f, 0.1f);
 }
 
 void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
@@ -227,7 +227,7 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 
 		cuint* g_indice = get_indice(pad, k);
 
-		for (uint n = 0; n < in.n; ++n) {
+		for (int n = 0; n < in.n; ++n) {
 			const nn_type* input_data = m_input.get_ptr() + (n * in.c * in.h * in.w);
 			nn_type* output_data = m_output.get_ptr() + (n * out.c * out.h * out.w);
 
@@ -247,6 +247,10 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 					_stride[0] == 1 ? (in.h - pad.h) / 2 : 0,
 					0, 0
 				);
+
+				//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
+				//check_cuda(cudaGetLastError());
+
 				__conv2d<<<blocks, threads, 0, st[n % STREAMS]>>>(
 					g_indice,
 					pad_space,
@@ -263,6 +267,9 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 					_stride[0],
 					_stride[1]
 				);
+
+				//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
+				//check_cuda(cudaGetLastError());
 
 				check_cuda(cudaFreeAsync(pad_space, st[n % STREAMS]));
 			}
@@ -283,13 +290,16 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 					_stride[0],
 					_stride[1]
 				);
+
+				//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
+				//check_cuda(cudaGetLastError());
 			}
 		}
 	}
 	else {
 		cuint* g_indice = get_indice(in, k);
 
-		for (uint n = 0; n < in.n; ++n) {
+		for (int n = 0; n < in.n; ++n) {
 			const nn_type* in_data = m_input.get_ptr() + (n * in.c * in.h * in.w);
 			nn_type* out_data = m_output.get_ptr() + (n * out.c * out.h * out.w);
 

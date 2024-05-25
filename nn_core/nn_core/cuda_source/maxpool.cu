@@ -244,6 +244,8 @@ void NN_Maxpool2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_typ
 				tile_h,
 				tile_w
 			);
+			//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
+			//check_cuda(cudaGetLastError());
 		}
 	}
 }

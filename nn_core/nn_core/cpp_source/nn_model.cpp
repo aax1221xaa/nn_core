@@ -389,7 +389,3 @@ void Model::summary() {
 
 	_manager.clear_shapes();
 }
-
-std::vector<Tensor<nn_type>> Model::predict(const std::vector<Tensor<nn_type>>& x) {
-	return std::vector<Tensor<nn_type>>();
-}

@@ -1,4 +1,5 @@
 #include "nn_base.h"
+#include <opencv2/opencv.hpp>
 #include <random>
 
 
@@ -36,13 +37,7 @@ void NN_Layer::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>&
 	);
 }
 
-void NN_Layer::run_forward(const Tensor& src, GpuTensor& dst) {
-	ErrorExcept(
-		"[NN_Layer::run_forward] Make this function."
-	);
-}
-
-void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor>& d_output, std::vector<GpuTensor>& d_input) {
+void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input) {
 	ErrorExcept(
 		"[NN_Layer::run_backward] Make this function."
 	);
@@ -87,17 +82,18 @@ void NN_Input::get_output_shape(const std::vector<NN_Shape>& input_shape, std::v
 			);
 		}
 
-		nn_shape out_shape(_shape.size(), 0);
-		
-		if (!is_valid_shape(input_shape[0])) {
-			ErrorExcept(
-				"[NN_Input::get_output_shape] Input dimensions must be all grater than 0 but %s.",
-				shape_to_str(input_shape[0])
-			);
-		}
+		NN_Shape out_shape(_shape.get_len());
 
-		for (int i = 0; i < _shape.size(); ++i) {
-			if (_shape[i] < 0) out_shape[i] = input_shape[0][i];
+		int i = 0;
+		for (const int& n : in_shape) {
+			if (n < 0) {
+				ErrorExcept(
+					"[NN_Input::get_output_shape] The dimensions of inputs must be greater than 0. %s",
+					shape_to_str(in_shape)
+				);
+			}
+
+			if (_shape[i] < 0) out_shape[i] = n;
 			else out_shape[i] = _shape[i];
 		}
 
@@ -105,17 +101,8 @@ void NN_Input::get_output_shape(const std::vector<NN_Shape>& input_shape, std::v
 	}
 }
 
-void NN_Input::build(const std::vector<nn_shape>& input_shape) {
-	std::cout << "build: " << _layer_name << std::endl;
-}
+void NN_Input::build(const std::vector<NN_Shape>& input_shape) {
 
-void NN_Input::run_forward(NN_Stream& st, const std::vector<GpuTensor>& input, std::vector<GpuTensor>& output) {
-	output = input;
-}
-
-void NN_Input::run_forward(const Tensor& src, GpuTensor& dst) {
-	dst.upload(src);
-	
 }
 
 

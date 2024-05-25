@@ -2,11 +2,14 @@
 
 #include "cpp_source/nn_model.h"
 #include "cpp_source/nn_layer.h"
+#include "cpp_source/mnist.h"
 
 
 int main() {
 	try {
 		NN_Manager nn;
+		MNIST mnist("E:\\data_set\\mnist");
+		const Sample<uchar, uchar> train = mnist.get_train_samples(64, 10);
 
 		Layer_t x_input = nn.input({ 1, 28, 28 }, -1, "input");
 
@@ -29,7 +32,7 @@ int main() {
 
 		Model model(nn, x_input, x, "model_1");
 
-		model.summary();
+		model.predict(train);
 	}
 	catch (Exception& e) {
 		e.put();

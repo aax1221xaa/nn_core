@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include <opencv2/opencv.hpp>
 #include "CudaCheck.h"
 
 
@@ -18,6 +17,7 @@
 typedef const int cint;
 typedef unsigned int uint;
 typedef const unsigned int cuint;
+typedef float nn_type;
 
 dim3 get_grid_size(const dim3 block, unsigned int x = 1, unsigned int y = 1, unsigned int z = 1);
 

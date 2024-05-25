@@ -76,9 +76,12 @@ void NN_Dense::build(const std::vector<NN_Shape>& input_shape) {
 
 
 	_weight = GpuTensor<nn_type>({ shape[1], _amounts });
-	_bias = GpuTensor<nn_type>({ _amounts });
+	_bias = GpuTensor<nn_type>(NN_Shape({ _amounts }));
 	set_random_uniform(_weight, 0.1f, -0.1f);
 
+	Tensor<nn_type> tmp(NN_Shape({ _amounts }));
+	tmp = 0.f;
+	_bias = tmp;
 }
 
 void NN_Dense::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {

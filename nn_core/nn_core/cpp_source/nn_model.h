@@ -1,5 +1,6 @@
 #pragma once
 #include "nn_base.h"
+#include "nn_sample.h"
 #include "nn_optimizer.h"
 #include "nn_loss.h"
 
@@ -51,5 +52,88 @@ public:
 	/**************************************************************/
 
 	void summary();
-	std::vector<Tensor<nn_type>> predict(const std::vector<Tensor<nn_type>>& x);
+	template <typename _xT, typename _yT>
+	std::vector<Tensor<nn_type>> predict(const Sample<_xT, _yT>& sample);
 };
+
+template <typename _xT, typename _yT>
+std::vector<Tensor<nn_type>> Model::predict(const Sample<_xT, _yT>& sample) {
+	_manager.set_reserved_shapes();
+	_manager.set_reserved_outputs();
+
+	int i = 0;
+
+	for (const DataSet<_xT, _yT>& data : sample) {
+		if (i == 0) {
+			const NN_Shape shape = data._x.get_shape();
+
+			for (NN_Link* node : _layers) {
+				std::vector<NN_Shape>& m_output_shape = _manager.get_node_shape(node->get_index());
+				std::vector<NN_Shape> m_input_shape;
+				std::vector<GpuTensor<nn_type>>& m_output = _manager.get_node_output(node->get_index());
+
+				if (node->get_prev_nodes().size() > 0) {
+					for (NN_Link* p_prev_node : node->get_prev_nodes()) {
+						size_t j = 0;
+
+						for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
+							if (p_next_node == node) break;
+							else ++j;
+						}
+						m_input_shape.push_back(_manager.get_node_shape(p_prev_node->get_index())[j]);
+					}
+				}
+
+				node->get_layer().get_output_shape(m_input_shape, m_output_shape);
+				node->get_layer().build(m_input_shape);
+
+				for (NN_Shape& m_shape : m_output_shape) {
+					m_shape[0] = shape[0];
+					m_output.push_back(GpuTensor<nn_type>(m_shape));
+				}
+			}
+		}
+
+		std::cout << "Iteration: " << i << std::endl;
+		const std::vector<NN_Input*>& inputs = _manager.get_input_layers();
+
+		int m = 0;
+		for (NN_Link* node : _layers) {
+			std::vector<GpuTensor<nn_type>>& m_output = _manager.get_node_output(node->get_index());
+			std::vector<GpuTensor<nn_type>> m_input;
+
+			if (node->get_prev_nodes().size() > 0) {
+				for (NN_Link* p_prev_node : node->get_prev_nodes()) {
+					int j = 0;
+
+					for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
+						if (p_next_node == node) break;
+						else ++j;
+					}
+
+					m_input.push_back(_manager.get_node_output(p_prev_node->get_index())[j]);
+				}
+
+				node->get_layer().run_forward(_manager.get_streams(), m_input, m_output);
+			}
+			else {
+				int j = 0;
+				for (const NN_Input* p_input : inputs) {
+					if (&(node->get_layer()) == p_input) {
+						p_input->trans_data(data._x, m_output[0]);
+						break;
+					}
+					else ++j;
+				}
+			}
+			++m;
+		}
+
+		++i;
+	}
+
+	check_cuda(cudaDeviceSynchronize());
+	check_cuda(cudaGetLastError());
+
+	return std::vector<Tensor<nn_type>>();
+}
