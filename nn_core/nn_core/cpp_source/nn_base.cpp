@@ -286,7 +286,7 @@ void set_random_uniform(GpuTensor<nn_type>& tensor, nn_type a, nn_type b) {
 
 	cv::Mat tmp(tensor.get_shape().get_vector(), CV_32FC1);
 
-	rng.fill(tmp, cv::RNG::UNIFORM, a, b);
+	rng.fill(tmp, cv::RNG::UNIFORM, a, b, true);
 
 	check_cuda(
 		cudaMemcpy(

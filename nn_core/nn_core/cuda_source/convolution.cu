@@ -225,6 +225,9 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 			pad.w = (in.w / _stride[1]) + k.w;
 		}
 
+		printf("input=[%d, %d, %d, %d]\n", in.n, in.c, in.h, in.w);
+		printf("pad=[%d, %d, %d, %d]\n", pad.n, pad.c, pad.h, pad.w);
+
 		cuint* g_indice = get_indice(pad, k);
 
 		for (int n = 0; n < in.n; ++n) {
@@ -243,9 +246,9 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 					pad_space,
 					in,
 					pad,
-					_stride[1] == 1 ? (in.w - pad.w) / 2 : 0,
-					_stride[0] == 1 ? (in.h - pad.h) / 2 : 0,
-					0, 0
+					_stride[1] == 1 ? (pad.w - in.w) / 2 : 0,
+					_stride[0] == 1 ? (pad.h - in.h) / 2 : 0,
+					1, 1
 				);
 
 				//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
@@ -322,7 +325,7 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 		}
 	}
 
-	add_bias_2d(st, m_input, _bias, m_output);
+	add_bias_2d(st, m_output, _bias, m_output);
 }
 
 /**********************************************

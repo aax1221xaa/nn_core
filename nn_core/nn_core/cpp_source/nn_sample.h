@@ -40,7 +40,8 @@ public:
 
 	const DataSet<_xT, _yT> operator[](int index) const;
 
-	int get_amounts();
+	size_t get_amounts() const;
+	size_t get_iteration() const;
 };
 
 template <typename _xT, typename _yT>
@@ -138,6 +139,11 @@ const DataSet<_xT, _yT> Sample<_xT, _yT>::operator[](int index) const {
 }
 
 template <typename _xT, typename _yT>
-int Sample<_xT, _yT>::get_amounts() {
+size_t Sample<_xT, _yT>::get_amounts() const {
 	return _n_batch;
+}
+
+template <typename _xT, typename _yT>
+size_t Sample<_xT, _yT>::get_iteration() const {
+	return _n_iter;
 }

@@ -55,14 +55,14 @@ void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) con
 	src = sample;
 
 	tbb::parallel_for(
-		tbb::blocked_range<size_t>(0, src.get_shape().get_len()),
+		tbb::blocked_range<size_t>(0, src.get_shape().total_size()),
 		[&](const tbb::blocked_range<size_t>& q) {
 		
 		const _sT* p_src = src.get_ptr();
 		_dT* p_dst = dst.get_ptr();
 
 		for (size_t i = q.begin(); i < q.end(); ++i) {
-			p_dst[i] = (_dT)(p_src[i]);
+			p_dst[i] = (_dT)(p_src[i]) / 255.f - 0.5f;
 		}
 	}
 	);
