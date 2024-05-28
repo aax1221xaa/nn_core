@@ -50,9 +50,10 @@ void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 /*                                            */
 /**********************************************/
 
-NN_Input::NN_Input(const NN_Shape& input_size, int batch, const char* _layer_name) :
+NN_Input::NN_Input(const NN_Shape& input_size, int batch, const char* _layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&)) :
 	NN_Layer(_layer_name),
-	_shape(input_size)
+	_shape(input_size),
+	p_convert(convert_f)
 {
 	_shape.push_front(batch);
 }
@@ -260,8 +261,8 @@ void NN_Manager::clear_outputs() {
 	_outputs.clear();
 }
 
-Layer_t NN_Manager::input(const NN_Shape& input_size, int batch, const char* layer_name) {
-	NN_Input* layer = new NN_Input(input_size, batch, layer_name);
+Layer_t NN_Manager::input(const NN_Shape& input_size, int batch, const char* layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&)) {
+	NN_Input* layer = new NN_Input(input_size, batch, layer_name, convert_f);
 	NN_Link* node = new NN_Link;
 
 	_input_layers.push_back(layer);

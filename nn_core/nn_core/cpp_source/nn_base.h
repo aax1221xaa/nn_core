@@ -38,7 +38,9 @@ class NN_Input : public NN_Layer {
 public:
 	NN_Shape _shape;
 
-	NN_Input(const NN_Shape& input_size, int batch = -1, const char* _layer_name = "Input");
+	void(*p_convert)(const void* p_src, void* p_dst, const tbb::blocked_range<size_t>& q);
+
+	NN_Input(const NN_Shape& input_size, int batch = -1, const char* _layer_name = "Input", void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&) = NULL);
 	~NN_Input();
 
 	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
@@ -61,9 +63,7 @@ void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) con
 		const _sT* p_src = src.get_ptr();
 		_dT* p_dst = dst.get_ptr();
 
-		for (size_t i = q.begin(); i < q.end(); ++i) {
-			p_dst[i] = (_dT)(p_src[i]) / 255.f - 0.5f;
-		}
+		(*p_convert)(p_src, p_dst, q);
 	}
 	);
 
@@ -157,7 +157,7 @@ public:
 	void clear_shapes();
 	void clear_outputs();
 
-	Layer_t input(const NN_Shape& input_size, int batch, const char* layer_name);
+	Layer_t input(const NN_Shape& input_size, int batch, const char* layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&) = NULL);
 
 	template <class _T>
 	NN_Link& operator()(const _T& layer);

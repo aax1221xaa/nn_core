@@ -10,7 +10,13 @@ int main() {
 		MNIST mnist("E:\\data_set\\mnist");
 		NN_Manager nn;
 
-		Layer_t x_input = nn.input({ 1, 28, 28 }, -1, "input");
+		auto convert_func = [](const void* src, void* dst, const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				((nn_type*)dst)[i] = (nn_type)((const uchar*)src)[i] / 255.f - 0.5f;
+			}
+		};
+
+		Layer_t x_input = nn.input(NN_Shape({ 1, 28, 28 }), -1, "input", convert_func);
 
 		Layer_t x = nn(NN_Conv2D(32, { 3, 3 }, { 1, 1 }, Pad::VALID, "conv_1"))(x_input);
 		x = nn(NN_ReLU("relu_1"))(x);
