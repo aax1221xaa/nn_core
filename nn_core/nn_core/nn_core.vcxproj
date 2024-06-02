@@ -41,12 +41,14 @@
     <Import Project="..\..\..\..\CUDA_11_DEBUG.props" />
     <Import Project="..\OpenCV_453D.props" />
     <Import Project="..\TBB_DEBUG.props" />
+    <Import Project="HDF5D.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\CUDA_11_RELEASE.props" />
     <Import Project="..\TBB.props" />
     <Import Project="..\OpenCV_453.props" />
+    <Import Project="HDF5.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />

@@ -60,7 +60,7 @@ const DataSet<_xT, _yT> Sample<_xT, _yT>::get_batch_samples(const DataSet<_xT, _
 	std::vector<int> batch_indice;
 
 	if (shuffle) {
-		batch_indice = random_choice(0, amounts, n_batch, false);
+		batch_indice = random_choice(0, amounts, n_batch, shuffle);
 	}
 	else {
 		batch_indice.resize(n_batch);

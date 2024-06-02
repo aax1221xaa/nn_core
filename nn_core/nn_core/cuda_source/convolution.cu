@@ -208,6 +208,10 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 	dim3 threads(BLOCK_32, BLOCK_32);
 	dim3 blocks = get_grid_size(threads, out.h * out.w, out.c);
 
+	const nn_type* input_data = m_input.get_ptr();
+	nn_type* output_data = m_output.get_ptr();
+	const nn_type* filter_data = _filter.get_ptr();
+
 	if (_pad == Pad::SAME) {
 		NCHW pad = { in.n, in.c, 0, 0 };
 
@@ -231,18 +235,18 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 		cuint* g_indice = get_indice(pad, k);
 
 		for (int n = 0; n < in.n; ++n) {
-			const nn_type* input_data = m_input.get_ptr() + (n * in.c * in.h * in.w);
-			nn_type* output_data = m_output.get_ptr() + (n * out.c * out.h * out.w);
+			const nn_type* in_data = input_data + (n * in.c * in.h * in.w);
+			nn_type* out_data = output_data + (n * out.c * out.h * out.w);
 
 			if (pad.h != in.h || pad.w != in.w) {
 				nn_type* pad_space = NULL;
 
-				check_cuda(cudaMallocAsync(&pad_space, sizeof(nn_type) * pad.c * pad.h * pad.w, st[n % STREAMS]));
-				check_cuda(cudaMemsetAsync(pad_space, 0, sizeof(nn_type) * pad.c * pad.h * pad.w, st[n % STREAMS]));
+				cudaMallocAsync(&pad_space, sizeof(nn_type) * pad.c * pad.h * pad.w, st[n % STREAMS]);
+				cudaMemsetAsync(pad_space, 0, sizeof(nn_type) * pad.c * pad.h * pad.w, st[n % STREAMS]);
 
 				padding_dilation(
 					st[n % STREAMS],
-					input_data,
+					in_data,
 					pad_space,
 					in,
 					pad,
@@ -257,8 +261,8 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 				__conv2d<<<blocks, threads, 0, st[n % STREAMS]>>>(
 					g_indice,
 					pad_space,
-					_filter.get_ptr(),
-					output_data,
+					filter_data,
+					out_data,
 					pad.h,
 					pad.w,
 					k.n,
@@ -274,14 +278,14 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 				//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
 				//check_cuda(cudaGetLastError());
 
-				check_cuda(cudaFreeAsync(pad_space, st[n % STREAMS]));
+				cudaFreeAsync(pad_space, st[n % STREAMS]);
 			}
 			else {
 				__conv2d<<<blocks, threads, 0, st[n % STREAMS]>>>(
 					g_indice,
-					input_data,
-					_filter.get_ptr(),
-					output_data,
+					in_data,
+					filter_data,
+					out_data,
 					in.h,
 					in.w,
 					k.n,
@@ -303,13 +307,13 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 		cuint* g_indice = get_indice(in, k);
 
 		for (int n = 0; n < in.n; ++n) {
-			const nn_type* in_data = m_input.get_ptr() + (n * in.c * in.h * in.w);
-			nn_type* out_data = m_output.get_ptr() + (n * out.c * out.h * out.w);
+			const nn_type* in_data = input_data + (n * in.c * in.h * in.w);
+			nn_type* out_data = output_data + (n * out.c * out.h * out.w);
 
 			__conv2d<<<blocks, threads, 0, st[n % STREAMS]>>>(
 				g_indice,
 				in_data,
-				_filter.get_ptr(),
+				filter_data,
 				out_data,
 				in.h,
 				in.w,

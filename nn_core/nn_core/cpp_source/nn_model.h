@@ -3,6 +3,7 @@
 #include "nn_sample.h"
 #include "nn_optimizer.h"
 #include "nn_loss.h"
+#include <time.h>
 
 
 /**********************************************/
@@ -72,7 +73,7 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 	}
 
 	int i = 0;
-
+	
 	for (const DataSet<_xT, _yT>& data : sample) {
 		if (i == 0) {
 			const NN_Shape shape = data._x.get_shape();
@@ -104,7 +105,8 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 			}
 		}
 
-		std::cout << "Iteration: " << i << std::endl;
+		//std::cout << "Iteration: " << i << std::endl;
+		
 		const std::vector<NN_Input*>& inputs = _manager.get_input_layers();
 
 		for (NN_Link* node : _layers) {
@@ -122,7 +124,7 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 
 					m_input.push_back(_manager.get_node_output(p_prev_node->get_index())[j]);
 				}
-
+				
 				node->get_layer().run_forward(_manager.get_streams(), m_input, m_output);
 			}
 			else {
@@ -136,7 +138,7 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 				}
 			}
 		}
-
+		
 		int m = 0;
 		for (NN_Link* p_out_link : _output_nodes) {
 			const std::vector<GpuTensor<nn_type>>& out_tensor = _manager.get_node_output(p_out_link->get_index());
@@ -148,9 +150,11 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 				outputs[i][m++] = h_out;
 			}
 		}
-
+		
 		++i;
 	}
+
+	
 
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());

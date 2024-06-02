@@ -221,32 +221,30 @@ void NN_Maxpool2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_typ
 
 	size_t smem_size = sizeof(nn_type) * tile_h * tile_w;
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, in.w, in.h);
+	dim3 blocks = get_grid_size(threads, in.w, in.h, in.c);
 
 	for (int n = 0; n < in.n; ++n) {
-		for (int c = 0; c < in.c; ++c) {
-			const nn_type* in_data = m_input + (n * in.c * in.h * in.w) + (c * in.h * in.w);
-			nn_type* out_data = m_output + (n * out.c * out.h * out.w) + (c * out.h * out.w);
-			uint* indice = m_indice + (n * out.c * out.h * out.w) + (c * out.h * out.w);
+		const nn_type* in_data = m_input + (n * in.c * in.h * in.w);
+		nn_type* out_data = m_output + (n * out.c * out.h * out.w);
+		uint* indice = m_indice + (n * out.c * out.h * out.w);
 
-			__maxpool_2d<<<blocks, threads, smem_size, st[(n * in.c + c) % STREAMS]>>>(
-				in_data,
-				out_data,
-				indice,
-				in.h,
-				in.w,
-				out.h,
-				out.w,
-				_k_size[0],
-				_k_size[1],
-				_stride[0],
-				_stride[1],
-				tile_h,
-				tile_w
-			);
+		__maxpool_2d<<<blocks, threads, smem_size, st[n % STREAMS]>>>(
+			in_data,
+			out_data,
+			indice,
+			in.h,
+			in.w,
+			out.h,
+			out.w,
+			_k_size[0],
+			_k_size[1],
+			_stride[0],
+			_stride[1],
+			tile_h,
+			tile_w
+		);
 			//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
 			//check_cuda(cudaGetLastError());
-		}
 	}
 }
 

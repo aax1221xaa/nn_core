@@ -12,7 +12,7 @@
 
 #define EPSILON					1e-8
 
-#define STREAMS					32
+#define STREAMS					16
 
 typedef const int cint;
 typedef unsigned int uint;
