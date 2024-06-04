@@ -1,3 +1,4 @@
+#define CUDA_API_PER_THREAD_DEFAULT_STEAM 
 #include "cuda_misc.cuh"
 
 #ifndef __CUDACC__
@@ -297,18 +298,23 @@ void add_bias_2d(
 	GpuTensor<nn_type>& output
 ) {
 	const NCHW in = input.get_shape().get_nchw();
+	const nn_type* in_data = input.get_ptr();
+	const nn_type* bias_data = bias.get_ptr();
+	nn_type* out_data = output.get_ptr();
+
+	cudaStream_t* p_st = s.get_stream();
 
 	if (in.h >= BLOCK_16 && in.w >= BLOCK_16 || in.c <= BLOCK_4) {
 		dim3 threads(BLOCK_16, BLOCK_16, BLOCK_4);
 		dim3 blocks = get_grid_size(threads, in.w, in.h, in.c);
 
 		for (uint i = 0; i < in.n; ++i) {
-			const nn_type* d_in = input.get_ptr() + (i * in.c * in.h * in.w);
-			nn_type* d_out = output.get_ptr() + (i * in.c * in.h * in.w);
+			const nn_type* d_in = in_data + (i * in.c * in.h * in.w);
+			nn_type* d_out = out_data + (i * in.c * in.h * in.w);
 			
-			__add_bias_16x16x4<<<blocks, threads, 0, s[i % STREAMS]>>>(
+			__add_bias_16x16x4<<<blocks, threads, 0, p_st[i % STREAMS]>>>(
 				d_in,
-				bias.get_ptr(),
+				bias_data,
 				d_out,
 				in.c, 
 				in.h, 
@@ -321,12 +327,12 @@ void add_bias_2d(
 		dim3 blocks = get_grid_size(threads, in.w, in.h, in.c);
 
 		for (uint i = 0; i < in.n; ++i) {
-			const nn_type* d_in = input.get_ptr() + (i * in.c * in.h * in.w);
-			nn_type* d_out = output.get_ptr() + (i * in.c * in.h * in.w);
+			const nn_type* d_in = in_data + (i * in.c * in.h * in.w);
+			nn_type* d_out = out_data + (i * in.c * in.h * in.w);
 
-			__add_bias_8x8x16<<<blocks, threads, 0, s[i % STREAMS]>>>(
+			__add_bias_8x8x16<<<blocks, threads, 0, p_st[i % STREAMS]>>>(
 				d_in,
-				bias.get_ptr(),
+				bias_data,
 				d_out,
 				in.c,
 				in.h,

@@ -163,3 +163,7 @@ void NN_Stream::clear() {
 	}
 	_ptr = NULL;
 }
+
+cudaStream_t* NN_Stream::get_stream() const {
+	return _ptr->_st;
+}

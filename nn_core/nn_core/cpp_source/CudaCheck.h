@@ -1,5 +1,7 @@
 #pragma once
 
+#define CUDA_API_PER_THREAD_DEFAULT_STEAM
+
 #include <cuda_runtime.h>
 #include <cuda.h>
 #include "Exception.h"

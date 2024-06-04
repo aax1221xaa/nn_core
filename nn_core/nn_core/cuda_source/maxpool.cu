@@ -1,3 +1,4 @@
+#define CUDA_API_PER_THREAD_DEFAULT_STEAM 
 #include "maxpool.cuh"
 #include "cuda_misc.cuh"
 
@@ -116,7 +117,7 @@ __global__ void __d_maxpool(
 				    Maxpool2d
 
 **********************************************/
-
+/*
 void maxpool2d(
 	cudaStream_t s,
 	const nn_type* input,
@@ -153,7 +154,7 @@ void maxpool2d(
 		w_tile
 	);
 }
-
+*/
 /**********************************************/
 /*                                            */
 /*                NN_Maxpool2D                */
@@ -223,12 +224,19 @@ void NN_Maxpool2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_typ
 	dim3 threads(BLOCK_32, BLOCK_32);
 	dim3 blocks = get_grid_size(threads, in.w, in.h, in.c);
 
+	cuint kh = _k_size[0];
+	cuint kw = _k_size[1];
+	cuint sh = _stride[0];
+	cuint sw = _stride[1];
+	
+	cudaStream_t* p_st = st.get_stream();
+
 	for (int n = 0; n < in.n; ++n) {
 		const nn_type* in_data = m_input + (n * in.c * in.h * in.w);
 		nn_type* out_data = m_output + (n * out.c * out.h * out.w);
 		uint* indice = m_indice + (n * out.c * out.h * out.w);
 
-		__maxpool_2d<<<blocks, threads, smem_size, st[n % STREAMS]>>>(
+		__maxpool_2d<<<blocks, threads, smem_size, p_st[n % STREAMS]>>>(
 			in_data,
 			out_data,
 			indice,
@@ -236,10 +244,10 @@ void NN_Maxpool2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_typ
 			in.w,
 			out.h,
 			out.w,
-			_k_size[0],
-			_k_size[1],
-			_stride[0],
-			_stride[1],
+			kh,
+			kw,
+			sh,
+			sw,
 			tile_h,
 			tile_w
 		);

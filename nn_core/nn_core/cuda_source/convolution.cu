@@ -1,4 +1,7 @@
-﻿#include "convolution.cuh"
+﻿#define CUDA_API_PER_THREAD_DEFAULT_STEAM 
+
+#include "convolution.cuh"
+
 #include "cuda_indice.cuh"
 #include "cuda_misc.cuh"
 
@@ -212,6 +215,8 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 	nn_type* output_data = m_output.get_ptr();
 	const nn_type* filter_data = _filter.get_ptr();
 
+	cudaStream_t* p_st = st.get_stream();
+
 	if (_pad == Pad::SAME) {
 		NCHW pad = { in.n, in.c, 0, 0 };
 
@@ -241,11 +246,11 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 			if (pad.h != in.h || pad.w != in.w) {
 				nn_type* pad_space = NULL;
 
-				cudaMallocAsync(&pad_space, sizeof(nn_type) * pad.c * pad.h * pad.w, st[n % STREAMS]);
-				cudaMemsetAsync(pad_space, 0, sizeof(nn_type) * pad.c * pad.h * pad.w, st[n % STREAMS]);
+				cudaMallocAsync(&pad_space, sizeof(nn_type) * pad.c * pad.h * pad.w, p_st[n % STREAMS]);
+				cudaMemsetAsync(pad_space, 0, sizeof(nn_type) * pad.c * pad.h * pad.w, p_st[n % STREAMS]);
 
 				padding_dilation(
-					st[n % STREAMS],
+					p_st[n % STREAMS],
 					in_data,
 					pad_space,
 					in,
@@ -258,7 +263,7 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 				//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
 				//check_cuda(cudaGetLastError());
 
-				__conv2d<<<blocks, threads, 0, st[n % STREAMS]>>>(
+				__conv2d<<<blocks, threads, 0, p_st[n % STREAMS]>>>(
 					g_indice,
 					pad_space,
 					filter_data,
@@ -278,10 +283,10 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 				//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
 				//check_cuda(cudaGetLastError());
 
-				cudaFreeAsync(pad_space, st[n % STREAMS]);
+				cudaFreeAsync(pad_space, p_st[n % STREAMS]);
 			}
 			else {
-				__conv2d<<<blocks, threads, 0, st[n % STREAMS]>>>(
+				__conv2d<<<blocks, threads, 0, p_st[n % STREAMS]>>>(
 					g_indice,
 					in_data,
 					filter_data,
@@ -310,7 +315,7 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 			const nn_type* in_data = input_data + (n * in.c * in.h * in.w);
 			nn_type* out_data = output_data + (n * out.c * out.h * out.w);
 
-			__conv2d<<<blocks, threads, 0, st[n % STREAMS]>>>(
+			__conv2d<<<blocks, threads, 0, p_st[n % STREAMS]>>>(
 				g_indice,
 				in_data,
 				filter_data,

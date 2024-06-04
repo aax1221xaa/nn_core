@@ -79,6 +79,8 @@ public:
 	typename Iterator begin() const { return Iterator(_ptr->_st, 0); }
 	typename Iterator end() const { return Iterator(_ptr->_st, _ptr->_amounts); }
 	void clear();
+
+	cudaStream_t* get_stream() const;
 };
 
 

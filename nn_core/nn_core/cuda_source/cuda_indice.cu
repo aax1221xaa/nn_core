@@ -1,3 +1,4 @@
+#define CUDA_API_PER_THREAD_DEFAULT_STEAM 
 #include "cuda_indice.cuh"
 
 #ifndef __CUDACC__

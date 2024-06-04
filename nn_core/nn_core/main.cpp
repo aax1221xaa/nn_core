@@ -39,7 +39,7 @@ int main() {
 		Model model(nn, x_input, x, "model_1");
 
 
-		Sample<uchar, uchar> sample = mnist.get_train_samples(64, 938);
+		Sample<uchar, uchar> sample = mnist.get_train_samples(32, 1);
 
 		clock_t start = clock();
 		std::vector<std::vector<Tensor<nn_type>>> _y = model.predict(sample);
