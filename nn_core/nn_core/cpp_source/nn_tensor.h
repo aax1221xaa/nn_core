@@ -39,6 +39,7 @@ public:
 	Tensor operator()(int index);
 	Tensor operator()(const std::vector<int>& indice) const;
 	Tensor operator[](int index);
+	Tensor operator[](int index) const;
 
 	_T& val();
 	const _T& val() const;
@@ -425,6 +426,31 @@ Tensor<_T> Tensor<_T>::operator()(const std::vector<int>& indice) const {
 
 template <typename _T>
 Tensor<_T> Tensor<_T>::operator[](int index) {
+	if (_rank_cnt >= _indice.size()) {
+		ErrorExcept(
+			"[Tensor<_T>::operator()] %d rank is empty.",
+			_rank_cnt
+		);
+	}
+
+	const int n = (int)_indice[_rank_cnt].size();
+
+	index = index < 0 ? n + index : index;
+
+	if (index < 0 || index >= n) {
+		ErrorExcept(
+			"[Tensor<_T>::operator()] begin and end is out of range."
+		);
+	}
+
+	Tensor<_T> tensor = *this;
+	count_indice(tensor._indice[_rank_cnt++], index, index + 1, 1);
+
+	return tensor;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator[](int index) const {
 	if (_rank_cnt >= _indice.size()) {
 		ErrorExcept(
 			"[Tensor<_T>::operator()] %d rank is empty.",

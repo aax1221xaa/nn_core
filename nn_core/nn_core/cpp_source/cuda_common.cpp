@@ -18,7 +18,7 @@ dim3 get_grid_size(const dim3 block, unsigned int x, unsigned int y, unsigned in
 std::vector<int> random_choice(int min, int max, int amounts, bool replace) {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_int_distribution<int> dist(min, max);
+	std::uniform_int_distribution<int> dist(min, max - 1);
 
 	std::vector<int> indice(amounts);
 
@@ -34,9 +34,9 @@ std::vector<int> random_choice(int min, int max, int amounts, bool replace) {
 			while (true) {
 				int num = dist(gen);
 
-				if (!mask[num]) {
-					mask[num] = true;
-					indice[i] = num + min;
+				if (!mask[num - min]) {
+					mask[num - min] = true;
+					indice[i] = num;
 
 					break;
 				}

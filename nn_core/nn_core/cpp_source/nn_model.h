@@ -72,6 +72,8 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 		m_tensor.resize(_output_nodes.size());
 	}
 
+	clock_t cnt = 0;
+
 	int i = 0;
 	
 	for (const DataSet<_xT, _yT>& data : sample) {
@@ -125,7 +127,9 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 					m_input.push_back(_manager.get_node_output(p_prev_node->get_index())[j]);
 				}
 				
+				clock_t start = clock();
 				node->get_layer().run_forward(_manager.get_streams(), m_input, m_output);
+				cnt += clock() - start;
 			}
 			else {
 				int j = 0;
@@ -154,7 +158,7 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 		++i;
 	}
 
-	
+	std::cout << cnt << "ms" << std::endl;
 
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());
