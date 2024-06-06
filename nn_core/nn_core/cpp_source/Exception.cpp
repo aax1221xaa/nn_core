@@ -1,6 +1,6 @@
-#include "Exception.h"
+ï»¿#include "Exception.h"
 
-
+ 
 /**********************************************/
 /*                                            */
 /*                  NN_Check                  */
@@ -28,9 +28,9 @@ Exception::Exception(const std::string& message_, const std::string& file_, int 
 
 void Exception::put() const {
 	std::cout << "================================================================\n";
-	std::cout << "¿À·ù ³»¿ë: " << message << std::endl;
-	std::cout << "ÆÄÀÏ¸í: " << file << std::endl;
-	std::cout << "ÁÙ¼ö: " << line << std::endl;
+	std::cout << "ì˜¤ë¥˜ ë‚´ìš©: " << message << std::endl;
+	std::cout << "íŒŒì¼ëª…: " << file << std::endl;
+	std::cout << "ì¤„ìˆ˜: " << line << std::endl;
 }
 
 
