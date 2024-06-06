@@ -151,8 +151,8 @@ public:
 	void set_reserved_shapes();
 	void set_reserved_outputs();
 
-	std::vector<NN_Shape>& get_node_shape(int index);
-	std::vector<GpuTensor<nn_type>>& get_node_output(int index);
+	std::vector<std::vector<NN_Shape>>& get_node_shape();
+	std::vector<std::vector<GpuTensor<nn_type>>>& get_node_output();
 
 	void clear_shapes();
 	void clear_outputs();

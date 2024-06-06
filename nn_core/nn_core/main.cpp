@@ -5,6 +5,11 @@
 #include "cpp_source/nn_layer.h"
 #include "cpp_source/mnist.h"
 
+/********************************************/
+/*                                          */
+/*             UTF-8 한글 테스트            */
+/*                                          */
+/********************************************/
 
 int main() {
 	try {
@@ -41,10 +46,7 @@ int main() {
 
 		Sample<uchar, uchar> sample = mnist.get_test_samples(64, 157, true);
 
-		clock_t start = clock();
-		std::vector<std::vector<Tensor<nn_type>>> _y = model.predict(sample);
-		clock_t end = clock();
-		std::cout << end - start << "ms" << std::endl;
+		model.summary();
 	}
 	catch (Exception& e) {
 		e.put();

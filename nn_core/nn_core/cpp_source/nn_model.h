@@ -63,6 +63,7 @@ public:
 
 template <typename _xT, typename _yT>
 std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>& sample) {
+	/*
 	_manager.set_reserved_shapes();
 	_manager.set_reserved_outputs();
 
@@ -164,10 +165,13 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 	check_cuda(cudaGetLastError());
 
 	return outputs;
+	*/
+	return std::vector<std::vector<Tensor<nn_type>>>();
 }
 
 template <typename _T>
 std::vector<std::vector<Tensor<nn_type>>> Model::predict(const std::vector<Tensor<_T>>& x) {
+	/*
 	_manager.set_reserved_shapes();
 	_manager.set_reserved_outputs();
 
@@ -262,4 +266,6 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const std::vector<Tenso
 	check_cuda(cudaGetLastError());
 
 	return outputs;
+	*/
+	return std::vector<std::vector<Tensor<nn_type>>>();
 }

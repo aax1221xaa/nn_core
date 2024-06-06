@@ -245,12 +245,12 @@ void NN_Manager::set_reserved_outputs() {
 	_outputs.resize(_nodes.size());
 }
 
-std::vector<NN_Shape>& NN_Manager::get_node_shape(int index) {
-	return _out_shapes[index];
+std::vector<std::vector<NN_Shape>>& NN_Manager::get_node_shape() {
+	return _out_shapes;
 }
 
-std::vector<GpuTensor<nn_type>>& NN_Manager::get_node_output(int index) {
-	return _outputs[index];
+std::vector<std::vector<GpuTensor<nn_type>>>& NN_Manager::get_node_output() {
+	return _outputs;
 }
 
 void NN_Manager::clear_shapes() {
