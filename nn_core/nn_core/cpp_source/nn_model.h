@@ -27,7 +27,9 @@ private:
 	void count_branch(std::vector<int>& mask);
 	void set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask);
 
-protected:
+	static int get_n_node_prev_for_next(const NN_Link* prev_node, const NN_Link* curr_node);
+	static int get_n_input(const std::vector<NN_Link*>& input_node, const NN_Link* curr_node);
+
 	const std::vector<int>& get_output_indice() const;
 	void set_output_indice(const std::vector<int>& indice);
 
@@ -58,22 +60,21 @@ public:
 	std::vector<std::vector<Tensor<nn_type>>> predict(const Sample<_xT, _yT>& sample);
 
 	template <typename _T>
-	std::vector<std::vector<Tensor<nn_type>>> predict(const std::vector<Tensor<_T>>& x);
+	std::vector<Tensor<nn_type>> predict(const std::vector<Tensor<_T>>& x);
 };
 
 template <typename _xT, typename _yT>
 std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>& sample) {
-	/*
 	_manager.set_reserved_shapes();
 	_manager.set_reserved_outputs();
 
+	std::vector<std::vector<NN_Shape>>& nodes_shapes = _manager.get_node_shape();
+	std::vector<std::vector<GpuTensor<nn_type>>>& nodes_outputs = _manager.get_node_output();
 	std::vector<std::vector<Tensor<nn_type>>> outputs(sample.get_iteration());
 
 	for(std::vector<Tensor<nn_type>>& m_tensor : outputs){
 		m_tensor.resize(_output_nodes.size());
 	}
-
-	clock_t cnt = 0;
 
 	int i = 0;
 	
@@ -82,19 +83,16 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 			const NN_Shape shape = data._x.get_shape();
 
 			for (NN_Link* node : _layers) {
-				std::vector<NN_Shape>& m_output_shape = _manager.get_node_shape(node->get_index());
+				std::vector<NN_Shape>& m_output_shape = nodes_shapes[node->get_index()];
 				std::vector<NN_Shape> m_input_shape;
-				std::vector<GpuTensor<nn_type>>& m_output = _manager.get_node_output(node->get_index());
+				std::vector<GpuTensor<nn_type>>& m_output = nodes_outputs[node->get_index()];
 
 				if (node->get_prev_nodes().size() > 0) {
 					for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-						size_t j = 0;
-
-						for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
-							if (p_next_node == node) break;
-							else ++j;
-						}
-						m_input_shape.push_back(_manager.get_node_shape(p_prev_node->get_index())[j]);
+						int n_out = get_n_node_prev_for_next(p_prev_node, node);
+						int n_prev = p_prev_node->get_index();
+						
+						m_input_shape.push_back(nodes_shapes[n_prev][n_out]);
 					}
 				}
 
@@ -113,24 +111,18 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 		const std::vector<NN_Input*>& inputs = _manager.get_input_layers();
 
 		for (NN_Link* node : _layers) {
-			std::vector<GpuTensor<nn_type>>& m_output = _manager.get_node_output(node->get_index());
+			std::vector<GpuTensor<nn_type>>& m_output = nodes_outputs[node->get_index()];
 			std::vector<GpuTensor<nn_type>> m_input;
 
 			if (node->get_prev_nodes().size() > 0) {
 				for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-					int j = 0;
+					int n_out = get_n_node_prev_for_next(p_prev_node, node);
+					int n_prev = p_prev_node->get_index();
 
-					for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
-						if (p_next_node == node) break;
-						else ++j;
-					}
-
-					m_input.push_back(_manager.get_node_output(p_prev_node->get_index())[j]);
+					m_input.push_back(nodes_outputs[n_prev][n_out]);
 				}
 				
-				clock_t start = clock();
 				node->get_layer().run_forward(_manager.get_streams(), m_input, m_output);
-				cnt += clock() - start;
 			}
 			else {
 				int j = 0;
@@ -146,126 +138,100 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 		
 		int m = 0;
 		for (NN_Link* p_out_link : _output_nodes) {
-			const std::vector<GpuTensor<nn_type>>& out_tensor = _manager.get_node_output(p_out_link->get_index());
+			const std::vector<GpuTensor<nn_type>>& out_tensor = nodes_outputs[p_out_link->get_index()];
 
 			for (const GpuTensor<nn_type>& g_out : out_tensor) {
-				Tensor<nn_type> h_out(g_out.get_shape());
-
-				h_out = g_out;
-				outputs[i][m++] = h_out;
+				outputs[i][m].resize(g_out.get_shape());
+				outputs[i][m++] = g_out;
 			}
 		}
 		
 		++i;
 	}
 
-	std::cout << cnt << "ms" << std::endl;
-
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());
 
+	_manager.clear_outputs();
+	_manager.clear_shapes();
+
 	return outputs;
-	*/
-	return std::vector<std::vector<Tensor<nn_type>>>();
 }
 
 template <typename _T>
-std::vector<std::vector<Tensor<nn_type>>> Model::predict(const std::vector<Tensor<_T>>& x) {
-	/*
+std::vector<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x) {
 	_manager.set_reserved_shapes();
 	_manager.set_reserved_outputs();
 
-	std::vector<std::vector<Tensor<nn_type>>> outputs(x.size());
+	std::vector<std::vector<NN_Shape>>& nodes_shapes = _manager.get_node_shape();
+	std::vector<std::vector<GpuTensor<nn_type>>>& nodes_outputs = _manager.get_node_output();
+	std::vector<Tensor<nn_type>> outputs(_output_nodes.size());
 
-	for (std::vector<Tensor<nn_type>>& m_tensor : outputs) {
-		m_tensor.resize(_output_nodes.size());
+	for (NN_Link* node : _layers) {
+		std::vector<NN_Shape>& m_output_shape = nodes_shapes[node->get_index()];
+		std::vector<NN_Shape> m_input_shape;
+		std::vector<GpuTensor<nn_type>>& m_output = nodes_outputs[node->get_index()];
+
+		if (node->get_prev_nodes().size() > 0) {
+			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
+				int n_out = get_n_node_prev_for_next(p_prev_node, node);
+				int n_prev = p_prev_node->get_index();
+
+				m_input_shape.push_back(nodes_shapes[n_prev][n_out]);
+			}
+		}
+		else {
+			int n_input_node = get_n_input(_input_nodes, node);
+
+			m_input_shape.push_back(x[n_input_node].get_shape());
+		}
+
+		node->get_layer().get_output_shape(m_input_shape, m_output_shape);
+		node->get_layer().build(m_input_shape);
 	}
 
-	int i = 0;
+	// std::cout << "Iteration: " << i << std::endl;
+	const std::vector<NN_Input*>& inputs = _manager.get_input_layers();
 
-	for (const Tensor<_T>& mx : x) {
-		if (i == 0) {
-			const NN_Shape shape = mx.get_shape();
+	for (NN_Link* node : _layers) {
+		std::vector<GpuTensor<nn_type>>& m_output = nodes_outputs[node->get_index()];
+		std::vector<GpuTensor<nn_type>> m_input;
 
-			for (NN_Link* node : _layers) {
-				std::vector<NN_Shape>& m_output_shape = _manager.get_node_shape(node->get_index());
-				std::vector<NN_Shape> m_input_shape;
-				std::vector<GpuTensor<nn_type>>& m_output = _manager.get_node_output(node->get_index());
+		if (node->get_prev_nodes().size() > 0) {
+			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
+				int n_out = get_n_node_prev_for_next(p_prev_node, node);
+				int n_prev = p_prev_node->get_index();
 
-				if (node->get_prev_nodes().size() > 0) {
-					for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-						size_t j = 0;
+				m_input.push_back(nodes_outputs[n_prev][n_out]);
+			}
 
-						for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
-							if (p_next_node == node) break;
-							else ++j;
-						}
-						m_input_shape.push_back(_manager.get_node_shape(p_prev_node->get_index())[j]);
-					}
-				}
+			node->get_layer().run_forward(_manager.get_streams(), m_input, m_output);
+		}
+		else {
+			int n_input_node = get_n_input(_input_nodes, node);
 
-				node->get_layer().get_output_shape(m_input_shape, m_output_shape);
-				node->get_layer().build(m_input_shape);
-
-				for (NN_Shape& m_shape : m_output_shape) {
-					m_shape[0] = shape[0];
-					m_output.push_back(GpuTensor<nn_type>(m_shape));
+			for (const NN_Input* p_input : inputs) {
+				if (&(node->get_layer()) == p_input) {
+					p_input->trans_data(x[n_input_node], m_output[0]);
+					break;
 				}
 			}
 		}
+	}
 
-		std::cout << "Iteration: " << i << std::endl;
-		const std::vector<NN_Input*>& inputs = _manager.get_input_layers();
+	int n = 0;
+	for (NN_Link* p_out_link : _output_nodes) {
+		const std::vector<GpuTensor<nn_type>>& out_tensor = nodes_outputs[p_out_link->get_index()];
 
-		for (NN_Link* node : _layers) {
-			std::vector<GpuTensor<nn_type>>& m_output = _manager.get_node_output(node->get_index());
-			std::vector<GpuTensor<nn_type>> m_input;
-
-			if (node->get_prev_nodes().size() > 0) {
-				for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-					int j = 0;
-
-					for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
-						if (p_next_node == node) break;
-						else ++j;
-					}
-
-					m_input.push_back(_manager.get_node_output(p_prev_node->get_index())[j]);
-				}
-
-				node->get_layer().run_forward(_manager.get_streams(), m_input, m_output);
-			}
-			else {
-				int j = 0;
-				for (const NN_Input* p_input : inputs) {
-					if (&(node->get_layer()) == p_input) {
-						p_input->trans_data(mx, m_output[0]);
-						break;
-					}
-					else ++j;
-				}
-			}
-		}
-
-		int m = 0;
-		for (NN_Link* p_out_link : _output_nodes) {
-			const std::vector<GpuTensor<nn_type>>& out_tensor = _manager.get_node_output(p_out_link->get_index());
-
-			for (const GpuTensor<nn_type>& g_out : out_tensor) {
-				Tensor<nn_type> h_out(g_out.get_shape());
-
-				h_out = g_out;
-				outputs[i][m++] = h_out;
-			}
-		}
-
-		++i;
+		outputs[n].resize(out_tensor[0].get_shape());
+		outputs[n++] = out_tensor;
 	}
 
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());
 
+	_manager.clear_outputs();
+	_manager.clear_shapes();
+
 	return outputs;
-	*/
-	return std::vector<std::vector<Tensor<nn_type>>>();
 }

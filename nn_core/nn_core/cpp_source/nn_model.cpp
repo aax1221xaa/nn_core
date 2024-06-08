@@ -9,96 +9,6 @@
 
 int Model::_stack = 0;
 
-Model::Model(NN_Manager& manager, const char* model_name) :
-	NN_Layer(model_name),
-	_manager(manager)
-{
-}
-
-Model::Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* model_name) :
-	NN_Layer(model_name),
-	_manager(manager)
-{
-	try {
-		std::vector<int> mask;
-
-		find_path(inputs, outputs, mask);
-		count_branch(mask);
-		set_childs(inputs, outputs, mask);
-	}
-	catch (const Exception& e) {
-		e.put();
-	}
-}
-
-Model::~Model() {
-
-}
-
-Layer_t Model::operator()(Layer_t prev_node) {
-	int i = 0;
-
-	for (Layer_t& p_prev_node : prev_node) {
-		NN_Ptr& prev_ptr = p_prev_node.get_val();
-
-		set_prev_node(prev_ptr._node);
-		prev_ptr._node->set_next_link(this, i++);
-	}
-
-	_manager.set_static_node(this);
-
-	Layer_t output_nodes;
-
-	for (i = 0; i < _output_nodes.size(); ++i) output_nodes.push_back(NN_Ptr({ i, this }));
-
-	return output_nodes;
-}
-
-NN_Link* Model::create_child() {
-	std::vector<NN_Link*>& nodes = _manager.get_nodes();
-	std::vector<int> child_index(nodes.size(), -1);
-
-	Model* child_model = new Model(_manager, _layer_name);
-
-	child_model->set_layer(child_model);
-	child_model->trainable = trainable;
-	child_model->set_output_indice(_output_indice);
-
-	for (NN_Link* p_node : _layers) {
-		NN_Link* child_node = p_node->create_child();
-
-		_manager.set_nodes(child_node);
-		child_index[p_node->get_index()] = child_node->get_index();
-
-		child_model->_layers.push_back(child_node);
-	}
-
-	for (NN_Link* p_node : _layers) {
-		NN_Link* p_child = nodes[child_index[p_node->get_index()]];
-		
-		for (NN_Link* p_next_node : p_node->get_next_nodes()) {
-			NN_Link* p_next_child = nodes[child_index[p_next_node->get_index()]];
-
-			p_child->set_next_node(p_next_child);
-			p_next_child->set_prev_node(p_child);
-		}
-	}
-
-	for (NN_Link* p_input : _input_nodes) {
-		child_model->_input_nodes.push_back(nodes[child_index[p_input->get_index()]]);
-	}
-	for (NN_Link* p_output : _output_nodes) {
-		child_model->_output_nodes.push_back(nodes[child_index[p_output->get_index()]]);
-	}
-
-	return child_model;
-}
-
-void Model::set_next_link(NN_Link* node, int index) {
-	set_next_node(node);
-	_output_indice.push_back(index);
-}
-
 const NN_Input* Model::get_input_layer(NN_Link* link) {
 	const NN_Input* input_layer = NULL;
 
@@ -250,12 +160,126 @@ void Model::set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask
 	}
 }
 
+int Model::get_n_node_prev_for_next(const NN_Link* prev_node, const NN_Link* curr_node) {
+	int n = -1;
+
+	for (const NN_Link* p_next : prev_node->get_next_nodes()) {
+		++n;
+
+		if (p_next == curr_node) break;
+	}
+
+	return n;
+}
+
+int Model::get_n_input(const std::vector<NN_Link*>& input_node, const NN_Link* curr_node) {
+	int n = -1;
+
+	for (const NN_Link* p_input : input_node) {
+		++n;
+
+		if (p_input == curr_node) break;
+	}
+
+	return n;
+}
+
 const std::vector<int>& Model::get_output_indice() const {
 	return _output_indice;
 }
 
 void Model::set_output_indice(const std::vector<int>& indice) {
 	_output_indice = indice;
+}
+
+Model::Model(NN_Manager& manager, const char* model_name) :
+	NN_Layer(model_name),
+	_manager(manager)
+{
+}
+
+Model::Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* model_name) :
+	NN_Layer(model_name),
+	_manager(manager)
+{
+	try {
+		std::vector<int> mask;
+
+		find_path(inputs, outputs, mask);
+		count_branch(mask);
+		set_childs(inputs, outputs, mask);
+	}
+	catch (const Exception& e) {
+		e.put();
+	}
+}
+
+Model::~Model() {
+
+}
+
+Layer_t Model::operator()(Layer_t prev_node) {
+	int i = 0;
+
+	for (Layer_t& p_prev_node : prev_node) {
+		NN_Ptr& prev_ptr = p_prev_node.get_val();
+
+		set_prev_node(prev_ptr._node);
+		prev_ptr._node->set_next_link(this, i++);
+	}
+
+	_manager.set_static_node(this);
+
+	Layer_t output_nodes;
+
+	for (i = 0; i < _output_nodes.size(); ++i) output_nodes.push_back(NN_Ptr({ i, this }));
+
+	return output_nodes;
+}
+
+NN_Link* Model::create_child() {
+	std::vector<NN_Link*>& nodes = _manager.get_nodes();
+	std::vector<int> child_index(nodes.size(), -1);
+
+	Model* child_model = new Model(_manager, _layer_name);
+
+	child_model->set_layer(child_model);
+	child_model->trainable = trainable;
+	child_model->set_output_indice(_output_indice);
+
+	for (NN_Link* p_node : _layers) {
+		NN_Link* child_node = p_node->create_child();
+
+		_manager.set_nodes(child_node);
+		child_index[p_node->get_index()] = child_node->get_index();
+
+		child_model->_layers.push_back(child_node);
+	}
+
+	for (NN_Link* p_node : _layers) {
+		NN_Link* p_child = nodes[child_index[p_node->get_index()]];
+
+		for (NN_Link* p_next_node : p_node->get_next_nodes()) {
+			NN_Link* p_next_child = nodes[child_index[p_next_node->get_index()]];
+
+			p_child->set_next_node(p_next_child);
+			p_next_child->set_prev_node(p_child);
+		}
+	}
+
+	for (NN_Link* p_input : _input_nodes) {
+		child_model->_input_nodes.push_back(nodes[child_index[p_input->get_index()]]);
+	}
+	for (NN_Link* p_output : _output_nodes) {
+		child_model->_output_nodes.push_back(nodes[child_index[p_output->get_index()]]);
+	}
+
+	return child_model;
+}
+
+void Model::set_next_link(NN_Link* node, int index) {
+	set_next_node(node);
+	_output_indice.push_back(index);
 }
 
 void Model::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
@@ -267,13 +291,8 @@ void Model::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vect
 
 		if (node->get_prev_nodes().size() > 0) {
 			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-				size_t i = 0;
-
-				for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
-					if (p_next_node == node) break;
-					else ++i;
-				}
-				m_input_shape.push_back(nodes_shape[p_prev_node->get_index()][i]);
+				int curr_n_out = get_n_node_prev_for_next(p_prev_node, node);
+				m_input_shape.push_back(nodes_shape[p_prev_node->get_index()][curr_n_out]);
 			}
 		}
 		else {
@@ -295,8 +314,26 @@ void Model::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vect
 }
 
 void Model::build(const std::vector<NN_Shape>& input_shape) {
-	for (NN_Link* node: _layers) {
+	const std::vector<std::vector<NN_Shape>>& shapes = _manager.get_node_shape();
 
+	for (NN_Link* node: _layers) {
+		std::vector<NN_Shape> m_input_shape;
+
+		if (node->get_prev_nodes().size() > 0) {
+			for (const NN_Link* p_prev : node->get_prev_nodes()) {
+				int n_prev_out = get_n_node_prev_for_next(p_prev, node);
+				int n_prev = p_prev->get_index();
+
+				m_input_shape.push_back(shapes[n_prev][n_prev_out]);
+			}
+		}
+		else {
+			int n_input = get_n_input(_input_nodes, node);
+
+			m_input_shape.push_back(input_shape[n_input]);
+		}
+
+		node->get_layer().build(m_input_shape);
 	}
 }
 
@@ -310,7 +347,6 @@ void Model::run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d
 
 void Model::summary() {
 	int i = 0;
-	std::vector<NN_Shape> tmp;
 	std::vector<std::vector<NN_Shape>>& nodes_shape = _manager.get_node_shape();
 
 	std::cout << '[' << _layer_name << ']' << std::endl;
@@ -323,13 +359,8 @@ void Model::summary() {
 
 		if (node->get_prev_nodes().size() > 0) {
 			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-				size_t i = 0;
-
-				for (NN_Link* p_next_node : p_prev_node->get_next_nodes()) {
-					if (p_next_node == node) break;
-					else ++i;
-				}
-				m_input_shape.push_back(nodes_shape[p_prev_node->get_index()][i]);
+				int curr_n_out = get_n_node_prev_for_next(p_prev_node, node);
+				m_input_shape.push_back(nodes_shape[p_prev_node->get_index()][curr_n_out]);
 			}
 		}
 
