@@ -187,6 +187,7 @@ void NN_Maxpool2D::get_output_shape(const std::vector<NN_Shape>& input_shape, st
 	}
 
 	output_shape.push_back({ n, c, h, w });
+	if (n > 0) _indice = GpuTensor<uint>::zeros({ n, c, h, w });
 }
 
 void NN_Maxpool2D::build(const std::vector<NN_Shape>& input_shape) {
@@ -206,7 +207,7 @@ void NN_Maxpool2D::build(const std::vector<NN_Shape>& input_shape) {
 		w = (int)floorf((float)(shape[3] - _k_size[1]) / _stride[1] + 1);
 	}
 
-	_indice = GpuTensor<uint>::zeros({ n, c, h, w });
+	//_indice = GpuTensor<uint>::zeros({ n, c, h, w });
 }
 
 void NN_Maxpool2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
@@ -251,9 +252,9 @@ void NN_Maxpool2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_typ
 			tile_h,
 			tile_w
 		);
-			//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
-			//check_cuda(cudaGetLastError());
 	}
+	check_cuda(cudaDeviceSynchronize());
+	check_cuda(cudaGetLastError());
 }
 
 /**********************************************

@@ -31,10 +31,25 @@ void NN_Flat::build(const std::vector<NN_Shape>& input_shape) {
 }
 
 void NN_Flat::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
-	const NC nc = input[0].get_shape().get_nc();
+	Tensor<nn_type> h_input(input[0].get_shape());
+	const NC nc = h_input.get_shape().get_nc();
 
-	output[0] = input[0];
-	output[0].reshape({ nc.n, nc.c });
+	h_input = input[0];
+
+	Tensor<nn_type> t_input = h_input.transpose({ 0, 2, 3, 1 });
+	Tensor<nn_type> tmp(t_input.get_shape());
+
+	tmp = t_input;
+
+	const nn_type* p_src = tmp.get_ptr();
+	nn_type* p_dst = output[0].get_ptr();
+	const size_t len = tmp.get_shape().total_size();
+
+	check_cuda(cudaMemcpy(p_dst, p_src, sizeof(nn_type) * len, cudaMemcpyHostToDevice));
+
+	//Tensor<nn_type> tmp = t_input[0];
+
+	//std::cout << std::endl << tmp;
 }
 
 

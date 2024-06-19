@@ -101,9 +101,6 @@
     <ClInclude Include="cuda_source\cuda_misc.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_source\cuda_indice.cuh">
-      <Filter>헤더 파일\cuh</Filter>
-    </ClInclude>
     <ClInclude Include="cuda_source\convolution.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
@@ -128,6 +125,12 @@
     <ClInclude Include="cpp_source\nn_sample.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
+    <ClInclude Include="cuda_source\softmax.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\sigmoid.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_source\relu.cu">
@@ -142,13 +145,16 @@
     <CudaCompile Include="cuda_source\cuda_misc.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
-    <CudaCompile Include="cuda_source\cuda_indice.cu">
-      <Filter>소스 파일\cu</Filter>
-    </CudaCompile>
     <CudaCompile Include="cuda_source\convolution.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_source\matmul.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\softmax.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\sigmoid.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
   </ItemGroup>

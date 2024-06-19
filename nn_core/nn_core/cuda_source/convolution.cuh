@@ -20,13 +20,14 @@ public:
 	GpuTensor<nn_type> _filter;
 	GpuTensor<nn_type> _bias;
 
-	static cuint* get_indice(const NCHW& in, const NCHW& k);
+	void set_indice(const NCHW& in, const NCHW& k);
 
 	NN_Conv2D(int amounts, const NN_Shape& filter_size, const NN_Shape& stride, Pad pad, const char* name);
 
 	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
 	void build(const std::vector<NN_Shape>& input_shape);
 	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	std::vector<GpuTensor<nn_type>> get_weight();
 };
 
 /**********************************************

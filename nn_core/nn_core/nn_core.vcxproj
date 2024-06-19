@@ -109,21 +109,23 @@
     <ClInclude Include="cpp_source\nn_tensor.h" />
     <ClInclude Include="cuda_source\cast.cuh" />
     <ClInclude Include="cuda_source\convolution.cuh" />
-    <ClInclude Include="cuda_source\cuda_indice.cuh" />
     <ClInclude Include="cuda_source\cuda_misc.cuh" />
     <ClInclude Include="cuda_source\matmul.cuh" />
     <ClInclude Include="cuda_source\maxpool.cuh" />
     <ClInclude Include="cuda_source\optimizer.cuh" />
     <ClInclude Include="cuda_source\relu.cuh" />
+    <ClInclude Include="cuda_source\sigmoid.cuh" />
+    <ClInclude Include="cuda_source\softmax.cuh" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_source\convolution.cu" />
-    <CudaCompile Include="cuda_source\cuda_indice.cu" />
     <CudaCompile Include="cuda_source\cuda_misc.cu" />
     <CudaCompile Include="cuda_source\matmul.cu" />
     <CudaCompile Include="cuda_source\maxpool.cu" />
     <CudaCompile Include="cuda_source\optimizer.cu" />
     <CudaCompile Include="cuda_source\relu.cu" />
+    <CudaCompile Include="cuda_source\sigmoid.cu" />
+    <CudaCompile Include="cuda_source\softmax.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -43,6 +43,10 @@ void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 	);
 }
 
+std::vector<GpuTensor<nn_type>> NN_Layer::get_weight() {
+	return std::vector<GpuTensor<nn_type>>();
+}
+
 
 /**********************************************/
 /*                                            */
@@ -204,7 +208,7 @@ NN_Manager::~NN_Manager() {
 		_nodes.clear();
 		_layers.clear();
 	}
-	catch (Exception& e) {
+	catch (NN_Exception& e) {
 		e.put();
 	}
 }

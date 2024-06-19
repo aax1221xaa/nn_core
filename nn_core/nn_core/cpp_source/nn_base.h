@@ -25,6 +25,7 @@ public:
 	virtual void build(const std::vector<NN_Shape>& input_shape);
 	virtual void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
 	virtual void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
+	virtual std::vector<GpuTensor<nn_type>> get_weight();
 };
 
 
@@ -66,6 +67,8 @@ void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) con
 		(*p_convert)(p_src, p_dst, q);
 	}
 	);
+
+	//std::cout << dst;
 
 	output = dst;
 }

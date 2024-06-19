@@ -4,6 +4,7 @@
 #include "nn_optimizer.h"
 #include "nn_loss.h"
 #include <time.h>
+#include <H5Cpp.h>
 
 
 /**********************************************/
@@ -33,6 +34,9 @@ private:
 	const std::vector<int>& get_output_indice() const;
 	void set_output_indice(const std::vector<int>& indice);
 
+	static std::vector<std::string> get_layer_names(const H5::H5File& fp);
+	static void set_weight(const H5::Group& group, std::vector<GpuTensor<nn_type>>& g_tensor);
+
 public:
 	static int _stack;
 
@@ -57,14 +61,16 @@ public:
 	void summary();
 
 	template <typename _xT, typename _yT>
-	std::vector<std::vector<Tensor<nn_type>>> predict(const Sample<_xT, _yT>& sample);
+	std::vector<std::vector<Tensor<nn_type>>> evaluate(const Sample<_xT, _yT>& sample);
 
 	template <typename _T>
 	std::vector<Tensor<nn_type>> predict(const std::vector<Tensor<_T>>& x);
+
+	void load_weights(const std::string& path, bool skip_mismatch = false);
 };
 
 template <typename _xT, typename _yT>
-std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>& sample) {
+std::vector<std::vector<Tensor<nn_type>>> Model::evaluate(const Sample<_xT, _yT>& sample) {
 	_manager.set_reserved_shapes();
 	_manager.set_reserved_outputs();
 
@@ -97,7 +103,7 @@ std::vector<std::vector<Tensor<nn_type>>> Model::predict(const Sample<_xT, _yT>&
 				}
 
 				node->get_layer().get_output_shape(m_input_shape, m_output_shape);
-				node->get_layer().build(m_input_shape);
+				//node->get_layer().build(m_input_shape);
 
 				for (NN_Shape& m_shape : m_output_shape) {
 					m_shape[0] = shape[0];
@@ -221,9 +227,9 @@ std::vector<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x) {
 
 	int n = 0;
 	for (NN_Link* p_out_link : _output_nodes) {
-		const std::vector<GpuTensor<nn_type>>& out_tensor = nodes_outputs[p_out_link->get_index()];
+		const GpuTensor<nn_type>& out_tensor = nodes_outputs[p_out_link->get_index()][0];
 
-		outputs[n].resize(out_tensor[0].get_shape());
+		outputs[n].resize(out_tensor.get_shape());
 		outputs[n++] = out_tensor;
 	}
 

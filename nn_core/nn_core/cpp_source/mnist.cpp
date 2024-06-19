@@ -75,7 +75,7 @@ MNIST::MNIST(const std::string& dir_path) {
 		_train = read_file(train_x, train_y);
 		_test = read_file(test_x, test_y);
 	}
-	catch (const Exception& e) {
+	catch (const NN_Exception& e) {
 		e.put();
 	}
 }

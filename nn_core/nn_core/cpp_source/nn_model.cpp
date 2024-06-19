@@ -192,6 +192,78 @@ void Model::set_output_indice(const std::vector<int>& indice) {
 	_output_indice = indice;
 }
 
+std::vector<std::string> Model::get_layer_names(const H5::H5File& fp) {
+	H5::Group main_group = fp.openGroup("/");
+	H5::Attribute attr = main_group.openAttribute("layer_names");
+	H5::DataType dtype = attr.getDataType();
+	H5::DataSpace space = attr.getSpace();
+
+	hsize_t layer_amounts = 0;
+
+	space.getSimpleExtentDims(&layer_amounts);
+
+	char** p_layer_names = new char*[layer_amounts];
+	std::vector<std::string> layer_names(layer_amounts);
+
+	attr.read(dtype, p_layer_names);
+
+	for (hsize_t i = 0; i < layer_amounts; ++i) layer_names[i] = p_layer_names[i];
+
+	delete[] p_layer_names;
+	attr.close();
+
+	return layer_names;
+}
+
+void Model::set_weight(const H5::Group& group, std::vector<GpuTensor<nn_type>>& g_tensor) {
+	if (g_tensor.size() == 0) return;
+
+	H5::Attribute attr = group.openAttribute("weight_names");
+	H5::DataType dtype = attr.getDataType();
+	H5::DataSpace space = attr.getSpace();
+
+	hsize_t n_weights = 0;
+
+	space.getSimpleExtentDims(&n_weights);
+
+	char** p_weight_names = new char*[n_weights];
+	std::vector<std::string> weight_names(n_weights);
+
+	attr.read(dtype, p_weight_names);
+
+	for (hsize_t i = 0; i < n_weights; ++i) weight_names[i] = p_weight_names[i];
+
+	delete[] p_weight_names;
+	attr.close();
+
+	int i = 0;
+	for (const std::string& name : weight_names) {
+		H5::DataSet data_set = group.openDataSet(name);
+		H5::DataSpace d_space = data_set.getSpace();
+		H5::DataType data_type = data_set.getDataType();
+
+		int n_dims = d_space.getSimpleExtentNdims();
+		hsize_t* dims = new hsize_t[n_dims];
+
+		d_space.getSimpleExtentDims(dims);
+
+		Tensor<nn_type> tensor(dims, n_dims);
+
+		data_set.read(tensor.get_ptr(), data_type);
+
+		if (n_dims == 4) {	
+			g_tensor[i] = tensor.transpose({ 3, 2, 0, 1 });
+		}
+		else {
+			g_tensor[i] = tensor;
+		}
+
+		++i;
+		delete[] dims;
+		data_set.close();
+	}
+}
+
 Model::Model(NN_Manager& manager, const char* model_name) :
 	NN_Layer(model_name),
 	_manager(manager)
@@ -209,7 +281,7 @@ Model::Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* m
 		count_branch(mask);
 		set_childs(inputs, outputs, mask);
 	}
-	catch (const Exception& e) {
+	catch (const NN_Exception& e) {
 		e.put();
 	}
 }
@@ -376,4 +448,47 @@ void Model::summary() {
 	}
 
 	_manager.clear_shapes();
+}
+
+void Model::load_weights(const std::string& path, bool skip_mismatch) {
+	std::vector<std::vector<NN_Shape>>& nodes_shape = _manager.get_node_shape();
+
+	_manager.set_reserved_shapes();
+
+	for (NN_Link* node : _layers) {
+		std::vector<NN_Shape>& m_output_shape = nodes_shape[node->get_index()];
+		std::vector<NN_Shape> m_input_shape;
+
+		if (node->get_prev_nodes().size() > 0) {
+			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
+				int curr_n_out = get_n_node_prev_for_next(p_prev_node, node);
+				m_input_shape.push_back(nodes_shape[p_prev_node->get_index()][curr_n_out]);
+			}
+		}
+
+		node->get_layer().get_output_shape(m_input_shape, m_output_shape);
+		node->get_layer().build(m_input_shape);
+	}
+
+	_manager.clear_shapes();
+
+	H5::H5File fp(path, H5F_ACC_RDONLY);
+	std::vector<std::string> layer_names = get_layer_names(fp);
+
+	for (const std::string& name : layer_names) {
+		for (NN_Link* p_link : _layers) {
+			if (name == p_link->get_layer()._layer_name) {
+				std::cout << "Layer_name: " << name << ' ';
+				std::vector<GpuTensor<nn_type>> weight = p_link->get_layer().get_weight();
+
+				H5::Group group = fp.openGroup('/' + name);
+				set_weight(group, weight);
+
+				std::cout << "Done." << std::endl;
+				group.close();
+			}
+		}
+	}
+
+	fp.close();
 }

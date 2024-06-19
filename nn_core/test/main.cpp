@@ -1,4 +1,7 @@
-#include "../nn_core/cpp_source/mnist.h"
+﻿#include "../nn_core/cpp_source/nn_tensor.h"
+#include <H5Cpp.h>
+
+#include <Windows.h>
 
 #ifdef _DEBUG
 #include "vld.h"
@@ -7,33 +10,19 @@
 
 
 int main() {
-	try {
-		const int batch = 3;
+	SetConsoleOutputCP(65001);
+	std::cout.precision(3);
 
-		MNIST mnist("E:\\data_set\\mnist");
-		Sample<uchar, uchar> samples = mnist.get_train_samples(batch, 100);
+	Tensor<int> tensor(NN_Shape({ 2, 3, 4, 5 }));
+	int* p = tensor.get_ptr();
 
-		int key = -1;
-		cv::namedWindow("train");
-		for (const DataSet<uchar, uchar>& data : samples) {
-			for (int i = 0; i < batch; ++i) {
-				cv::Mat image(28, 28, CV_8UC1, (void*)(data._x.get_ptr() + (28 * 28 * i)));
+	for (int i = 0; i < 120; ++i) p[i] = i;
 
-				std::cout << (int)*(data._y.get_ptr() + i) << std::endl;
-				cv::imshow("train", image);
-				key = cv::waitKey();
+	std::cout << tensor;
 
-				if (key == 27) break;
-			}
-			if (key == 27) break;
-		}
+	Tensor<int> tensor2 = tensor.transpose({ 1, 0, 2, 3 });
 
-		cv::destroyAllWindows();
-	}
-	catch (const Exception& e) {
-		e.put();
-	}
+	std::cout << tensor2;
 
 	return 0;
 }
-

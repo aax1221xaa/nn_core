@@ -28,7 +28,7 @@ public:
 
 	Tensor();
 	Tensor(const NN_Shape& shape);
-	//	Tensor(const std::initializer_list<int>& shape);
+	Tensor(const size_t* p_dims, int n_dims);
 	Tensor(const Tensor& p);
 	Tensor(Tensor&& p);
 
@@ -40,6 +40,9 @@ public:
 	Tensor operator()(const std::vector<int>& indice) const;
 	Tensor operator[](int index);
 	Tensor operator[](int index) const;
+
+	Tensor transpose(const std::initializer_list<int>& orders);
+	Tensor swap_pose();
 
 	_T& val();
 	const _T& val() const;
@@ -200,6 +203,26 @@ Tensor<_T>::Tensor(const NN_Shape& shape) :
 		for (size_t& m : m_indice) m = j++;
 
 		_indice[i++] = m_indice;
+	}
+
+	_steps = calc_step(shape);
+	_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
+}
+
+template <typename _T>
+Tensor<_T>::Tensor(const size_t* p_dims, int n_dims) :
+	_indice(n_dims)
+{
+	NN_Shape shape(n_dims);
+
+	for (int i = 0; i < n_dims; ++i) {
+		std::vector<size_t> m_indice(p_dims[i], 0);
+
+		size_t j = 0;
+		for (size_t& m : m_indice) m = j++;
+
+		_indice[i] = m_indice;
+		shape[i] = (int)p_dims[i];
 	}
 
 	_steps = calc_step(shape);
@@ -475,6 +498,42 @@ Tensor<_T> Tensor<_T>::operator[](int index) const {
 }
 
 template <typename _T>
+Tensor<_T> Tensor<_T>::transpose(const std::initializer_list<int>& orders) {
+	_rank_cnt = 0;
+
+	Tensor<_T> tmp = *this;
+
+	std::vector<size_t> m_steps(_steps.size());
+	std::vector<std::vector<size_t>> m_indice(_indice.size());
+
+	int i = 0;
+	for (const int& n : orders) {
+		m_steps[i] = _steps[n];
+		m_indice[i++] = _indice[n];
+	}
+
+	tmp._steps = m_steps;
+	tmp._indice = m_indice;
+
+	return tmp;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::swap_pose() {
+	_rank_cnt = 0;
+
+	Tensor<_T> tmp = *this;
+
+	std::vector<size_t> m_steps(_steps.rbegin(), _steps.rend());
+	std::vector<std::vector<size_t>> m_indice(_indice.rbegin(), _indice.rend());
+
+	tmp._steps = m_steps;
+	tmp._indice = m_indice;
+
+	return tmp;
+}
+
+template <typename _T>
 _T& Tensor<_T>::val() {
 	_rank_cnt = 0;
 
@@ -624,8 +683,8 @@ public:
 	~GpuTensor();
 
 	GpuTensor& operator=(const GpuTensor& p);
-	GpuTensor& operator=(GpuTensor&& p);
-	GpuTensor& operator=(Tensor<_T>& p);
+	GpuTensor& operator=(const GpuTensor&& p);
+	GpuTensor& operator=(const Tensor<_T>& p);
 
 	NN_Shape& get_shape();
 	const NN_Shape& get_shape() const;
@@ -687,7 +746,7 @@ GpuTensor<_T>& GpuTensor<_T>::operator=(const GpuTensor& p) {
 }
 
 template <typename _T>
-GpuTensor<_T>& GpuTensor<_T>::operator=(GpuTensor&& p) {
+GpuTensor<_T>& GpuTensor<_T>::operator=(const GpuTensor&& p) {
 	if (this == &p) return *this;
 
 	_data = std::move(p._data);
@@ -697,7 +756,7 @@ GpuTensor<_T>& GpuTensor<_T>::operator=(GpuTensor&& p) {
 }
 
 template <typename _T>
-GpuTensor<_T>& GpuTensor<_T>::operator=(Tensor<_T>& p) {
+GpuTensor<_T>& GpuTensor<_T>::operator=(const Tensor<_T>& p) {
 	const NN_Shape h_shape = p.get_shape();
 
 	if (h_shape != _shape) {

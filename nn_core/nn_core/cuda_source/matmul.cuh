@@ -11,6 +11,13 @@
 /*                                            */
 /**********************************************/
 
+void test_matmul(
+	const GpuTensor<nn_type>& input,
+	const GpuTensor<nn_type>& weight,
+	const GpuTensor<nn_type>& bias,
+	GpuTensor<nn_type>& output
+	);
+
 class NN_Dense : public NN_Layer {
 public:
 	GpuTensor<nn_type> _weight;
@@ -22,6 +29,7 @@ public:
 	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
 	void build(const std::vector<NN_Shape>& input_shape);
 	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
+	std::vector<GpuTensor<nn_type>> get_weight();
 };
 
 #endif

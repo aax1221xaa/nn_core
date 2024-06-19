@@ -18,14 +18,14 @@ public:
 };
 
 
-class Exception{
+class NN_Exception{
 protected:
 	const std::string message;
 	const std::string file;
 	int line;
 
 public:
-	Exception(const std::string& message_, const std::string& file_, int line_);
+	NN_Exception(const std::string& message_, const std::string& file_, int line_);
 	void put() const;
 };
 
@@ -34,9 +34,9 @@ public:
 
 template <typename... T>
 void __ErrorException(const std::string& file, int line, const std::string& format, T... args) {
-	char buff[100];
+	char buff[200];
 
 	sprintf_s(buff, format.c_str(), args...);
 
-	throw Exception(buff, file, line);
+	throw NN_Exception(buff, file, line);
 }

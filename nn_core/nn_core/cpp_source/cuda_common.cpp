@@ -87,7 +87,7 @@ NN_Stream::NN_Stream(int amounts) {
 	try {
 		for (int i = 0; i < amounts; ++i) check_cuda(cudaStreamCreate(&(_ptr->_st[i])));
 	}
-	catch (const Exception& e) {
+	catch (const NN_Exception& e) {
 		for (int i = 0; i < amounts; ++i) cudaStreamDestroy(_ptr->_st[i]);
 
 		delete[] _ptr->_st;
@@ -115,7 +115,7 @@ NN_Stream::~NN_Stream() {
 	try {
 		clear();
 	}
-	catch (const Exception& e) {
+	catch (const NN_Exception& e) {
 		NN_Check::set_flag(false);
 
 		e.put();
