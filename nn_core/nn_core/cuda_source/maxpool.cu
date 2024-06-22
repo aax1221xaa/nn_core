@@ -191,23 +191,7 @@ void NN_Maxpool2D::get_output_shape(const std::vector<NN_Shape>& input_shape, st
 }
 
 void NN_Maxpool2D::build(const std::vector<NN_Shape>& input_shape) {
-	const NN_Shape& shape = input_shape[0];
 
-	int n = shape[0];
-	int c = shape[1];
-	int h = 0;
-	int w = 0;
-
-	if (_pad == Pad::SAME) {
-		h = (int)ceil((float)(shape[2] - _k_size[0]) / _stride[0] + 1);
-		w = (int)ceil((float)(shape[3] - _k_size[1]) / _stride[1] + 1);
-	}
-	else {
-		h = (int)floorf((float)(shape[2] - _k_size[0]) / _stride[0] + 1);
-		w = (int)floorf((float)(shape[3] - _k_size[1]) / _stride[1] + 1);
-	}
-
-	//_indice = GpuTensor<uint>::zeros({ n, c, h, w });
 }
 
 void NN_Maxpool2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {

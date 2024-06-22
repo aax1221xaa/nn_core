@@ -12,8 +12,6 @@
 #include <device_launch_parameters.h>
 
 
-__constant__ uint __indice[CONST_ELEM_SIZE];
-
 
 /**********************************************/
 /*											  */
@@ -25,6 +23,7 @@ __global__ void __conv2d(
 	const nn_type* input,
 	const nn_type* kernel,
 	nn_type* output,
+	cuint* indice,
 	cuint in_h,
 	cuint in_w,
 	cuint k_n,
@@ -61,7 +60,7 @@ __global__ void __conv2d(
 		__syncthreads();
 
 		share_k[sidx] = th_x < n && cy < k_n ? p_kernel[th_x] : 0.f;
-		share_in[sidx] = cx < k && th_y < n ? p_input[__indice[th_y]] : 0.f;
+		share_in[sidx] = cx < k && th_y < n ? p_input[indice[th_y]] : 0.f;
 
 		__syncthreads();
 
@@ -155,7 +154,7 @@ void NN_Conv2D::set_indice(const NCHW& in, const NCHW& k) {
 		}
 	}
 
-	cudaMemcpyToSymbol(__indice, h_idx, sizeof(uint) * (k.c * k.h * k.w));
+	set_const_mem(h_idx, (k.c * k.h * k.w), 0);
 
 	delete[] h_idx;
 }
@@ -245,6 +244,7 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 		printf("pad=[%d, %d, %d, %d]\n", pad.n, pad.c, pad.h, pad.w);
 
 		set_indice(pad, k);
+		cuint* c_indice = get_const_mem(k.c * k.h * k.w, 0);
 
 		for (int n = 0; n < in.n; ++n) {
 			const nn_type* in_data = input_data + (n * in.c * in.h * in.w);
@@ -274,6 +274,7 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 					pad_space,
 					filter_data,
 					out_data,
+					c_indice,
 					pad.h,
 					pad.w,
 					k.n,
@@ -296,6 +297,7 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 					in_data,
 					filter_data,
 					out_data,
+					c_indice,
 					in.h,
 					in.w,
 					k.n,
@@ -315,6 +317,7 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 	}
 	else {
 		set_indice(in, k);
+		cuint* c_indice = get_const_mem(k.c * k.h * k.w, 0);
 
 		for (int n = 0; n < in.n; ++n) {
 			const nn_type* in_data = input_data + (n * in.c * in.h * in.w);
@@ -324,6 +327,7 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 				in_data,
 				filter_data,
 				out_data,
+				c_indice,
 				in.h,
 				in.w,
 				k.n,

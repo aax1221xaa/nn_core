@@ -1,5 +1,4 @@
-﻿#include "../nn_core/cpp_source/nn_tensor.h"
-#include <H5Cpp.h>
+﻿#include "../nn_core/cuda_source/cuda_misc.cuh"
 
 #include <Windows.h>
 
@@ -13,16 +12,25 @@ int main() {
 	SetConsoleOutputCP(65001);
 	std::cout.precision(3);
 
-	Tensor<int> tensor(NN_Shape({ 2, 3, 4, 5 }));
-	int* p = tensor.get_ptr();
+	Tensor<nn_type> A({ 2, 3, 4 });
+	GpuTensor<nn_type> dA({ 2, 3, 4 });
 
-	for (int i = 0; i < 120; ++i) p[i] = i;
+	Tensor<nn_type> B({ 4, 3, 2 });
+	GpuTensor<nn_type> dB({ 4, 3, 2 });
 
-	std::cout << tensor;
+	nn_type* pA = A.get_ptr();
+	
+	for (int i = 0; i < 24; ++i) pA[i] = (float)i;
 
-	Tensor<int> tensor2 = tensor.transpose({ 1, 0, 2, 3 });
+	dA = A;
 
-	std::cout << tensor2;
+	transpose(dA, dB, { 2, 1, 0 });
+
+	B = dB;
+
+	std::cout << A;
+	std::cout << std::endl;
+	std::cout << B;
 
 	return 0;
 }

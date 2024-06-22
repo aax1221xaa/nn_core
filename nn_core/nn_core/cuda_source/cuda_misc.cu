@@ -9,6 +9,9 @@
 #include <device_launch_parameters.h>
 
 
+__constant__ uint __cmem[CONST_ELEM_SIZE];
+
+
 /*******************************************
 											  
 			   kernel functions			  
@@ -18,22 +21,31 @@
 __global__ void __transpose(
 	const nn_type* input,
 	nn_type* output,
-	cuint n,
-	cuint c,
-	cuint h,
-	cuint w
+	cuint* c_trans_ranks,
+	cuint* c_dims,
+	cuint* c_steps,
+	uint n_ranks,
+	cuint total_size
 ) {
 	cuint tidx = blockIdx.x * blockDim.x + threadIdx.x;
-	cuint k_idx = tidx % (w * h);
-	cuint k_count = tidx / (w * h);
+	
+	uint quot = tidx;
+	uint src_index = 0;
 
-	cuint row = k_count % c;
-	cuint col = k_count / c;
+	while (n_ranks) {
+		--n_ranks;
 
-	nn_type* p_out = output + (row * (w * h * n) + col * (w * h));
+		cuint rank = c_trans_ranks[n_ranks];
+		cuint dim = c_dims[rank];
+		cuint curr_dim = quot % dim;
 
-	if (tidx < (n * h * w * c)) {
-		p_out[k_idx] = input[tidx];
+		src_index += c_steps[rank] * curr_dim;
+
+		quot /= dim;
+	}
+
+	if (tidx < total_size) {
+		output[tidx] = input[src_index];
 	}
 }
 
@@ -218,23 +230,112 @@ __global__ void __sum_gradient_2d(
 
 *******************************************/
 
+void set_const_mem(cuint* h_mem, size_t len, size_t offset) {
+#if _DEBUG
+	check_cuda(cudaMemcpyToSymbol(__cmem, h_mem, sizeof(uint) * len, sizeof(uint) * offset));
+#else
+	cudaMemcpyToSymbol(__cmem, h_mem, sizeof(uint) * len, sizeof(uint) * offset)
+#endif
+}
+
+cuint* get_const_mem(size_t len, size_t offset) {
+	uint* ptr = NULL;
+
+#if _DEBUG
+	check_cuda(cudaGetSymbolAddress((void**)&ptr, __cmem));
+#else
+	cudaGetSymbolAddress(&ptr, __cmem);
+#endif
+
+	return ptr + offset;
+}
+
+void put_param(cuint* param, cuint len) {
+	printf("\n");
+	printf("[");
+	for (uint i = 0; i < len; ++i) {
+		printf("%d, ", param[i]);
+	}
+	printf("]\n");
+}
+
+void transpose_param_init(
+	const GpuTensor<nn_type>& input,
+	const std::vector<uint>& ranks,
+	cuint** c_dims,
+	cuint** c_steps,
+	cuint** c_ranks
+) {
+	const NN_Shape shape = input.get_shape();
+	uint* ptr = new uint[shape.get_len()];
+	size_t offset = 0;
+	size_t len = (size_t)shape.get_len();
+
+	int i = 0;
+
+	for (const int& n : shape) ptr[i++] = (uint)n;
+
+	put_param(ptr, len);
+
+	set_const_mem(ptr, len, offset);
+	*c_dims = get_const_mem(len, offset);
+
+	offset += len;
+
+	uint step = 1;
+
+	while (i) {
+		--i;
+
+		cuint dim = ptr[i];
+		ptr[i] = step;
+		step *= dim;
+	}
+
+	put_param(ptr, len);
+
+	set_const_mem(ptr, len, offset);
+	*c_steps = get_const_mem(len, offset);
+
+	offset += len;
+
+	for (const int& n : ranks) ptr[i++] = n;
+
+	put_param(ptr, len);
+
+	set_const_mem(ptr, len, offset);
+	*c_ranks = get_const_mem(len, offset);
+
+	delete[] ptr;
+}
+
 void transpose(
 	const GpuTensor<nn_type>& input,
-	GpuTensor<nn_type>& output
+	GpuTensor<nn_type>& output,
+	const std::vector<uint>& ranks
 ) {
-	const NCHW in = input.get_shape().get_nchw();
-
 	dim3 threads(BLOCK_1024);
-	dim3 blocks = get_grid_size(threads, in.n * in.c * in.h * in.w);
+	dim3 blocks = get_grid_size(threads, (uint)input.get_shape().total_size());
+
+	cuint* c_dims = NULL;
+	cuint* c_steps = NULL;
+	cuint* c_trans_ranks = NULL;
+
+	transpose_param_init(input, ranks, &c_dims, &c_steps, &c_trans_ranks);
 
 	__transpose<<<blocks, threads>>>(
 		input.get_ptr(),
 		output.get_ptr(),
-		in.n,
-		in.c,
-		in.h,
-		in.w
+		c_trans_ranks,
+		c_dims,
+		c_steps,
+		(uint)input.get_shape().get_len(),
+		(uint)input.get_shape().total_size()
 	);
+#if _DEBUG
+	check_cuda(cudaDeviceSynchronize());
+	check_cuda(cudaGetLastError());
+#endif
 }
 
 void padding_dilation(

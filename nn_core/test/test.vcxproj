@@ -97,6 +97,10 @@
     <ClInclude Include="..\nn_core\cpp_source\nn_sample.h" />
     <ClInclude Include="..\nn_core\cpp_source\nn_shape.h" />
     <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h" />
+    <ClInclude Include="..\nn_core\cuda_source\cuda_misc.cuh" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="..\nn_core\cuda_source\cuda_misc.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

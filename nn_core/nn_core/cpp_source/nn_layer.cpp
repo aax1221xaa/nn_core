@@ -31,25 +31,28 @@ void NN_Flat::build(const std::vector<NN_Shape>& input_shape) {
 }
 
 void NN_Flat::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
-	Tensor<nn_type> h_input(input[0].get_shape());
-	const NC nc = h_input.get_shape().get_nc();
+	const GpuTensor<nn_type>& m_input = input[0];
+	GpuTensor<nn_type>& m_output = output[0];
+	GpuTensor<nn_type> tmp = m_output;
 
-	h_input = input[0];
+	int shape_ranks = m_input.get_shape().get_len();
 
-	Tensor<nn_type> t_input = h_input.transpose({ 0, 2, 3, 1 });
-	Tensor<nn_type> tmp(t_input.get_shape());
+	if (shape_ranks > 2) {
+		int c_tmp = 0;
 
-	tmp = t_input;
+		NN_Shape& tmp_shape = tmp.get_shape();
 
-	const nn_type* p_src = tmp.get_ptr();
-	nn_type* p_dst = output[0].get_ptr();
-	const size_t len = tmp.get_shape().total_size();
+		tmp_shape = m_input.get_shape();
+		c_tmp = tmp_shape[shape_ranks - 3];
+		tmp_shape[shape_ranks - 3] = tmp_shape[shape_ranks - 2];
+		tmp_shape[shape_ranks - 2] = tmp_shape[shape_ranks - 1];
+		tmp_shape[shape_ranks - 1] = c_tmp;
 
-	check_cuda(cudaMemcpy(p_dst, p_src, sizeof(nn_type) * len, cudaMemcpyHostToDevice));
+		std::cout << std::endl << tmp_shape;
+		std::cout << m_output.get_shape();
 
-	//Tensor<nn_type> tmp = t_input[0];
-
-	//std::cout << std::endl << tmp;
+		transpose(m_input, tmp);
+	}
 }
 
 
