@@ -1,7 +1,7 @@
 #pragma once
 #include "nn_base.h"
 #include "nn_sample.h"
-#include "nn_optimizer.h"
+#include "../cuda_source/optimizer.cuh"
 #include "nn_loss.h"
 #include <time.h>
 #include <H5Cpp.h>
@@ -35,7 +35,7 @@ private:
 	void set_output_indice(const std::vector<int>& indice);
 
 	static std::vector<std::string> get_layer_names(const H5::H5File& fp);
-	static void set_weight(const H5::Group& group, std::vector<GpuTensor<nn_type>>& g_tensor);
+	static void set_weight(const H5::Group& group, NN_List<GpuTensor<nn_type>>& g_tensor);
 
 public:
 	static int _stack;
@@ -52,25 +52,31 @@ public:
 	/*************************************************************/
 
 	/************************** NN_Layer **************************/
-	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
-	void build(const std::vector<NN_Shape>& input_shape);
-	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
-	void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
+	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
+	void build(const NN_List<NN_Shape>& input_shape);
+	NN_List<GpuTensor<nn_type>> get_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input);
+	void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
+	NN_Backward* create_backward(NN_Optimizer* optimizer);
+	NN_List<GpuTensor<nn_type>> get_weight();
 	/**************************************************************/
 
+	void load_weights(const std::string& path, bool skip_mismatch = false);
 	void summary();
 
 	template <typename _xT, typename _yT>
-	std::vector<std::vector<Tensor<nn_type>>> evaluate(const Sample<_xT, _yT>& sample);
+	NN_List<Tensor<nn_type>> evaluate(const Sample<_xT, _yT>& sample);
 
 	template <typename _T>
-	std::vector<Tensor<nn_type>> predict(const std::vector<Tensor<_T>>& x);
+	NN_List<Tensor<nn_type>> predict(const NN_List<Tensor<_T>>& x);
 
-	void load_weights(const std::string& path, bool skip_mismatch = false);
+	void stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss&> loss);
+
+	//template <typename _xT, typename _yT>
+	//std::vector<std::vector<Tensor<nn_type>>> fit(const Sample<_xT, _yT>& sample);
 };
 
 template <typename _xT, typename _yT>
-std::vector<std::vector<Tensor<nn_type>>> Model::evaluate(const Sample<_xT, _yT>& sample) {
+NN_List<Tensor<nn_type>> Model::evaluate(const Sample<_xT, _yT>& sample) {
 	_manager.set_reserved_shapes();
 	_manager.set_reserved_outputs();
 
@@ -128,7 +134,7 @@ std::vector<std::vector<Tensor<nn_type>>> Model::evaluate(const Sample<_xT, _yT>
 					m_input.push_back(nodes_outputs[n_prev][n_out]);
 				}
 				
-				node->get_layer().run_forward(_manager.get_streams(), m_input, m_output);
+				node->get_layer().run(_manager.get_streams(), m_input, m_output);
 			}
 			else {
 				int j = 0;
@@ -165,13 +171,14 @@ std::vector<std::vector<Tensor<nn_type>>> Model::evaluate(const Sample<_xT, _yT>
 }
 
 template <typename _T>
-std::vector<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x) {
+NN_List<Tensor<nn_type>> Model::predict(const NN_List<Tensor<_T>>& x) {
 	_manager.set_reserved_shapes();
 	_manager.set_reserved_outputs();
 
 	std::vector<std::vector<NN_Shape>>& nodes_shapes = _manager.get_node_shape();
 	std::vector<std::vector<GpuTensor<nn_type>>>& nodes_outputs = _manager.get_node_output();
 	std::vector<Tensor<nn_type>> outputs(_output_nodes.size());
+	const NN_Shape shape = x[0].get_shape();
 
 	for (NN_Link* node : _layers) {
 		std::vector<NN_Shape>& m_output_shape = nodes_shapes[node->get_index()];
@@ -194,6 +201,11 @@ std::vector<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x) {
 
 		node->get_layer().get_output_shape(m_input_shape, m_output_shape);
 		node->get_layer().build(m_input_shape);
+
+		for (NN_Shape& m_shape : m_output_shape) {
+			m_shape[0] = shape[0];
+			m_output.push_back(GpuTensor<nn_type>(m_shape));
+		}
 	}
 
 	// std::cout << "Iteration: " << i << std::endl;
@@ -211,7 +223,7 @@ std::vector<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x) {
 				m_input.push_back(nodes_outputs[n_prev][n_out]);
 			}
 
-			node->get_layer().run_forward(_manager.get_streams(), m_input, m_output);
+			node->get_layer().run(_manager.get_streams(), m_input, m_output);
 		}
 		else {
 			int n_input_node = get_n_input(_input_nodes, node);
@@ -241,3 +253,25 @@ std::vector<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x) {
 
 	return outputs;
 }
+
+
+/**********************************************/
+/*                                            */
+/*                    dModel                  */
+/*                                            */
+/**********************************************/
+
+class dModel : public NN_Backward {
+public:
+	Model* _model;
+
+	dModel(Model* model, NN_Optimizer* optimizer);
+
+	void get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape);
+	void run(
+		NN_Stream& st,
+		const NN_List<GpuTensor<nn_type>>& input,
+		const NN_List<GpuTensor<nn_type>>& doutput,
+		NN_List<GpuTensor<nn_type>>& dinput
+	);
+};

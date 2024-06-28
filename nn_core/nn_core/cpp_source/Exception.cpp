@@ -1,4 +1,4 @@
-﻿#include "Exception.h"
+#include "Exception.h"
 
  
 /**********************************************/
@@ -28,9 +28,9 @@ NN_Exception::NN_Exception(const std::string& message_, const std::string& file_
 
 void NN_Exception::put() const {
 	std::cout << "================================================================\n";
-	std::cout << "오류 내용: " << message << std::endl;
-	std::cout << "파일명: " << file << std::endl;
-	std::cout << "줄수: " << line << std::endl;
+	std::cout << "Error script: " << message << std::endl;
+	std::cout << "File path: " << file << std::endl;
+	std::cout << "Line: " << line << std::endl;
 }
 
 

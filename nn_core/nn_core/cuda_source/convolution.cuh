@@ -1,4 +1,4 @@
-﻿#ifndef _CONVOLUTION_CUH_
+#ifndef _CONVOLUTION_CUH_
 #define _CONVULUTION_CUH_
 
 #include "../cpp_source/nn_base.h"
@@ -24,25 +24,34 @@ public:
 
 	NN_Conv2D(int amounts, const NN_Shape& filter_size, const NN_Shape& stride, Pad pad, const char* name);
 
-	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
-	void build(const std::vector<NN_Shape>& input_shape);
-	void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
-	std::vector<GpuTensor<nn_type>> get_weight();
+	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
+	void build(const NN_List<NN_Shape>& input_shape);
+	void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
+	NN_Backward* create_backward(NN_Optimizer* optimizer);
+
+	NN_List<GpuTensor<nn_type>> get_weight();
 };
 
-/**********************************************
+/**********************************************/
+/*                                            */
+/*                 NN_dConv2D                 */
+/*                                            */
+/**********************************************/
 
-		         KernelConv2d
+class NN_dConv2D : public NN_Backward {
+	NN_Conv2D* _conv;
 
-**********************************************/
-/*
-void kernel_conv2d(
-	const nn_type* d_output,
-	const nn_type* input,
-	nn_type* grad,
-	const nn_shape& out_shape,
-	const nn_shape& in_shape,
-	const nn_shape& grad_shape
-);
-*/
+public:
+	NN_dConv2D(NN_Conv2D* conv, NN_Optimizer* optimizer);
+
+	void get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape);
+	void run(
+		NN_Stream& st,
+		const NN_List<GpuTensor<nn_type>>& input,
+		const NN_List<GpuTensor<nn_type>>& doutput,
+		NN_List<GpuTensor<nn_type>>& dinput
+	);
+};
+
+
 #endif // !_CONVOLUTION_CUH_

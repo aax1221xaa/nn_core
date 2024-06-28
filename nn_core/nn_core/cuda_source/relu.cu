@@ -51,16 +51,16 @@ NN_ReLU::NN_ReLU(const char* name) :
 {
 }
 
-void NN_ReLU::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
-	output_shape.push_back(input_shape[0]);
+void NN_ReLU::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
+	output_shape.append(input_shape[0].val());
 }
 
-void NN_ReLU::build(const std::vector<NN_Shape>& input_shape) {
+void NN_ReLU::build(const NN_List<NN_Shape>& input_shape) {
 
 }
 
-void NN_ReLU::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
-	cuint size = (cuint)input[0].get_shape().total_size();
+void NN_ReLU::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	cuint size = (cuint)input[0].val().get_shape().total_size();
 
 	dim3 threads(BLOCK_1024);
 	dim3 blocks = get_grid_size(threads, size);
@@ -73,4 +73,35 @@ void NN_ReLU::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& 
 
 	//check_cuda(cudaDeviceSynchronize());
 	//check_cuda(cudaGetLastError());
+}
+
+NN_Backward* NN_ReLU::create_backward(NN_Optimizer* optimizer) {
+	return new NN_dReLU(this, optimizer);
+}
+
+
+/**********************************************/
+/*                                            */
+/*                   NN_dReLU                 */
+/*                                            */
+/**********************************************/
+
+NN_dReLU::NN_dReLU(NN_ReLU* relu, NN_Optimizer* optimizer) :
+	NN_Backward(optimizer),
+	_relu(relu)
+{
+
+}
+
+void NN_dReLU::get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape) {
+
+}
+
+void NN_dReLU::run(
+	NN_Stream& st,
+	const NN_List<GpuTensor<nn_type>>& input,
+	const NN_List<GpuTensor<nn_type>>& doutput,
+	NN_List<GpuTensor<nn_type>>& dinput
+) {
+
 }

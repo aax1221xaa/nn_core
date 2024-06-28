@@ -93,14 +93,14 @@ NN_Dense::NN_Dense(const int amounts, const char* name) :
 {
 }
 
-void NN_Dense::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
-	const NN_Shape& shape = input_shape[0];
+void NN_Dense::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
+	const NN_Shape& shape = input_shape[0].val();
 
-	output_shape.push_back({ shape[0], _amounts });
+	output_shape.append(NN_Shape({ shape[0], _amounts }));
 }
 
-void NN_Dense::build(const std::vector<NN_Shape>& input_shape) {
-	const NN_Shape& shape = input_shape[0];
+void NN_Dense::build(const NN_List<NN_Shape>& input_shape) {
+	const NN_Shape& shape = input_shape[0].val();
 
 
 	_weight = GpuTensor<nn_type>({ shape[1], _amounts });
@@ -112,9 +112,9 @@ void NN_Dense::build(const std::vector<NN_Shape>& input_shape) {
 	_bias = tmp;
 }
 
-void NN_Dense::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
-	const GpuTensor<nn_type>& m_input = input[0];
-	GpuTensor<nn_type>& m_output = output[0];
+void NN_Dense::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	const GpuTensor<nn_type>& m_input = input[0].val();
+	GpuTensor<nn_type>& m_output = output[0].val();
 
 	const NC in = m_input.get_shape().get_nc();
 	const NC out = m_output.get_shape().get_nc();
@@ -140,6 +140,37 @@ void NN_Dense::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>&
 	add_bias_1d(m_output, _bias, m_output);
 }
 
-std::vector<GpuTensor<nn_type>> NN_Dense::get_weight() {
+NN_Backward* NN_Dense::create_backward(NN_Optimizer* optimizer) {
+	return new NN_dDense(this, optimizer);
+}
+
+NN_List<GpuTensor<nn_type>> NN_Dense::get_weight() {
 	return { _weight, _bias };
+}
+
+
+/**********************************************/
+/*                                            */
+/*                   NN_dDense                */
+/*                                            */
+/**********************************************/
+
+NN_dDense::NN_dDense(NN_Dense* dense, NN_Optimizer* optimizer) :
+	NN_Backward(optimizer),
+	_dense(dense)
+{
+
+}
+
+void NN_dDense::get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape) {
+
+}
+
+void NN_dDense::run(
+	NN_Stream& st,
+	const NN_List<GpuTensor<nn_type>>& input,
+	const NN_List<GpuTensor<nn_type>>& doutput,
+	NN_List<GpuTensor<nn_type>>& dinput
+) {
+
 }

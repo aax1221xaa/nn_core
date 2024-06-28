@@ -1,11 +1,35 @@
 #pragma once
+#include "nn_list.h"
 #include "nn_tensor.h"
-#include "nn_optimizer.h"
+#include "../cuda_source/optimizer.cuh"
 
 
 struct NN_Ptr;
 
-typedef	List<NN_Ptr> Layer_t;
+typedef	NN_List<NN_Ptr> Layer_t;
+
+
+/**********************************************/
+/*                                            */
+/*                 NN_Backward                */
+/*                                            */
+/**********************************************/
+
+class NN_Backward {
+public:
+	NN_Optimizer* _optimizer;
+
+	NN_Backward(NN_Optimizer* optimizer);
+	virtual ~NN_Backward();
+
+	virtual void get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape);
+	virtual void run(
+		NN_Stream& st, 
+		const NN_List<GpuTensor<nn_type>>& input,
+		const NN_List<GpuTensor<nn_type>>& doutput,
+		NN_List<GpuTensor<nn_type>>& dinput
+	);
+};
 
 
 /**********************************************/
@@ -21,11 +45,13 @@ public:
 	NN_Layer(const char* layer_name);
 	virtual ~NN_Layer();
 
-	virtual void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
-	virtual void build(const std::vector<NN_Shape>& input_shape);
-	virtual void run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output);
-	virtual void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
-	virtual std::vector<GpuTensor<nn_type>> get_weight();
+	virtual void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
+	virtual void build(const NN_List<NN_Shape>& input_shape);
+	virtual NN_List<GpuTensor<nn_type>> get_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input);
+	virtual void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
+	virtual NN_Backward* create_backward(NN_Optimizer* optimizer);
+//	virtual void run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input);
+	virtual NN_List<GpuTensor<nn_type>> get_weight();
 };
 
 
@@ -44,10 +70,12 @@ public:
 	NN_Input(const NN_Shape& input_size, int batch = -1, const char* _layer_name = "Input", void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&) = NULL);
 	~NN_Input();
 
-	void get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape);
-	void build(const std::vector<NN_Shape>& input_shape);
+	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
+	void build(const NN_List<NN_Shape>& input_shape);
+	NN_List<GpuTensor<nn_type>> get_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input);
 	template <typename _sT, typename _dT>
 	void trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) const;
+	NN_Backward* create_backward(NN_Optimizer* optimizer);
 };
 
 template <typename _sT, typename _dT>
@@ -76,6 +104,28 @@ void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) con
 
 /**********************************************/
 /*                                            */
+/*                 NN_dInput                  */
+/*                                            */
+/**********************************************/
+
+class NN_dInput : public NN_Backward {
+public:
+	NN_Input* _input;
+
+	NN_dInput(NN_Input* input, NN_Optimizer* optimizer);
+	
+	void get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape);
+	void run(
+		NN_Stream& st,
+		const NN_List<GpuTensor<nn_type>>& input,
+		const NN_List<GpuTensor<nn_type>>& doutput,
+		NN_List<GpuTensor<nn_type>>& dinput
+	);
+};
+
+
+/**********************************************/
+/*                                            */
 /*                   NN_Link                  */
 /*                                            */
 /**********************************************/
@@ -88,6 +138,7 @@ private:
 	std::vector<NN_Link*> _next;
 
 	NN_Layer* _layer;
+	NN_Backward* _backward;
 
 public:
 	bool trainable;
@@ -132,11 +183,13 @@ class NN_Manager {
 	std::vector<NN_Input*> _input_layers;
 	std::vector<NN_Link*> _nodes;
 	std::vector<NN_Layer*> _layers;
+	std::vector<NN_Backward*> _backward;
 
 	int _node_counter;
 
-	std::vector<std::vector<NN_Shape>> _out_shapes;
-	std::vector<std::vector<GpuTensor<nn_type>>> _outputs;
+	NN_List<NN_Shape> _out_shapes;
+	NN_List<GpuTensor<nn_type>> _outputs;
+	NN_List<GpuTensor<nn_type>> _dinputs;
 
 public:
 	NN_Manager();
@@ -147,18 +200,22 @@ public:
 	std::vector<NN_Link*>& get_nodes();
 	std::vector<NN_Layer*>& get_layers();
 	const std::vector<NN_Input*>& get_input_layers();
+	std::vector<NN_Backward*>& get_backward();
 
 	void set_nodes(NN_Link* node);
 	void set_static_node(NN_Link* const node);
 
 	void set_reserved_shapes();
 	void set_reserved_outputs();
+	void set_reserved_dinputs();
 
-	std::vector<std::vector<NN_Shape>>& get_node_shape();
-	std::vector<std::vector<GpuTensor<nn_type>>>& get_node_output();
+	NN_List<NN_Shape>& get_node_shape();
+	NN_List<GpuTensor<nn_type>>& get_node_output();
+	NN_List<GpuTensor<nn_type>>& get_node_dinput();
 
 	void clear_shapes();
 	void clear_outputs();
+	void clear_dinputs();
 
 	Layer_t input(const NN_Shape& input_size, int batch, const char* layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&) = NULL);
 

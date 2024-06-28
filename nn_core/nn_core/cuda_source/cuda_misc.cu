@@ -250,15 +250,6 @@ cuint* get_const_mem(size_t len, size_t offset) {
 	return ptr + offset;
 }
 
-void put_param(cuint* param, cuint len) {
-	printf("\n");
-	printf("[");
-	for (uint i = 0; i < len; ++i) {
-		printf("%d, ", param[i]);
-	}
-	printf("]\n");
-}
-
 void transpose_param_init(
 	const GpuTensor<nn_type>& input,
 	const std::vector<uint>& ranks,
@@ -275,8 +266,6 @@ void transpose_param_init(
 
 	for (const int& n : shape) ptr[i++] = (uint)n;
 
-	put_param(ptr, len);
-
 	set_const_mem(ptr, len, offset);
 	*c_dims = get_const_mem(len, offset);
 
@@ -292,16 +281,12 @@ void transpose_param_init(
 		step *= dim;
 	}
 
-	put_param(ptr, len);
-
 	set_const_mem(ptr, len, offset);
 	*c_steps = get_const_mem(len, offset);
 
 	offset += len;
 
 	for (const int& n : ranks) ptr[i++] = n;
-
-	put_param(ptr, len);
 
 	set_const_mem(ptr, len, offset);
 	*c_ranks = get_const_mem(len, offset);

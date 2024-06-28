@@ -1,8 +1,5 @@
-﻿#include "cpp_source/nn_model.h"
-#include "cpp_source/nn_layer.h"
+﻿#include "cpp_source/nn_core.h"
 #include "cpp_source/mnist.h"
-
-#include <Windows.h>
 
 #ifdef _DEBUG
 #include "vld.h"
@@ -11,7 +8,6 @@
 
 
 int main() {
-	SetConsoleOutputCP(65001);
 	std::cout.precision(6);
 
 	try {
@@ -34,7 +30,7 @@ int main() {
 		x = nn(NN_ReLU("relu_2"))(x);
 		x = nn(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, Pad::VALID, "maxpool_2"))(x);
 
-		x = nn(NN_Flat("flat"))(x);
+		x = nn(NN_Flatten("flat"))(x);
 
 		x = nn(NN_Dense(256, "dense_1"))(x);
 		x = nn(NN_Sigmoid("sigmoid_3"))(x);

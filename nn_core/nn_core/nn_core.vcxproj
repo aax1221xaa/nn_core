@@ -58,7 +58,6 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -83,12 +82,11 @@
     <ClCompile Include="cpp_source\CudaCheck.cpp" />
     <ClCompile Include="cpp_source\cuda_common.cpp" />
     <ClCompile Include="cpp_source\Exception.cpp" />
+    <ClCompile Include="cpp_source\flatten.cpp" />
     <ClCompile Include="cpp_source\mnist.cpp" />
     <ClCompile Include="cpp_source\nn_base.cpp" />
-    <ClCompile Include="cpp_source\nn_layer.cpp" />
     <ClCompile Include="cpp_source\nn_loss.cpp" />
     <ClCompile Include="cpp_source\nn_model.cpp" />
-    <ClCompile Include="cpp_source\nn_optimizer.cpp" />
     <ClCompile Include="cpp_source\nn_sample.cpp" />
     <ClCompile Include="cpp_source\nn_shape.cpp" />
     <ClCompile Include="cpp_source\nn_tensor.cpp" />
@@ -98,12 +96,13 @@
     <ClInclude Include="cpp_source\CudaCheck.h" />
     <ClInclude Include="cpp_source\cuda_common.h" />
     <ClInclude Include="cpp_source\Exception.h" />
+    <ClInclude Include="cpp_source\flatten.h" />
     <ClInclude Include="cpp_source\mnist.h" />
     <ClInclude Include="cpp_source\nn_base.h" />
-    <ClInclude Include="cpp_source\nn_layer.h" />
+    <ClInclude Include="cpp_source\nn_core.h" />
+    <ClInclude Include="cpp_source\nn_list.h" />
     <ClInclude Include="cpp_source\nn_loss.h" />
     <ClInclude Include="cpp_source\nn_model.h" />
-    <ClInclude Include="cpp_source\nn_optimizer.h" />
     <ClInclude Include="cpp_source\nn_sample.h" />
     <ClInclude Include="cpp_source\nn_shape.h" />
     <ClInclude Include="cpp_source\nn_tensor.h" />

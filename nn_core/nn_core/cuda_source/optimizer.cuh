@@ -1,7 +1,16 @@
-#ifndef OPTIMIZER_CUH
-#define OPTIMIZER_CUH
+#pragma once
+#include "../cpp_source/nn_tensor.h"
 
-#include "../cpp_source/cuda_common.h"
+
+
+class NN_Optimizer {
+public:
+	virtual ~NN_Optimizer();
+
+	virtual void run(const GpuTensor<nn_type>& gradient, GpuTensor<nn_type>& weights);
+};
+
+
 
 
 void sgd(
@@ -32,5 +41,3 @@ void adam(
 	float beta_1,
 	float beta_2
 );
-
-#endif // !OPTIMIZER_CUH

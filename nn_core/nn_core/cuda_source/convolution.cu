@@ -1,4 +1,4 @@
-﻿#define CUDA_API_PER_THREAD_DEFAULT_STEAM 
+#define CUDA_API_PER_THREAD_DEFAULT_STEAM 
 
 #include "convolution.cuh"
 #include "cuda_misc.cuh"
@@ -168,8 +168,8 @@ NN_Conv2D::NN_Conv2D(int amounts, const NN_Shape& filter_size, const NN_Shape& s
 {
 }
 
-void NN_Conv2D::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
-	const NN_Shape& shape = input_shape[0];
+void NN_Conv2D::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
+	const NN_Shape& shape = input_shape[0].val();
 
 	if (_pad == Pad::SAME) {
 		int n = shape[0];
@@ -177,7 +177,7 @@ void NN_Conv2D::get_output_shape(const std::vector<NN_Shape>& input_shape, std::
 		int h = (int)ceil((float)shape[2] / _stride[0]);
 		int w = (int)ceil((float)shape[3] / _stride[1]);
 
-		output_shape.push_back({ n, c, h, w });
+		output_shape.append(NN_Shape({ n, c, h, w }));
 	}
 	else {
 		int n = shape[0];
@@ -185,12 +185,12 @@ void NN_Conv2D::get_output_shape(const std::vector<NN_Shape>& input_shape, std::
 		int h = (int)floorf((float)(shape[2] - _filter_size[0]) / _stride[0] + 1);
 		int w = (int)floorf((float)(shape[3] - _filter_size[1]) / _stride[1] + 1);
 
-		output_shape.push_back({ n, c, h, w });
+		output_shape.append(NN_Shape({ n, c, h, w }));
 	}
 }
 
-void NN_Conv2D::build(const std::vector<NN_Shape>& input_shape) {
-	const NN_Shape& shape = input_shape[0];
+void NN_Conv2D::build(const NN_List<NN_Shape>& input_shape) {
+	const NN_Shape& shape = input_shape[0].val();
 
 	_filter.resize({ _amounts, shape[1], _filter_size[0], _filter_size[1] });
 	_bias = GpuTensor<nn_type>::zeros({ _amounts });
@@ -198,9 +198,9 @@ void NN_Conv2D::build(const std::vector<NN_Shape>& input_shape) {
 	set_random_uniform(_filter, -0.1f, 0.1f);
 }
 
-void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
-	const GpuTensor<nn_type>& m_input = input[0];
-	GpuTensor<nn_type>& m_output = output[0];
+void NN_Conv2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	const GpuTensor<nn_type>& m_input = input[0].val();
+	GpuTensor<nn_type>& m_output = output[0].val();
 
 	//std::cout << "input: " << m_input.get_shape();
 	//std::cout << "kernel: " << _filter.get_shape();
@@ -353,9 +353,40 @@ void NN_Conv2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>
 	check_cuda(cudaGetLastError());
 }
 
-std::vector<GpuTensor<nn_type>> NN_Conv2D::get_weight() {
+NN_Backward* NN_Conv2D::create_backward(NN_Optimizer* optimizer) {
+	return new NN_dConv2D(this, optimizer);
+}
+
+NN_List<GpuTensor<nn_type>> NN_Conv2D::get_weight() {
 	return { _filter, _bias };
 }
+
+
+/**********************************************/
+/*                                            */
+/*                 NN_dConv2D                 */
+/*                                            */
+/**********************************************/
+
+NN_dConv2D::NN_dConv2D(NN_Conv2D* conv, NN_Optimizer* optimizer) :
+	NN_Backward(optimizer),
+	_conv(conv)
+{
+}
+
+void NN_dConv2D::get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape) {
+
+}
+
+void NN_dConv2D::run(
+	NN_Stream& st,
+	const NN_List<GpuTensor<nn_type>>& input,
+	const NN_List<GpuTensor<nn_type>>& doutput,
+	NN_List<GpuTensor<nn_type>>& dinput
+) {
+
+}
+
 
 /**********************************************
 

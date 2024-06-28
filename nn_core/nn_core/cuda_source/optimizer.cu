@@ -85,6 +85,14 @@ __global__ void __adam(
 /*										      */
 /**********************************************/
 
+NN_Optimizer::~NN_Optimizer() {
+
+}
+
+void NN_Optimizer::run(const GpuTensor<nn_type>& gradient, GpuTensor<nn_type>& weights) {
+
+}
+
 void sgd(
 	nn_type* gradient,
 	nn_type* momentum,

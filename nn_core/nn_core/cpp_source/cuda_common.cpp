@@ -47,12 +47,6 @@ std::vector<int> random_choice(int min, int max, int amounts, bool replace) {
 	return indice;
 }
 
-std::ostream& operator<<(std::ostream& os, List<int>& list) {
-	list.put(os);
-
-	return os;
-}
-
 
 /**********************************************/
 /*                                            */

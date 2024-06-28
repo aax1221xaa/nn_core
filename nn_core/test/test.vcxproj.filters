@@ -67,6 +67,9 @@
     <ClInclude Include="..\nn_core\cuda_source\cuda_misc.cuh">
       <Filter>cuda헤더</Filter>
     </ClInclude>
+    <ClInclude Include="..\nn_core\cpp_source\nn_list.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="..\nn_core\cuda_source\cuda_misc.cu">

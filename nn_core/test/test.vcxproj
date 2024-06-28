@@ -21,7 +21,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -94,6 +94,7 @@
     <ClInclude Include="..\nn_core\cpp_source\cuda_common.h" />
     <ClInclude Include="..\nn_core\cpp_source\Exception.h" />
     <ClInclude Include="..\nn_core\cpp_source\mnist.h" />
+    <ClInclude Include="..\nn_core\cpp_source\nn_list.h" />
     <ClInclude Include="..\nn_core\cpp_source\nn_sample.h" />
     <ClInclude Include="..\nn_core\cpp_source\nn_shape.h" />
     <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h" />

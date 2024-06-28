@@ -39,16 +39,10 @@
     <ClCompile Include="cpp_source\cuda_common.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\nn_layer.cpp">
-      <Filter>소스 파일\cpp</Filter>
-    </ClCompile>
     <ClCompile Include="cpp_source\nn_model.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
     <ClCompile Include="cpp_source\nn_loss.cpp">
-      <Filter>소스 파일\cpp</Filter>
-    </ClCompile>
-    <ClCompile Include="cpp_source\nn_optimizer.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
     <ClCompile Include="cpp_source\nn_base.cpp">
@@ -66,6 +60,9 @@
     <ClCompile Include="cpp_source\nn_sample.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
+    <ClCompile Include="cpp_source\flatten.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpp_source\CudaCheck.h">
@@ -74,16 +71,10 @@
     <ClInclude Include="cpp_source\Exception.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
-    <ClInclude Include="cpp_source\nn_layer.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
     <ClInclude Include="cpp_source\nn_model.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_loss.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
-    <ClInclude Include="cpp_source\nn_optimizer.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_base.h">
@@ -130,6 +121,15 @@
     </ClInclude>
     <ClInclude Include="cuda_source\sigmoid.cuh">
       <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\flatten.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\nn_core.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\nn_list.h">
+      <Filter>헤더 파일\h</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

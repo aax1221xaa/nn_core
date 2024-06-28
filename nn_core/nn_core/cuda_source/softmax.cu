@@ -41,24 +41,31 @@ __global__ void __softmax(
 	}
 }
 
+
+/**********************************************/
+/*                                            */
+/*                  NN_Softmax                */
+/*                                            */
+/**********************************************/
+
 NN_Softmax::NN_Softmax(const char* name) :
 	NN_Layer(name)
 {
 }
 
-void NN_Softmax::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
-	output_shape.push_back(input_shape[0]);
+void NN_Softmax::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
+	output_shape.append(input_shape[0].val());
 }
 
-void NN_Softmax::build(const std::vector<NN_Shape>& input_shape) {
+void NN_Softmax::build(const NN_List<NN_Shape>& input_shape) {
 
 }
 
-void NN_Softmax::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
-	const NC in = input[0].get_shape().get_nc();
+void NN_Softmax::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	const NC in = input[0].val().get_shape().get_nc();
 
-	const nn_type* in_data = input[0].get_ptr();
-	nn_type* out_data = output[0].get_ptr();
+	const nn_type* in_data = input[0].val().get_ptr();
+	nn_type* out_data = output[0].val().get_ptr();
 
 
 	dim3 threads(BLOCK_1024);
@@ -74,4 +81,34 @@ void NN_Softmax::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>
 			in.c
 		);
 	}
+}
+
+NN_Backward* NN_Softmax::create_backward(NN_Optimizer* optimizer) {
+	return new NN_dSoftmax(this, optimizer);
+}
+
+
+/**********************************************/
+/*                                            */
+/*                 NN_dSoftmax                */
+/*                                            */
+/**********************************************/
+
+NN_dSoftmax::NN_dSoftmax(NN_Softmax* softmax, NN_Optimizer* optimizer) :
+	NN_Backward(optimizer),
+	_softmax(softmax)
+{
+}
+
+void NN_dSoftmax::get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape) {
+
+}
+
+void NN_dSoftmax::run(
+	NN_Stream& st,
+	const NN_List<GpuTensor<nn_type>>& input,
+	const NN_List<GpuTensor<nn_type>>& doutput,
+	NN_List<GpuTensor<nn_type>>& dinput
+) {
+
 }

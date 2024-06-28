@@ -169,8 +169,8 @@ NN_Maxpool2D::NN_Maxpool2D(const NN_Shape& k_size, const NN_Shape& stride, const
 {
 }
 
-void NN_Maxpool2D::get_output_shape(const std::vector<NN_Shape>& input_shape, std::vector<NN_Shape>& output_shape) {
-	const NN_Shape& shape = input_shape[0];
+void NN_Maxpool2D::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
+	const NN_Shape& shape = input_shape[0].val();
 
 	int n = shape[0];
 	int c = shape[1];
@@ -186,21 +186,21 @@ void NN_Maxpool2D::get_output_shape(const std::vector<NN_Shape>& input_shape, st
 		w = (int)floorf((float)(shape[3] - _k_size[1]) / _stride[1] + 1);
 	}
 
-	output_shape.push_back({ n, c, h, w });
+	output_shape.append(NN_Shape({ n, c, h, w }));
 	if (n > 0) _indice = GpuTensor<uint>::zeros({ n, c, h, w });
 }
 
-void NN_Maxpool2D::build(const std::vector<NN_Shape>& input_shape) {
+void NN_Maxpool2D::build(const NN_List<NN_Shape>& input_shape) {
 
 }
 
-void NN_Maxpool2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& input, std::vector<GpuTensor<nn_type>>& output) {
-	const nn_type* m_input = input[0].get_ptr();
-	nn_type* m_output = output[0].get_ptr();
+void NN_Maxpool2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	const nn_type* m_input = input[0].val().get_ptr();
+	nn_type* m_output = output[0].val().get_ptr();
 	uint* m_indice = _indice.get_ptr();
 
-	const NCHW in = input[0].get_shape().get_nchw();
-	const NCHW out = output[0].get_shape().get_nchw();
+	const NCHW in = input[0].val().get_shape().get_nchw();
+	const NCHW out = output[0].val().get_shape().get_nchw();
 
 	int tile_h = (BLOCK_32 - 1) * _stride[0] + _k_size[0];
 	int tile_w = (BLOCK_32 - 1) * _stride[1] + _k_size[1];
@@ -240,6 +240,38 @@ void NN_Maxpool2D::run_forward(NN_Stream& st, const std::vector<GpuTensor<nn_typ
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());
 }
+
+NN_Backward* NN_Maxpool2D::create_backward(NN_Optimizer* optimizer) {
+	return new NN_dMaxpool2D(this, optimizer);
+}
+
+
+/**********************************************/
+/*                                            */
+/*                NN_dMaxpool2D               */
+/*                                            */
+/**********************************************/
+
+NN_dMaxpool2D::NN_dMaxpool2D(NN_Maxpool2D* maxpool, NN_Optimizer* optimizer) :
+	NN_Backward(optimizer),
+	_maxpool(maxpool)
+{
+
+}
+
+void NN_dMaxpool2D::get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape) {
+
+}
+
+void NN_dMaxpool2D::run(
+	NN_Stream& st,
+	const NN_List<GpuTensor<nn_type>>& input,
+	const NN_List<GpuTensor<nn_type>>& doutput,
+	NN_List<GpuTensor<nn_type>>& dinput
+) {
+
+}
+
 
 /**********************************************
 
