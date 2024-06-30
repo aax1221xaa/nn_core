@@ -48,8 +48,8 @@ void NN_Sigmoid::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN
 	dim3 blocks = get_grid_size(threads, size);
 
 	__sigmoid<<<blocks, threads>>>(
-		input[0].get_ptr(),
-		output[0].get_ptr(),
+		input[0].val().get_ptr(),
+		output[0].val().get_ptr(),
 		size
 		);
 }

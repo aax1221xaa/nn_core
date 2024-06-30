@@ -442,6 +442,8 @@ NN_List<GpuTensor<nn_type>> Model::get_output(const NN_List<NN_Shape>& output_sh
 	for (size_t i = 0; i < _output_nodes.size(); ++i) {
 		output[i] = nodes_output[_output_nodes[_output_indice[i]]->get_index()];
 	}
+
+	return GpuTensor<nn_type>();
 }
 
 void Model::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
@@ -455,7 +457,7 @@ NN_Backward* Model::create_backward(NN_Optimizer* optimizer) {
 }
 
 NN_List<GpuTensor<nn_type>> Model::get_weight() {
-
+	return GpuTensor<nn_type>();
 }
 
 void Model::load_weights(const std::string& path, bool skip_mismatch) {
@@ -534,7 +536,7 @@ void Model::summary() {
 	_manager.clear_shapes();
 }
 
-void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss&> loss) {
+void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& loss) {
 
 }
 

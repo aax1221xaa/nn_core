@@ -2,6 +2,8 @@
 #include "cuda_common.h"
 
 
+
+
 /**********************************************/
 /*                                            */
 /*                   NN_List                  */
@@ -42,6 +44,7 @@ public:
 
 	NN_List();
 	NN_List(const _T& val);
+	NN_List(_T&& val);
 	NN_List(const std::initializer_list<_T>& list);
 	NN_List(const std::initializer_list<NN_List>& list);
 	NN_List(const NN_List& p);
@@ -56,13 +59,16 @@ public:
 
 	void clear();
 	void append(const _T& val);
+	void append(_T&& val);
 	void append(const std::initializer_list<_T>& list);
 	void append(const NN_List& list);
 	void extend(const _T& val);
+	void extend(_T&& val);
 	void extend(const std::initializer_list<_T>& list);
 	void extend(const NN_List& list);
 	_T& val();
 	size_t size();
+	void reserve(size_t size);
 	void resize(size_t size);
 
 	size_t size() const;
@@ -76,7 +82,9 @@ public:
 	typename ConstIterator begin() const;
 	typename ConstIterator end() const;
 
+#ifdef PUT_LIST
 	std::ostream& put_list(std::ostream& os) const;
+#endif
 };
 
 template <class _T>
@@ -148,8 +156,16 @@ NN_List<_T>::NN_List() :
 }
 
 template <class _T>
-NN_List<_T>::NN_List(const _T& val) {
-	_data = std::shared_ptr<_T>(new _T(val));
+NN_List<_T>::NN_List(const _T& val) :
+	_data(std::shared_ptr<_T>(new _T(val)))
+{
+	_p_list.push_back(this);
+}
+
+template <class _T>
+NN_List<_T>::NN_List(_T&& val) :
+	_data(std::shared_ptr<_T>(new _T(val)))
+{
 	_p_list.push_back(this);
 }
 
@@ -384,6 +400,30 @@ void NN_List<_T>::append(const _T& val) {
 }
 
 template <class _T>
+void NN_List<_T>::append(_T&& val) {
+	if (_p_list.front() == this) {
+		if (_data) {
+			_p_list.front() = new NN_List(_data);
+			_p_list.push_back(new NN_List(val));
+			_data = NULL;
+		}
+		else {
+			_data = std::shared_ptr<_T>(new _T(val));
+		}
+	}
+	else {
+		if (_data) {
+			ErrorExcept(
+				"[NN_List<_T>::append] Can't append this value."
+			);
+		}
+		else {
+			_p_list.push_back(new NN_List(val));
+		}
+	}
+}
+
+template <class _T>
 void NN_List<_T>::append(const std::initializer_list<_T>& list) {
 	if (_p_list.front() == this) {
 		if (_data) {
@@ -469,6 +509,30 @@ void NN_List<_T>::extend(const _T& val) {
 }
 
 template <class _T>
+void NN_List<_T>::extend(_T&& val) {
+	if (_p_list.front() == this) {
+		if (_data) {
+			_p_list.front() = new NN_List(_data);
+			_p_list.push_back(new NN_List(val));
+			_data = NULL;
+		}
+		else {
+			_data = std::shared_ptr<_T>(new _T(val));
+		}
+	}
+	else {
+		if (_data) {
+			ErrorExcept(
+				"[NN_List<_T>::extend] Can't extend this value."
+			);
+		}
+		else {
+			_p_list.push_back(new NN_List(val));
+		}
+	}
+}
+
+template <class _T>
 void NN_List<_T>::extend(const std::initializer_list<_T>& list) {
 	if (_p_list.front() == this) {
 		if (_data) {
@@ -513,24 +577,40 @@ _T& NN_List<_T>::val() {
 
 template <class _T>
 size_t NN_List<_T>::size() {
-	return _p_list.size();
+	size_t size = 0;
+
+	if (_p_list.front() == this && _data == NULL) size = 0;
+	else size = _p_list.size();
+
+	return size;
+}
+
+template <class _T>
+void NN_List<_T>::reserve(size_t size) {
+	clear();
+
+	_p_list.resize(size, NULL);
+
+	for (NN_List*& p_list : _p_list) p_list = new NN_List;
 }
 
 template <class _T>
 void NN_List<_T>::resize(size_t size) {
 	clear();
 
-	if (size == 1) _data = std::shared_ptr<_T>(new _T);
-	else if (size > 1) {
-		_p_list.resize(size, NULL);
+	_p_list.resize(size, NULL);
 
-		for (NN_List*& ptr : _p_list) ptr = new NN_List;
-	}
+	for (NN_List*& p_list : _p_list) p_list = new NN_List(_T());
 }
 
 template <class _T>
 size_t NN_List<_T>::size() const {
-	return _p_list.size();
+	size_t size = 0;
+
+	if (_p_list.front() == this && _data == NULL) size = 0;
+	else size = _p_list.size();
+
+	return size;
 }
 
 template <class _T>
@@ -563,6 +643,7 @@ typename NN_List<_T>::ConstIterator NN_List<_T>::end() const {
 	return NN_List<_T>::ConstIterator(_p_list.cend());
 }
 
+#ifdef PUT_LIST
 template <class _T>
 std::ostream& NN_List<_T>::put_list(std::ostream& os) const {
 	os << '[';
@@ -583,3 +664,4 @@ template <class _T>
 std::ostream& operator<<(std::ostream& os, const NN_List<_T>& list) {
 	return list.put_list(os) << std::endl;
 }
+#endif

@@ -47,12 +47,12 @@ int main() {
 		model.summary();
 		model.load_weights("E:\\data_set\\mnist\\mnist.h5");
 		
-		std::vector<std::vector<Tensor<nn_type>>> result = model.evaluate(sample);
+		NN_List<Tensor<nn_type>> result = model.evaluate(sample);
 
 		
-		for (std::vector<Tensor<nn_type>>& m_result : result) {
-			for (Tensor<nn_type>& p_result : m_result) {
-				std::cout << std::endl << p_result;
+		for (NN_List<Tensor<nn_type>>& m_result : result) {
+			for (NN_List<Tensor<nn_type>>& p_result : m_result) {
+				std::cout << std::endl << p_result.val();
 			}
 		}
 		
@@ -68,6 +68,9 @@ int main() {
 	}
 	catch (NN_Exception& e) {
 		e.put();
+		cudaDeviceReset();
+
+		return -1;
 	}
 
 	cudaDeviceReset();

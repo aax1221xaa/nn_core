@@ -321,15 +321,15 @@ void NN_Manager::set_static_node(NN_Link* const node) {
 }
 
 void NN_Manager::set_reserved_shapes() {
-	_out_shapes.resize(_nodes.size());
+	_out_shapes.reserve(_nodes.size());
 }
 
 void NN_Manager::set_reserved_outputs() {
-	_outputs.resize(_nodes.size());
+	_outputs.reserve(_nodes.size());
 }
 
 void NN_Manager::set_reserved_dinputs() {
-	_dinputs.resize(_nodes.size());
+	_dinputs.reserve(_nodes.size());
 }
 
 NN_List<NN_Shape>& NN_Manager::get_node_shape() {
