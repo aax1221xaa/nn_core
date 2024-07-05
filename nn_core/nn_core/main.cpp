@@ -1,11 +1,16 @@
 ﻿#include "cpp_source/nn_core.h"
 #include "cpp_source/mnist.h"
+#include <exception>
 
 #ifdef _DEBUG
 #include "vld.h"
 #endif
  
 
+#define SELECT				1
+
+
+#if (SELECT == 0)
 
 int main() {
 	std::cout.precision(6);
@@ -77,3 +82,78 @@ int main() {
 
 	return 0;
 }
+
+#elif (SELECT == 1)
+
+int main() {
+	try {
+		NN_Manager nn;
+
+		Layer_t x_input_1 = nn.input({ 3, 3 }, -1, "input_1", NULL);
+		Layer_t x_input_2 = nn.input({ 3, 3 }, -1, "input_2", NULL);
+		Layer_t x_input_3 = nn.input({ 3, 3 }, -1, "input_3", NULL);
+
+		Layer_t x1 = nn(NN_Add(1.f, "Add_1"))(x_input_1);
+		Layer_t x2 = nn(NN_Add(2.f, "Add_2"))(x_input_2);
+		Layer_t x3 = nn(NN_Add(3.f, "Add_3"))(x_input_3);
+
+		Layer_t x4 = nn(NN_Sum("Sum_1"))({ x1, x2 });
+		x4 = nn(NN_Add(1.f, "Add_4"))(x4);
+		Layer_t x5 = nn(NN_Sum("Sum_2"))({ x4, x3 });
+
+		Model model_1(nn, { x_input_1, x_input_2, x_input_3 }, { x4, x5 }, "model_1");
+
+		Layer_t x_input_4 = nn.input({ 3, 3 }, -1, "input_4", NULL);
+		Layer_t x_input_5 = nn.input({ 3, 3 }, -1, "input_5", NULL);
+		Layer_t x_input_6 = nn.input({ 3, 3 }, -1, "input_6", NULL);
+
+		Layer_t x6 = model_1({ x_input_4, x_input_5, x_input_6 });
+		Layer_t x7 = nn(NN_Add(1.f, "Add_5"))(x6[0]);
+		Layer_t x8 = nn(NN_Add(1.f, "Add_6"))(x6[1]);
+
+		Model model_2(nn, { x_input_4, x_input_5, x_input_6 }, { x7, x8 }, "model_2");
+		
+		Model model_3(nn, { x_input_1, x_input_2 }, x4, "model_3");
+
+		model_1.summary();
+		model_2.summary();
+		model_3.summary();
+
+		Tensor<nn_type> a({ 1, 3, 3 });
+		Tensor<nn_type> b({ 1, 3, 3 });
+		Tensor<nn_type> c({ 1, 3, 3 });
+
+		a = b = c = 1;
+
+		NN_List<Tensor<nn_type>> samples({ a, b, c });
+
+		NN_List<Tensor<nn_type>> result = model_1.predict(samples);
+
+		std::cout << std::endl;
+		std::cout << result << std::endl;
+	}
+	catch (const NN_Exception& e) {
+		e.put();
+
+		return -1;
+	}
+	catch (const std::out_of_range& e) {
+		std::cout << e.what() << std::endl;
+
+		return -1;
+	}
+	catch (const std::length_error& e) {
+		std::cout << e.what() << std::endl;
+
+		return -1;
+	}
+	catch (const std::exception& e) {
+		std::cout << e.what() << std::endl;
+
+		return -1;
+	}
+
+	return 0;
+}
+
+#endif

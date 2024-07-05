@@ -60,10 +60,6 @@ void NN_Layer::build(const NN_List<NN_Shape>& input_shape) {
 	);
 }
 
-NN_List<GpuTensor<nn_type>> NN_Layer::get_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input) {
-	return { GpuTensor<nn_type>(output_shape[0].val()) };
-}
-
 void NN_Layer::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
 	ErrorExcept(
 		"[NN_Layer::run] Make this function."
@@ -74,14 +70,79 @@ NN_Backward* NN_Layer::create_backward(NN_Optimizer* optimizer) {
 	return new NN_Backward(optimizer);
 }
 
-//void NN_Layer::run_backward(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& d_output, std::vector<GpuTensor<nn_type>>& d_input) {
-//	ErrorExcept(
-//		"[NN_Layer::run_backward] Make this function."
-//	);
-//}
-
 NN_List<GpuTensor<nn_type>> NN_Layer::get_weight() {
 	return NN_List<GpuTensor<nn_type>>();
+}
+
+void NN_Layer::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	for (const NN_List<NN_Shape>& shape : output_shape) output.append(GpuTensor<nn_type>(shape.val()));
+}
+
+
+/**********************************************/
+/*                                            */
+/*                    NN_Add                  */
+/*                                            */
+/**********************************************/
+
+NN_Add::NN_Add(nn_type val, const char* layer_name) :
+	NN_Layer(layer_name),
+	_val(val)
+{
+}
+
+void NN_Add::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
+	output_shape.append(input_shape[0].val());
+}
+
+void NN_Add::build(const NN_List<NN_Shape>& input_shape) {
+
+}
+
+void NN_Add::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	Tensor<nn_type> m_input(input[0].val().get_shape());
+	Tensor<nn_type> m_output(output[0].val().get_shape());
+
+	m_input = input[0].val();
+
+	m_output = m_input + _val;
+
+	output[0].val() = m_output;
+}
+
+
+/**********************************************/
+/*                                            */
+/*                    NN_Sum                  */
+/*                                            */
+/**********************************************/
+
+NN_Sum::NN_Sum(const char* layer_name) :
+	NN_Layer(layer_name)
+{
+}
+
+void NN_Sum::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
+	output_shape.append(input_shape[0].val());
+}
+
+void NN_Sum::build(const NN_List<NN_Shape>& input_shape) {
+
+}
+
+void NN_Sum::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	Tensor<nn_type> sum_input(output[0].val().get_shape());
+	
+	sum_input = 0.f;
+
+	for (const NN_List<GpuTensor<nn_type>>& m_input : input) {
+		Tensor<nn_type> in(m_input.val().get_shape());
+
+		in = m_input.val();
+		sum_input += in;
+	}
+
+	output[0].val() = sum_input;
 }
 
 
@@ -91,8 +152,8 @@ NN_List<GpuTensor<nn_type>> NN_Layer::get_weight() {
 /*                                            */
 /**********************************************/
 
-NN_Input::NN_Input(const NN_Shape& input_size, int batch, const char* _layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&)) :
-	NN_Layer(_layer_name),
+NN_Input::NN_Input(const NN_Shape& input_size, int batch, const char* layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&)) :
+	NN_Layer(layer_name),
 	_shape(input_size),
 	p_convert(convert_f)
 {
@@ -128,15 +189,16 @@ void NN_Input::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN
 
 		int i = 0;
 		for (const int& n : in_shape) {
-			if (n < 0) {
-				ErrorExcept(
-					"[NN_Input::get_output_shape] The dimensions of inputs must be greater than 0. %s",
-					shape_to_str(in_shape)
-				);
-			}
+			//if (n < 0) {
+			//	ErrorExcept(
+			//		"[NN_Input::get_output_shape] The dimensions of inputs must be greater than 0. %s",
+			//		shape_to_str(in_shape)
+			//	);
+			//}
 
 			if (_shape[i] < 0) out_shape[i] = n;
 			else out_shape[i] = _shape[i];
+			++i;
 		}
 
 		output_shape.append(out_shape);
@@ -147,14 +209,13 @@ void NN_Input::build(const NN_List<NN_Shape>& input_shape) {
 
 }
 
-NN_List<GpuTensor<nn_type>> NN_Input::get_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input) {
-	input[0].val().resize(output_shape[0].val());
-
-	return input;
-}
-
 NN_Backward* NN_Input::create_backward(NN_Optimizer* optimizer) {
 	return new NN_dInput(this, optimizer);
+}
+
+void NN_Input::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	if (input.size()) output.append(input[0].val());
+	else output.append(GpuTensor<nn_type>(output_shape[0].val()));
 }
 
 

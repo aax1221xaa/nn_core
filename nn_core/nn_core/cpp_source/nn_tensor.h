@@ -29,6 +29,7 @@ public:
 	Tensor();
 	Tensor(const NN_Shape& shape);
 	Tensor(const size_t* p_dims, int n_dims);
+	Tensor(const std::initializer_list<int>& shape);
 	Tensor(const Tensor& p);
 	Tensor(Tensor&& p);
 
@@ -40,6 +41,26 @@ public:
 	Tensor operator()(const std::vector<int>& indice) const;
 	Tensor operator[](int index);
 	Tensor operator[](int index) const;
+
+	Tensor operator+(const Tensor& p);
+	Tensor operator-(const Tensor& p);
+	Tensor operator*(const Tensor& p);
+	Tensor operator/(const Tensor& p);
+
+	Tensor operator+(const _T& val);
+	Tensor operator-(const _T& val);
+	Tensor operator*(const _T& val);
+	Tensor operator/(const _T& val);
+
+	void operator+=(const Tensor& p);
+	void operator-=(const Tensor& p);
+	void operator*=(const Tensor& p);
+	void operator/=(const Tensor& p);
+
+	void operator+=(const _T& val);
+	void operator-=(const _T& val);
+	void operator*=(const _T& val);
+	void operator/=(const _T& val);
 
 	Tensor transpose(const std::initializer_list<int>& orders);
 	Tensor swap_pose();
@@ -54,6 +75,7 @@ public:
 	const _T* get_ptr() const;
 
 	std::ostream& put(std::ostream& os);
+	std::ostream& put(std::ostream& os) const;
 
 	void resize(const NN_Shape& shape);
 
@@ -68,7 +90,7 @@ template <typename _T>
 int Tensor<_T>::_rank_cnt = 0;
 
 template <typename _T>
-std::ostream& operator<<(std::ostream& os, Tensor<_T>& tensor) {
+std::ostream& operator<<(std::ostream& os, const Tensor<_T>& tensor) {
 	tensor.put(os);
 
 	return os;
@@ -229,7 +251,7 @@ Tensor<_T>::Tensor(const size_t* p_dims, int n_dims) :
 	_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
 }
 
-/*
+
 template <typename _T>
 Tensor<_T>::Tensor(const std::initializer_list<int>& shape) :
 	_indice(shape.size())
@@ -254,7 +276,7 @@ Tensor<_T>::Tensor(const std::initializer_list<int>& shape) :
 	_steps = calc_step(shape);
 	_data = std::shared_ptr<_T[]>(new _T[NN_Shape(shape).total_size()]);
 }
-*/
+
 template <typename _T>
 Tensor<_T>::Tensor(const Tensor& p) :
 	_data(p._data),
@@ -288,7 +310,7 @@ Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 
 		if (!is_valid_src_shape(origin_shape, source_shape)) {
 			ErrorExcept(
-				"[Tensor<_T>::operator=] Source shape is wrong. %s.",
+				"[Tensor<_T>::operator=] Shape of Right operand are unsuitable. %s.",
 				shape_to_str(source_shape)
 			);
 		}
@@ -344,6 +366,8 @@ Tensor<_T>& Tensor<_T>::operator=(_T scalar) {
 		_data = std::shared_ptr<_T[]>(new _T[1]);
 		_steps.push_back(1);
 		_indice.push_back({ 0 });
+
+		_data[0] = scalar;
 	}
 	else {
 		const size_t size = calc_size(_indice);
@@ -498,6 +522,534 @@ Tensor<_T> Tensor<_T>::operator[](int index) const {
 }
 
 template <typename _T>
+Tensor<_T> Tensor<_T>::operator+(const Tensor& p) {
+	_rank_cnt = 0;
+
+	Tensor<_T> value(calc_shape(_indice));
+
+	if (_data != NULL && p._data != NULL) {
+		const NN_Shape origin_shape = calc_shape(_indice);
+		const NN_Shape source_shape = calc_shape(p._indice);
+
+		if (!is_valid_src_shape(origin_shape, source_shape)) {
+			ErrorExcept(
+				"[Tensor<_T>::operator+] Shape of Right operand are unsuitable. %s.",
+				shape_to_str(source_shape)
+			);
+		}
+
+		const size_t src_size = calc_size(p._indice);
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				value._data[dst_idx] = _data[dst_idx] + p._data[src_idx];
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator+] None tensor can't this operator."
+		);
+	}
+
+	return value;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator-(const Tensor& p) {
+	_rank_cnt = 0;
+
+	Tensor<_T> value(calc_shape(_indice));
+
+	if (_data != NULL && p._data != NULL) {
+		const NN_Shape origin_shape = calc_shape(_indice);
+		const NN_Shape source_shape = calc_shape(p._indice);
+
+		if (!is_valid_src_shape(origin_shape, source_shape)) {
+			ErrorExcept(
+				"[Tensor<_T>::operator-] Shape of Right operand are unsuitable. %s.",
+				shape_to_str(source_shape)
+			);
+		}
+
+		const size_t src_size = calc_size(p._indice);
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				value._data[dst_idx] = _data[dst_idx] - p._data[src_idx];
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator-] None tensor can't this operator."
+		);
+	}
+
+	return value;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator*(const Tensor& p) {
+	_rank_cnt = 0;
+
+	Tensor<_T> value(calc_shape(_indice));
+
+	if (_data != NULL && p._data != NULL) {
+		const NN_Shape origin_shape = calc_shape(_indice);
+		const NN_Shape source_shape = calc_shape(p._indice);
+
+		if (!is_valid_src_shape(origin_shape, source_shape)) {
+			ErrorExcept(
+				"[Tensor<_T>::operator*] Shape of Right operand are unsuitable. %s.",
+				shape_to_str(source_shape)
+			);
+		}
+
+		const size_t src_size = calc_size(p._indice);
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				value._data[dst_idx] = _data[dst_idx] * p._data[src_idx];
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator*] None tensor can't this operator."
+		);
+	}
+
+	return value;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator/(const Tensor& p) {
+	_rank_cnt = 0;
+
+	Tensor<_T> value(calc_shape(_indice));
+
+	if (_data != NULL && p._data != NULL) {
+		const NN_Shape origin_shape = calc_shape(_indice);
+		const NN_Shape source_shape = calc_shape(p._indice);
+
+		if (!is_valid_src_shape(origin_shape, source_shape)) {
+			ErrorExcept(
+				"[Tensor<_T>::operator/] Shape of Right operand are unsuitable. %s.",
+				shape_to_str(source_shape)
+			);
+		}
+
+		const size_t src_size = calc_size(p._indice);
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				value._data[dst_idx] = _data[dst_idx] / p._data[src_idx];
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator/] None tensor can't this operator."
+		);
+	}
+
+	return value;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator+(const _T& val) {
+	_rank_cnt = 0;
+
+	Tensor<_T> value(calc_shape(_indice));
+
+	if (_data != NULL) {
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				value._data[dst_idx] = _data[dst_idx] + val;
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator+] None tensor can't this operator."
+		);
+	}
+
+	return value;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator-(const _T& val) {
+	_rank_cnt = 0;
+
+	Tensor<_T> value(calc_shape(_indice));
+
+	if (_data != NULL) {
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				value._data[dst_idx] = _data[dst_idx] - val;
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator-] None tensor can't this operator."
+		);
+	}
+
+	return value;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator*(const _T& val) {
+	_rank_cnt = 0;
+
+	Tensor<_T> value(calc_shape(_indice));
+
+	if (_data != NULL) {
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				value._data[dst_idx] = _data[dst_idx] * val;
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator*] None tensor can't this operator."
+		);
+	}
+
+	return value;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator/(const _T& val) {
+	_rank_cnt = 0;
+
+	Tensor<_T> value(calc_shape(_indice));
+
+	if (_data != NULL) {
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				value._data[dst_idx] = _data[dst_idx] / val;
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator/] None tensor can't this operator."
+		);
+	}
+
+	return value;
+}
+
+template <typename _T>
+void Tensor<_T>::operator+=(const Tensor& p) {
+	_rank_cnt = 0;
+
+	if (_data != NULL && p._data != NULL) {
+		const NN_Shape origin_shape = calc_shape(_indice);
+		const NN_Shape source_shape = calc_shape(p._indice);
+
+		if (!is_valid_src_shape(origin_shape, source_shape)) {
+			ErrorExcept(
+				"[Tensor<_T>::operator+=] Shape of Right operand are unsuitable. %s.",
+				shape_to_str(source_shape)
+			);
+		}
+
+		const size_t src_size = calc_size(p._indice);
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				_data[dst_idx] += p._data[src_idx];
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator+=] None tensor can't this operator."
+		);
+	}
+}
+
+template <typename _T>
+void Tensor<_T>::operator-=(const Tensor& p) {
+	_rank_cnt = 0;
+
+	if (_data != NULL && p._data != NULL) {
+		const NN_Shape origin_shape = calc_shape(_indice);
+		const NN_Shape source_shape = calc_shape(p._indice);
+
+		if (!is_valid_src_shape(origin_shape, source_shape)) {
+			ErrorExcept(
+				"[Tensor<_T>::operator-=] Shape of Right operand are unsuitable. %s.",
+				shape_to_str(source_shape)
+			);
+		}
+
+		const size_t src_size = calc_size(p._indice);
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				_data[dst_idx] -= p._data[src_idx];
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator-=] None tensor can't this operator."
+		);
+	}
+}
+
+template <typename _T>
+void Tensor<_T>::operator*=(const Tensor& p) {
+	_rank_cnt = 0;
+
+	if (_data != NULL && p._data != NULL) {
+		const NN_Shape origin_shape = calc_shape(_indice);
+		const NN_Shape source_shape = calc_shape(p._indice);
+
+		if (!is_valid_src_shape(origin_shape, source_shape)) {
+			ErrorExcept(
+				"[Tensor<_T>::operator*=] Shape of Right operand are unsuitable. %s.",
+				shape_to_str(source_shape)
+			);
+		}
+
+		const size_t src_size = calc_size(p._indice);
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				_data[dst_idx] *= p._data[src_idx];
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator*=] None tensor can't this operator."
+		);
+	}
+}
+
+template <typename _T>
+void Tensor<_T>::operator/=(const Tensor& p) {
+	_rank_cnt = 0;
+
+	if (_data != NULL && p._data != NULL) {
+		const NN_Shape origin_shape = calc_shape(_indice);
+		const NN_Shape source_shape = calc_shape(p._indice);
+
+		if (!is_valid_src_shape(origin_shape, source_shape)) {
+			ErrorExcept(
+				"[Tensor<_T>::operator/=] Shape of Right operand are unsuitable. %s.",
+				shape_to_str(source_shape)
+			);
+		}
+
+		const size_t src_size = calc_size(p._indice);
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				_data[dst_idx] /= p._data[src_idx];
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator/=] None tensor can't this operator."
+		);
+	}
+}
+
+template <typename _T>
+void Tensor<_T>::operator+=(const _T& val) {
+	_rank_cnt = 0;
+
+	if (_data != NULL) {
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				_data[dst_idx] += val;
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator+=] None tensor can't this operator."
+		);
+	}
+}
+
+template <typename _T>
+void Tensor<_T>::operator-=(const _T& val) {
+	_rank_cnt = 0;
+
+	if (_data != NULL) {
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				_data[dst_idx] -= val;
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator-=] None tensor can't this operator."
+		);
+	}
+}
+
+template <typename _T>
+void Tensor<_T>::operator*=(const _T& val) {
+	_rank_cnt = 0;
+
+	if (_data != NULL) {
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				_data[dst_idx] *= val;
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator*=] None tensor can't this operator."
+		);
+	}
+}
+
+template <typename _T>
+void Tensor<_T>::operator/=(const _T& val) {
+	_rank_cnt = 0;
+
+	if (_data != NULL) {
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				_data[dst_idx] /= val;
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::operator/=] None tensor can't this operator."
+		);
+	}
+}
+
+template <typename _T>
 Tensor<_T> Tensor<_T>::transpose(const std::initializer_list<int>& orders) {
 	_rank_cnt = 0;
 
@@ -603,7 +1155,22 @@ std::ostream& Tensor<_T>::put(std::ostream& os) {
 		int i = 0;
 
 		put_tensor(os, *this, 0, i);
-		os << shape_to_str(calc_shape(_indice)) << std::endl;
+		os << "shape: " << shape_to_str(calc_shape(_indice)) << std::endl;
+	}
+	else os << "[]" << std::endl;
+
+	return os;
+}
+
+template <typename _T>
+std::ostream& Tensor<_T>::put(std::ostream& os) const {
+	_rank_cnt = 0;
+
+	if (_indice.size() > 0) {
+		int i = 0;
+
+		put_tensor(os, *this, 0, i);
+		os << "shape: " << shape_to_str(calc_shape(_indice)) << std::endl;
 	}
 	else os << "[]" << std::endl;
 

@@ -3,6 +3,7 @@
 #define PUT_LIST
 
 #include "../nn_core/cpp_source/nn_list.h"
+#include "../nn_core/cpp_source/nn_tensor.h"
 
 #ifdef _DEBUG
 #include "vld.h"
@@ -12,11 +13,17 @@
 
 int main() {
 	try {
-		NN_List<int> test;
+		NN_List<int> a;
 
-		test.resize(1);
+		a.reserve(3);
+		a[0].append(1);
+		a[0].append(2);
+		a[1].append({ 1, 2 });
+		a[1].append({ 4, 5 });
+		a[2].append({ 1, 2 });
+		a[2].append(3);
 
-		for (NN_List<int>& n : test) std::cout << n;
+		std::cout << a << std::endl;
 	}
 	catch (const NN_Exception& e) {
 		e.put();

@@ -409,7 +409,36 @@ void Model::build(const NN_List<NN_Shape>& input_shape) {
 	}
 }
 
-NN_List<GpuTensor<nn_type>> Model::get_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input) {
+void Model::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	NN_List<GpuTensor<nn_type>>& nodes_output = _manager.get_node_output();
+
+	for (NN_Link* p_node : _layers) {
+		const int n_node = p_node->get_index();
+		NN_List<GpuTensor<nn_type>>& m_output = nodes_output[n_node];
+		NN_List<GpuTensor<nn_type>> m_input;
+
+		if (p_node->get_prev_nodes().size() > 0) {
+			for (NN_Link* p_prev_node : p_node->get_prev_nodes()) {
+				const int n_prev_out = get_n_node_prev_for_next(p_prev_node, p_node);
+				const int prev_index = p_prev_node->get_index();
+
+				m_input.append(nodes_output[prev_index][n_prev_out]);
+			}
+
+			p_node->get_layer().run(st, m_input, m_output);
+		}
+	}
+}
+
+NN_Backward* Model::create_backward(NN_Optimizer* optimizer) {
+	return new dModel(this, optimizer);
+}
+
+NN_List<GpuTensor<nn_type>> Model::get_weight() {
+	return GpuTensor<nn_type>();
+}
+
+void Model::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
 	NN_List<GpuTensor<nn_type>>& nodes_output = _manager.get_node_output();
 	NN_List<NN_Shape>& node_shape = _manager.get_node_shape();
 
@@ -425,39 +454,17 @@ NN_List<GpuTensor<nn_type>> Model::get_output(const NN_List<NN_Shape>& output_sh
 
 				m_input.append(nodes_output[prev_index][n_prev_out]);
 			}
-
-			m_output = node->get_layer().get_output(node_shape[n_node], m_input);
 		}
 		else {
 			const int n_input = get_n_input(_input_nodes, node);
 
-			m_output.append(input[n_input]);
+			m_input.append(input[n_input]);
 		}
+
+		node->get_layer().set_output(node_shape[n_node], m_input, m_output);
 	}
 
-	NN_List<GpuTensor<nn_type>> output;
-	
-	output.resize(_output_nodes.size());
-
-	for (size_t i = 0; i < _output_nodes.size(); ++i) {
-		output[i] = nodes_output[_output_nodes[_output_indice[i]]->get_index()];
-	}
-
-	return GpuTensor<nn_type>();
-}
-
-void Model::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
-	NN_List<GpuTensor<nn_type>>& nodes_output = _manager.get_node_output();
-
-
-}
-
-NN_Backward* Model::create_backward(NN_Optimizer* optimizer) {
-	return new dModel(this, optimizer);
-}
-
-NN_List<GpuTensor<nn_type>> Model::get_weight() {
-	return GpuTensor<nn_type>();
+	for (int& n : _output_indice) output.append(nodes_output[_output_nodes[n]->get_index()]);
 }
 
 void Model::load_weights(const std::string& path, bool skip_mismatch) {
@@ -527,10 +534,7 @@ void Model::summary() {
 	
 	for (NN_Link* p_node : _layers) {
 		std::cout << ++i << " : layer_name = " << p_node->get_layer()._layer_name << ", output shape = ";
-		for (const NN_List<NN_Shape>& shape : nodes_shape[p_node->get_index()]) {
-			std::cout << shape_to_str(shape.val()) << ", ";
-		}
-		std::cout << std::endl;
+		std::cout << nodes_shape[p_node->get_index()];
 	}
 
 	_manager.clear_shapes();

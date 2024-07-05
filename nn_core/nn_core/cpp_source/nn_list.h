@@ -1,7 +1,7 @@
 #pragma once
 #include "cuda_common.h"
 
-
+#define PUT_LIST
 
 
 /**********************************************/
@@ -70,7 +70,9 @@ public:
 	size_t size();
 	void reserve(size_t size);
 	void resize(size_t size);
+	bool is_scalar();
 
+	bool is_scalar() const;
 	size_t size() const;
 	const _T& val() const;
 
@@ -601,6 +603,24 @@ void NN_List<_T>::resize(size_t size) {
 	_p_list.resize(size, NULL);
 
 	for (NN_List*& p_list : _p_list) p_list = new NN_List(_T());
+}
+
+template <class _T>
+bool NN_List<_T>::is_scalar() {
+	bool flag = false;
+
+	if (_p_list.front() == this) flag = true;
+
+	return flag;
+}
+
+template <class _T>
+bool NN_List<_T>::is_scalar() const {
+	bool flag = false;
+
+	if (_p_list.front() == this) flag = true;
+
+	return flag;
 }
 
 template <class _T>

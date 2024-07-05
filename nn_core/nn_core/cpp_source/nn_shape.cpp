@@ -108,7 +108,7 @@ std::ostream& NN_Shape::put_shape(std::ostream& os) const {
 
 	for (const int& n : _dims) os << std::to_string(n) << ", ";
 
-	os << ']' << std::endl;
+	os << ']';
 
 	return os;
 }
