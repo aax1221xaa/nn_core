@@ -1,7 +1,12 @@
 #include "nn_shape.h"
 
 
-char str_buff[100];
+#define BUFF_LEN			100
+
+
+char str_buff[BUFF_LEN];
+size_t buff_begin = 0;
+
 
 NN_Shape::NN_Shape() {
 
@@ -231,9 +236,22 @@ const char* shape_to_str(const NN_Shape& shape) {
 	}
 
 	buff += "]";
-	strcpy_s(str_buff, buff.c_str());
+	
+	char* str_out = NULL;
+	size_t size = strlen(buff.c_str()) + 1;
 
-	return str_buff;
+	if (buff_begin + size < BUFF_LEN) {
+		str_out = str_buff + buff_begin;
+		strcpy_s(str_out, sizeof(char) * BUFF_LEN, buff.c_str());
+		buff_begin += size;
+	}
+	else {
+		str_out = str_buff;
+		strcpy_s(str_buff, buff.c_str());
+		buff_begin = size;
+	}
+
+	return str_out;
 }
 
 std::ostream& operator<<(std::ostream& os, const NN_Shape& shape) {

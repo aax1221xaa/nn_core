@@ -385,7 +385,7 @@ void Model::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Sh
 	}
 }
 
-void Model::build(const NN_List<NN_Shape>& input_shape) {
+void Model::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
 	const NN_List<NN_Shape>& shapes = _manager.get_node_shape();
 
 	for (NN_Link* node: _layers) {
@@ -405,7 +405,7 @@ void Model::build(const NN_List<NN_Shape>& input_shape) {
 			m_input_shape.append(input_shape[n_input]);
 		}
 
-		node->get_layer().build(m_input_shape);
+		node->get_layer().build(m_input_shape, p_node);
 	}
 }
 
@@ -484,7 +484,7 @@ void Model::load_weights(const std::string& path, bool skip_mismatch) {
 		}
 
 		node->get_layer().get_output_shape(m_input_shape, m_output_shape);
-		node->get_layer().build(m_input_shape);
+		node->get_layer().build(m_input_shape, this);
 	}
 
 	_manager.clear_shapes();
@@ -541,7 +541,26 @@ void Model::summary() {
 }
 
 void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& loss) {
+	_optimizer = optimizer;
+	_losses = loss;
 
+	for (NN_Link* p_node : _layers) {
+		bool is_input = false;
+
+		for (NN_Link* p_input : _input_nodes) {
+			if (p_input == p_node) {
+				is_input = true;
+				break;
+			}
+		}
+
+		if (!is_input) {
+			NN_Backward* p_backward = p_node->get_layer().create_backward(&optimizer);
+
+			p_node->set_backward(p_backward);
+			_manager.set_backward(p_backward);
+		}
+	}
 }
 
 

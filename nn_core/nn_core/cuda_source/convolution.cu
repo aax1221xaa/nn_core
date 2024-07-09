@@ -189,13 +189,16 @@ void NN_Conv2D::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<N
 	}
 }
 
-void NN_Conv2D::build(const NN_List<NN_Shape>& input_shape) {
+void NN_Conv2D::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
 	const NN_Shape& shape = input_shape[0].val();
 
 	_filter.resize({ _amounts, shape[1], _filter_size[0], _filter_size[1] });
 	_bias = GpuTensor<nn_type>::zeros({ _amounts });
 
 	set_random_uniform(_filter, -0.1f, 0.1f);
+
+	p_node->set_weights(_filter);
+	p_node->set_weights(_bias);
 }
 
 void NN_Conv2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {

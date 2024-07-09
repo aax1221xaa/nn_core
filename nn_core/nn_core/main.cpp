@@ -7,7 +7,7 @@
 #endif
  
 
-#define SELECT				1
+#define SELECT				0
 
 
 #if (SELECT == 0)
@@ -16,7 +16,6 @@ int main() {
 	std::cout.precision(6);
 
 	try {
-		MNIST mnist("E:\\data_set\\mnist");
 		NN_Manager nn;
 
 		auto convert_func = [](const void* src, void* dst, const tbb::blocked_range<size_t>& q) {
@@ -46,8 +45,13 @@ int main() {
 
 		Model model(nn, x_input, x, "model_1");
 
+		MNIST mnist("E:\\data_set\\mnist");
+		std::vector<DataSet<uchar, uchar>> samples = mnist.get_samples();
+		DataSet<uchar, uchar>& train = samples[0];
+		DataSet<uchar, uchar>& test = samples[1];
 
-		Sample<uchar, uchar> sample = mnist.get_test_samples(16, 1, false);
+		train._x[0] = Tensor<uchar>::expand_dims(train._x[0], 1);
+		train._y[0] = Tensor<uchar>::expand_dims(train._y[0], 1);
 
 		model.summary();
 		model.load_weights("E:\\data_set\\mnist\\mnist.h5");
@@ -62,7 +66,7 @@ int main() {
 		}
 		
 		for (const DataSet<uchar, uchar>& data : sample) {
-			const uchar* p_y = data._y.get_ptr();
+			const uchar* p_y = data._y[0].get_ptr();
 			std::cout << std::endl;
 			for (int i = 0; i < 16; ++i) {
 				std::cout << (int)p_y[i] << ", ";
@@ -152,6 +156,49 @@ int main() {
 
 		return -1;
 	}
+
+	return 0;
+}
+
+#elif (SELECT == 2)
+
+int main() {
+	try {
+		MNIST mnist("E:\\data_set\\mnist");
+		Sample<MNIST::x_type, MNIST::y_type> test = mnist.get_test_samples(16, 1, true);
+
+		cv::namedWindow("IMAGE");
+		int key = 0;
+
+		for (const DataSet<MNIST::x_type, MNIST::y_type>& sample : test) {
+			const Tensor<MNIST::x_type>& x = sample._x[0].val();
+			const Tensor<MNIST::y_type>& y = sample._y[0].val();
+
+			for (int i = 0; i < 16; ++i) {
+				Tensor<MNIST::x_type> x_image(x[i].get_shape());
+				Tensor<MNIST::y_type> y_label(y[i].get_shape());
+
+				x_image = x[i];
+				y_label = y[i];
+
+				const cv::Mat m_image(28, 28, CV_8UC1, (void*)x_image.get_ptr());
+				const int m_label = *(y_label.get_ptr());
+
+				cv::imshow("IMAGE", m_image);
+				std::cout << m_label << std::endl;
+
+				key = cv::waitKey();
+
+				if (key == 27) break;
+			}
+			if (key == 27) break;
+		}
+	}
+	catch (const NN_Exception& e) {
+		e.put();
+	}
+
+	cv::destroyAllWindows();
 
 	return 0;
 }

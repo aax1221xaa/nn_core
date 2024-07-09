@@ -13,17 +13,14 @@
 
 int main() {
 	try {
-		NN_List<int> a;
+		Tensor<int> a({ 3, 3 });
 
-		a.reserve(3);
-		a[0].append(1);
-		a[0].append(2);
-		a[1].append({ 1, 2 });
-		a[1].append({ 4, 5 });
-		a[2].append({ 1, 2 });
-		a[2].append(3);
+		a = 1;
+		std::cout << a;
 
-		std::cout << a << std::endl;
+		a.expand_dims(1);
+
+		std::cout << a;
 	}
 	catch (const NN_Exception& e) {
 		e.put();

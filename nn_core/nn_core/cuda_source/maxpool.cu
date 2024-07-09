@@ -190,7 +190,7 @@ void NN_Maxpool2D::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_Lis
 	if (n > 0) _indice = GpuTensor<uint>::zeros({ n, c, h, w });
 }
 
-void NN_Maxpool2D::build(const NN_List<NN_Shape>& input_shape) {
+void NN_Maxpool2D::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
 
 }
 

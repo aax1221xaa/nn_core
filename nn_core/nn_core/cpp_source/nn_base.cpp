@@ -54,7 +54,7 @@ void NN_Layer::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN
 	);
 }
 
-void NN_Layer::build(const NN_List<NN_Shape>& input_shape) {
+void NN_Layer::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
 	ErrorExcept(
 		"[NN_Layer::build] Make this function."
 	);
@@ -95,7 +95,7 @@ void NN_Add::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_S
 	output_shape.append(input_shape[0].val());
 }
 
-void NN_Add::build(const NN_List<NN_Shape>& input_shape) {
+void NN_Add::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
 
 }
 
@@ -126,7 +126,7 @@ void NN_Sum::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_S
 	output_shape.append(input_shape[0].val());
 }
 
-void NN_Sum::build(const NN_List<NN_Shape>& input_shape) {
+void NN_Sum::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
 
 }
 
@@ -205,7 +205,7 @@ void NN_Input::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN
 	}
 }
 
-void NN_Input::build(const NN_List<NN_Shape>& input_shape) {
+void NN_Input::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
 
 }
 
@@ -291,6 +291,14 @@ NN_Layer& NN_Link::get_layer() {
 	return *_layer;
 }
 
+NN_Backward& NN_Link::get_backward() {
+	return *_backward;
+}
+
+void NN_Link::set_backward(NN_Backward* backward) {
+	_backward = backward;
+}
+
 void NN_Link::set_layer(NN_Layer* layer) {
 	_layer = layer;
 }
@@ -301,6 +309,14 @@ const int& NN_Link::get_index() const {
 
 void NN_Link::set_index(int index) {
 	_index = index;
+}
+
+void NN_Link::set_weights(GpuTensor<nn_type>& weight) {
+	_weights.push_back(weight);
+}
+
+std::vector<GpuTensor<nn_type>>& NN_Link::get_weights() {
+	return _weights;
 }
 
 Layer_t NN_Link::operator()(Layer_t prev_node) {
@@ -379,6 +395,10 @@ void NN_Manager::set_static_node(NN_Link* const node) {
 	node->set_index(_node_counter++);
 	_nodes.push_back(node);
 	_is_static.push_back(true);
+}
+
+void NN_Manager::set_backward(NN_Backward* backward) {
+	_backward.push_back(backward);
 }
 
 void NN_Manager::set_reserved_shapes() {

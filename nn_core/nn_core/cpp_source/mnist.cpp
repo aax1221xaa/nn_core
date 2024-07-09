@@ -50,26 +50,32 @@ DataSet<uchar, uchar> MNIST::read_file(const std::string& img_path, const std::s
 	std::cout << "magic num: " << std::hex << "0x" << label_head[0] << std::dec << std::endl;
 	std::cout << "amounts: " << label_head[1] << std::endl;
 	std::cout << std::endl;
-	
-	DataSet<uchar, uchar> samples;
 
-	samples._x.resize({ img_head[1], img_head[2], img_head[3] });
-	samples._y.resize({ img_head[1] });
+	Tensor<uchar> x;
+	Tensor<uchar> y;
 
-	img_fp.read((char*)samples._x.get_ptr(), sizeof(uchar) * samples._x.get_shape().total_size());
-	label_fp.read((char*)samples._y.get_ptr(), sizeof(uchar) * samples._y.get_shape().total_size());
+	x.resize({ img_head[1], img_head[2], img_head[3] });
+	y.resize({ img_head[1] });
+
+	img_fp.read((char*)x.get_ptr(), sizeof(uchar) * x.get_shape().total_size());
+	label_fp.read((char*)y.get_ptr(), sizeof(uchar) * y.get_shape().total_size());
 
 	img_fp.close();
 	label_fp.close();
 
-	return samples;
+	DataSet<uchar, uchar> sample;
+
+	sample._x.push_back(x);
+	sample._y.push_back(y);
+
+	return sample;
 }
 
 MNIST::MNIST(const std::string& dir_path) {
-	std::string train_x = dir_path + "\\train-images.idx3-ubyte";
-	std::string train_y = dir_path + "\\train-labels.idx1-ubyte";
-	std::string test_x = dir_path + "\\t10k-images.idx3-ubyte";
-	std::string test_y = dir_path + "\\t10k-labels.idx1-ubyte";
+	const std::string train_x = dir_path + "\\train-images.idx3-ubyte";
+	const std::string train_y = dir_path + "\\train-labels.idx1-ubyte";
+	const std::string test_x = dir_path + "\\t10k-images.idx3-ubyte";
+	const std::string test_y = dir_path + "\\t10k-labels.idx1-ubyte";
 	
 	try {
 		_train = read_file(train_x, train_y);
@@ -80,10 +86,26 @@ MNIST::MNIST(const std::string& dir_path) {
 	}
 }
 
-Sample<uchar, uchar> MNIST::get_train_samples(int n_batch, int n_iter, bool shuffle) const {
+std::vector<DataSet<uchar, uchar>> MNIST::get_samples() {
+	return { _train, _test };
+}
+
+Sample<uchar, uchar> MNIST::get_train_samples(int n_batch, int n_iter, bool shuffle) {
 	return Sample<uchar, uchar>(_train, n_batch, n_iter, shuffle);
 }
 
-Sample<uchar, uchar> MNIST::get_test_samples(int n_batch, int n_iter, bool shuffle) const {
+Sample<uchar, uchar> MNIST::get_test_samples(int n_batch, int n_iter, bool shuffle) {
+	return Sample<uchar, uchar>(_test, n_batch, n_iter, shuffle);
+}
+
+const std::vector<DataSet<uchar, uchar>> MNIST::get_samples() const {
+	return { _train, _test };
+}
+
+const Sample<uchar, uchar> MNIST::get_train_samples(int n_batch, int n_iter, bool shuffle) const {
+	return Sample<uchar, uchar>(_train, n_batch, n_iter, shuffle);
+}
+
+const Sample<uchar, uchar> MNIST::get_test_samples(int n_batch, int n_iter, bool shuffle) const {
 	return Sample<uchar, uchar>(_test, n_batch, n_iter, shuffle);
 }

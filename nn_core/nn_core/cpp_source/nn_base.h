@@ -8,6 +8,7 @@ struct NN_Ptr;
 
 typedef	NN_List<NN_Ptr> Layer_t;
 
+class NN_Link;
 
 /**********************************************/
 /*                                            */
@@ -46,7 +47,7 @@ public:
 	virtual ~NN_Layer();
 
 	virtual void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	virtual void build(const NN_List<NN_Shape>& input_shape);
+	virtual void build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node);
 	virtual void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 	virtual NN_Backward* create_backward(NN_Optimizer* optimizer);
 	virtual NN_List<GpuTensor<nn_type>> get_weight();
@@ -68,7 +69,7 @@ public:
 	NN_Add(nn_type val, const char* layer_name);
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape);
+	void build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node);
 	void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 };
 
@@ -84,7 +85,7 @@ public:
 	NN_Sum(const char* layer_name);
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape);
+	void build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node);
 	void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 };
 
@@ -105,7 +106,7 @@ public:
 	~NN_Input();
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape);
+	void build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node);
 	template <typename _sT, typename _dT>
 	void trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) const;
 	NN_Backward* create_backward(NN_Optimizer* optimizer);
@@ -132,10 +133,22 @@ void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) con
 		}
 		);
 	}
+	else {
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, src.get_shape().total_size()),
+			[&](const tbb::blocked_range<size_t>& q) {
 
-	//std::cout << dst;
+			const _sT* p_src = src.get_ptr();
+			_dT* p_dst = dst.get_ptr();
 
-	output = src;
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				p_dst[i] = (_dT)p_src[i];
+			}
+		}
+		);
+	}
+
+	output = dst;
 }
 
 
@@ -177,6 +190,8 @@ private:
 	NN_Layer* _layer;
 	NN_Backward* _backward;
 
+	std::vector<GpuTensor<nn_type>> _weights;
+
 public:
 	bool trainable;
 
@@ -191,9 +206,14 @@ public:
 
 	NN_Layer& get_layer();
 	void set_layer(NN_Layer* layer);
+	NN_Backward& get_backward();
+	void set_backward(NN_Backward* backward);
 
 	const int& get_index() const;
 	void set_index(int index);
+
+	void set_weights(GpuTensor<nn_type>& weight);
+	std::vector<GpuTensor<nn_type>>& get_weights();
 
 	Layer_t operator()(Layer_t prev_node);
 
@@ -241,6 +261,7 @@ public:
 
 	void set_nodes(NN_Link* node);
 	void set_static_node(NN_Link* const node);
+	void set_backward(NN_Backward* backward);
 
 	void set_reserved_shapes();
 	void set_reserved_outputs();

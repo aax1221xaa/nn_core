@@ -18,6 +18,8 @@ private:
 	std::vector<NN_Link*> _input_nodes;
 	std::vector<NN_Link*> _output_nodes;
 	std::vector<NN_Link*> _layers;
+	std::vector<NN_Loss> _losses;
+	NN_Optimizer _optimizer;
 
 	std::vector<int> _output_indice;
 
@@ -53,7 +55,7 @@ public:
 
 	/************************** NN_Layer **************************/
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape);
+	void build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node);
 	void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 	NN_Backward* create_backward(NN_Optimizer* optimizer);
 	NN_List<GpuTensor<nn_type>> get_weight();
@@ -71,8 +73,8 @@ public:
 
 	void stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& loss);
 
-	//template <typename _xT, typename _yT>
-	//std::vector<std::vector<Tensor<nn_type>>> fit(const Sample<_xT, _yT>& sample);
+	template <typename _xT, typename _yT>
+	NN_List<Tensor<nn_type>> fit(const DataSet<_xT, _yT>& sample, int batch);
 };
 
 template <typename _xT, typename _yT>
@@ -93,13 +95,16 @@ NN_List<Tensor<nn_type>> Model::evaluate(const Sample<_xT, _yT>& sample) {
 	int i = 0;
 	
 	for (const DataSet<_xT, _yT>& data : sample) {
+		Tensor<_xT> data_x = Tensor<_xT>::expand_dims(data._x[0], 1);
+
 		if (i == 0) {
-			const NN_Shape shape = data._x.get_shape();
+			const NN_Shape shape = data_x.get_shape();
 
 			for (NN_Link* node : _layers) {
 				NN_List<NN_Shape>& m_output_shape = nodes_shapes[node->get_index()];
 				NN_List<NN_Shape> m_input_shape;
 				NN_List<GpuTensor<nn_type>>& m_output = nodes_outputs[node->get_index()];
+				NN_List<GpuTensor<nn_type>> m_input;
 
 				if (node->get_prev_nodes().size() > 0) {
 					for (NN_Link* p_prev_node : node->get_prev_nodes()) {
@@ -109,18 +114,17 @@ NN_List<Tensor<nn_type>> Model::evaluate(const Sample<_xT, _yT>& sample) {
 						m_input_shape.append(nodes_shapes[n_prev][n_out]);
 					}
 				}
+				else {
+					int n_input_node = get_n_input(_input_nodes, node);
+
+					m_input_shape.append(data_x.get_shape());
+				}
 
 				node->get_layer().get_output_shape(m_input_shape, m_output_shape);
 				//node->get_layer().build(m_input_shape);
-
-				for (NN_List<NN_Shape>& m_shape : m_output_shape) {
-					m_shape.val()[0] = shape[0];
-					m_output.append(GpuTensor<nn_type>(m_shape.val()));
-				}
+				node->get_layer().set_output(m_output_shape, m_input, m_output);
 			}
 		}
-
-		//std::cout << "Iteration: " << i << std::endl;
 		
 		const std::vector<NN_Input*>& inputs = _manager.get_input_layers();
 
@@ -142,7 +146,7 @@ NN_List<Tensor<nn_type>> Model::evaluate(const Sample<_xT, _yT>& sample) {
 				int j = 0;
 				for (const NN_Input* p_input : inputs) {
 					if (&(node->get_layer()) == p_input) {
-						p_input->trans_data(data._x, m_output[0].val());
+						p_input->trans_data(data_x, m_output[0].val());
 						break;
 					}
 					else ++j;

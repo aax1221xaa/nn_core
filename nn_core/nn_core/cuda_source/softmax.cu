@@ -57,7 +57,7 @@ void NN_Softmax::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<
 	output_shape.append(input_shape[0].val());
 }
 
-void NN_Softmax::build(const NN_List<NN_Shape>& input_shape) {
+void NN_Softmax::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
 
 }
 

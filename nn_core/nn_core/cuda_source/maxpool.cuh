@@ -22,7 +22,7 @@ public:
 	NN_Maxpool2D(const NN_Shape& k_size, const NN_Shape& stride, const Pad pad, const char* name);
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape);
+	void build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node);
 	void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 	NN_Backward* create_backward(NN_Optimizer* optimizer);
 };
