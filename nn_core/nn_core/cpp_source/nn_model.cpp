@@ -385,7 +385,7 @@ void Model::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Sh
 	}
 }
 
-void Model::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
+void Model::build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights) {
 	const NN_List<NN_Shape>& shapes = _manager.get_node_shape();
 
 	for (NN_Link* node: _layers) {
@@ -405,7 +405,7 @@ void Model::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
 			m_input_shape.append(input_shape[n_input]);
 		}
 
-		node->get_layer().build(m_input_shape, p_node);
+		node->get_layer().build(m_input_shape, weights);
 	}
 }
 
@@ -430,8 +430,43 @@ void Model::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List
 	}
 }
 
-NN_Backward* Model::create_backward(NN_Optimizer* optimizer) {
-	return new dModel(this, optimizer);
+NN_Backward* Model::create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask) {
+	for (NN_Link* node : _layers) {
+		bool do_create = false;
+
+		if (node->get_prev_nodes().size() > 0) {
+			if (node->get_weights().size() > 0) {
+				do_create = true;
+			}
+			else {
+				for (NN_Link* prev_node : node->get_prev_nodes()) {
+					if (mask[prev_node->get_index()]) {
+						do_create = true;
+
+						break;
+					}
+				}
+			}
+		}
+		else {
+			const int n_input = get_n_input(_input_nodes, node);
+
+			if (mask[_prev[n_input]->get_index()]) {
+				do_create = true;
+			}
+		}
+
+		if (do_create) {
+			NN_Backward* backward = node->get_layer().create_backward(optimizer, mask);
+
+			node->set_backward(backward);
+			_manager.set_backward(backward);
+
+			mask[node->get_index()] = true;
+		}
+	}
+
+	return new dModel(*this, optimizer);
 }
 
 NN_List<GpuTensor<nn_type>> Model::get_weight() {
@@ -469,6 +504,7 @@ void Model::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<
 
 void Model::load_weights(const std::string& path, bool skip_mismatch) {
 	NN_List<NN_Shape>& nodes_shape = _manager.get_node_shape();
+	std::vector<GpuTensor<nn_type>>& weights = _manager.get_weights();
 
 	_manager.set_reserved_shapes();
 
@@ -484,7 +520,7 @@ void Model::load_weights(const std::string& path, bool skip_mismatch) {
 		}
 
 		node->get_layer().get_output_shape(m_input_shape, m_output_shape);
-		node->get_layer().build(m_input_shape, this);
+		node->get_layer().build(m_input_shape, weights);
 	}
 
 	_manager.clear_shapes();
@@ -544,21 +580,30 @@ void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& lo
 	_optimizer = optimizer;
 	_losses = loss;
 
+	std::vector<bool> mask(_manager.get_nodes().size(), false);
+
 	for (NN_Link* p_node : _layers) {
-		bool is_input = false;
+		if (p_node->get_weights().size() > 0) {
+			mask[p_node->get_index()] = true;
 
-		for (NN_Link* p_input : _input_nodes) {
-			if (p_input == p_node) {
-				is_input = true;
-				break;
-			}
-		}
-
-		if (!is_input) {
-			NN_Backward* p_backward = p_node->get_layer().create_backward(&optimizer);
-
-			p_node->set_backward(p_backward);
+			NN_Backward* p_backward = p_node->get_layer().create_backward(optimizer, mask);
+			
 			_manager.set_backward(p_backward);
+			p_node->set_backward(p_backward);
+		}
+		else {
+			for (NN_Link* p_prev_node : p_node->get_prev_nodes()) {
+				if (mask[p_prev_node->get_index()]) {
+					mask[p_node->get_index()] = true;
+
+					NN_Backward* p_backward = p_node->get_layer().create_backward(optimizer, mask);
+
+					_manager.set_backward(p_backward);
+					p_node->set_backward(p_backward);
+
+					break;
+				}
+			}
 		}
 	}
 }
@@ -570,7 +615,7 @@ void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& lo
 /*                                            */
 /**********************************************/
 
-dModel::dModel(Model* model, NN_Optimizer* optimizer) :
+dModel::dModel(Model& model, NN_Optimizer& optimizer) :
 	NN_Backward(optimizer),
 	_model(model)
 {

@@ -57,7 +57,7 @@ void NN_Softmax::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<
 	output_shape.append(input_shape[0].val());
 }
 
-void NN_Softmax::build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node) {
+void NN_Softmax::build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights) {
 
 }
 
@@ -83,8 +83,8 @@ void NN_Softmax::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN
 	}
 }
 
-NN_Backward* NN_Softmax::create_backward(NN_Optimizer* optimizer) {
-	return new NN_dSoftmax(this, optimizer);
+NN_Backward* NN_Softmax::create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask) {
+	return new NN_dSoftmax(*this, optimizer);
 }
 
 
@@ -94,7 +94,7 @@ NN_Backward* NN_Softmax::create_backward(NN_Optimizer* optimizer) {
 /*                                            */
 /**********************************************/
 
-NN_dSoftmax::NN_dSoftmax(NN_Softmax* softmax, NN_Optimizer* optimizer) :
+NN_dSoftmax::NN_dSoftmax(NN_Softmax& softmax, NN_Optimizer& optimizer) :
 	NN_Backward(optimizer),
 	_softmax(softmax)
 {

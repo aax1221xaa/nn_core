@@ -8,8 +8,6 @@ struct NN_Ptr;
 
 typedef	NN_List<NN_Ptr> Layer_t;
 
-class NN_Link;
-
 /**********************************************/
 /*                                            */
 /*                 NN_Backward                */
@@ -18,9 +16,9 @@ class NN_Link;
 
 class NN_Backward {
 public:
-	NN_Optimizer* _optimizer;
+	NN_Optimizer& _optimizer;
 
-	NN_Backward(NN_Optimizer* optimizer);
+	NN_Backward(NN_Optimizer& optimizer);
 	virtual ~NN_Backward();
 
 	virtual void get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape);
@@ -47,46 +45,12 @@ public:
 	virtual ~NN_Layer();
 
 	virtual void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	virtual void build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node);
+	virtual void build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights);
 	virtual void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
-	virtual NN_Backward* create_backward(NN_Optimizer* optimizer);
+	virtual NN_Backward* create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask);
 	virtual NN_List<GpuTensor<nn_type>> get_weight();
 
 	virtual void set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
-};
-
-
-/**********************************************/
-/*                                            */
-/*                    NN_Add                  */
-/*                                            */
-/**********************************************/
-
-class NN_Add : public NN_Layer {
-public:
-	const nn_type _val;
-
-	NN_Add(nn_type val, const char* layer_name);
-
-	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node);
-	void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
-};
-
-
-/**********************************************/
-/*                                            */
-/*                    NN_Sum                  */
-/*                                            */
-/**********************************************/
-
-class NN_Sum : public NN_Layer {
-public:
-	NN_Sum(const char* layer_name);
-
-	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node);
-	void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 };
 
 
@@ -106,10 +70,10 @@ public:
 	~NN_Input();
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape, NN_Link* p_node);
+	void build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights);
 	template <typename _sT, typename _dT>
 	void trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) const;
-	NN_Backward* create_backward(NN_Optimizer* optimizer);
+	NN_Backward* create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask);
 
 	void set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 };
@@ -160,9 +124,9 @@ void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) con
 
 class NN_dInput : public NN_Backward {
 public:
-	NN_Input* _input;
+	NN_Input& _input;
 
-	NN_dInput(NN_Input* input, NN_Optimizer* optimizer);
+	NN_dInput(NN_Input& input, NN_Optimizer& optimizer);
 	
 	void get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape);
 	void run(
@@ -181,7 +145,7 @@ public:
 /**********************************************/
 
 class NN_Link {
-private:
+protected:
 	int _index;
 
 	std::vector<NN_Link*> _prev;
@@ -189,8 +153,6 @@ private:
 
 	NN_Layer* _layer;
 	NN_Backward* _backward;
-
-	std::vector<GpuTensor<nn_type>> _weights;
 
 public:
 	bool trainable;
@@ -244,6 +206,7 @@ class NN_Manager {
 
 	int _node_counter;
 
+	std::vector<GpuTensor<nn_type>> _weights;
 	NN_List<NN_Shape> _out_shapes;
 	NN_List<GpuTensor<nn_type>> _outputs;
 	NN_List<GpuTensor<nn_type>> _dinputs;
@@ -259,6 +222,8 @@ public:
 	const std::vector<NN_Input*>& get_input_layers();
 	std::vector<NN_Backward*>& get_backward();
 
+	std::vector<GpuTensor<nn_type>>& get_weights();
+
 	void set_nodes(NN_Link* node);
 	void set_static_node(NN_Link* const node);
 	void set_backward(NN_Backward* backward);
@@ -271,6 +236,7 @@ public:
 	NN_List<GpuTensor<nn_type>>& get_node_output();
 	NN_List<GpuTensor<nn_type>>& get_node_dinput();
 
+	void clear_weights();
 	void clear_shapes();
 	void clear_outputs();
 	void clear_dinputs();

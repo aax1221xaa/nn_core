@@ -19,7 +19,7 @@ void NN_Flatten::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<
 	output_shape.append(NN_Shape({ in.n, in.c }));
 }
 
-void NN_Flatten::build(const NN_List<NN_Shape>& input_shape) {
+void NN_Flatten::build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights) {
 	
 }
 
@@ -44,8 +44,8 @@ void NN_Flatten::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN
 	else m_output = m_input;
 }
 
-NN_Backward* NN_Flatten::create_backward(NN_Optimizer* optimizer) {
-	return new NN_dFlatten(this, optimizer);
+NN_Backward* NN_Flatten::create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask) {
+	return new NN_dFlatten(*this, optimizer);
 }
 
 
@@ -55,7 +55,7 @@ NN_Backward* NN_Flatten::create_backward(NN_Optimizer* optimizer) {
 /*                                        */
 /******************************************/
 
-NN_dFlatten::NN_dFlatten(NN_Flatten* flatten, NN_Optimizer* optimizer) :
+NN_dFlatten::NN_dFlatten(NN_Flatten& flatten, NN_Optimizer& optimizer) :
 	NN_Backward(optimizer),
 	_flatten(flatten)
 {

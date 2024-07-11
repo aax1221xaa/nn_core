@@ -40,7 +40,10 @@ public:
 	Tensor& operator=(const GpuTensor<_T>& p);
 	Tensor& operator=(_T scalar);
 	Tensor operator()(int begin, int end, int step = 1);
+	Tensor operator()(int begin, int end, int step = 1) const;
 	Tensor operator()(int index);
+	Tensor operator()(int index) const;
+	Tensor operator()(const std::vector<int>& indice);
 	Tensor operator()(const std::vector<int>& indice) const;
 	Tensor operator[](int index);
 	Tensor operator[](int index) const;
@@ -445,6 +448,35 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) {
 }
 
 template <typename _T>
+Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) const {
+	if (*_cnt_rank >= _indice.size()) {
+		ErrorExcept(
+			"[Tensor<_T>::operator()] %d rank is empty.",
+			*_cnt_rank
+		);
+	}
+
+	const int n = (int)_indice[*_cnt_rank].size();
+
+	begin = begin < 0 ? n + begin : begin;
+	end = end < 0 ? n + end : end;
+
+	if (begin < 0 || begin >= n || end < 0 || end > n) {
+		ErrorExcept(
+			"[Tensor<_T>::operator()] begin and end is out of range. begin: %d, end: %d, step: %d",
+			begin, end, step
+		);
+	}
+
+	Tensor<_T> tensor(*this, *_cnt_rank + 1);
+
+	count_indice(tensor._indice[*_cnt_rank], begin, end, step);
+	*_cnt_rank = 0;
+
+	return tensor;
+}
+
+template <typename _T>
 Tensor<_T> Tensor<_T>::operator()(int index) {
 	if (*_cnt_rank >= _indice.size()) {
 		ErrorExcept(
@@ -466,6 +498,67 @@ Tensor<_T> Tensor<_T>::operator()(int index) {
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
 	count_indice(tensor._indice[*_cnt_rank], index, index + 1, 1);
+	*_cnt_rank = 0;
+
+	return tensor;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator()(int index) const {
+	if (*_cnt_rank >= _indice.size()) {
+		ErrorExcept(
+			"[Tensor<_T>::operator()] %d rank is empty.",
+			_cnt_rank
+		);
+	}
+
+	const int n = (int)_indice[*_cnt_rank].size();
+
+	index = index < 0 ? n + index : index;
+
+	if (index < 0 || index >= n) {
+		ErrorExcept(
+			"[Tensor<_T>::operator()] index is out of range."
+		);
+	}
+
+	Tensor<_T> tensor(*this, *_cnt_rank + 1);
+
+	count_indice(tensor._indice[*_cnt_rank], index, index + 1, 1);
+	*_cnt_rank = 0;
+
+	return tensor;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::operator()(const std::vector<int>& indice) {
+	if (*_cnt_rank >= _indice.size()) {
+		ErrorExcept(
+			"[Tensor<_T>::operator()] %d rank is empty.",
+			_cnt_rank
+		);
+	}
+
+	const std::vector<size_t>& curr_indice = _indice[*_cnt_rank];
+	const int n = (int)curr_indice.size();
+	std::vector<size_t> m_indice(indice.size(), 0);
+
+	int i = 0;
+	for (const int& m : indice) {
+		int index = m < 0 ? n + m : m;
+
+		if (index < 0 || index >= n) {
+			ErrorExcept(
+				"[Tensor<_T>::operator()] indice is out of range."
+			);
+		}
+
+		m_indice[i++] = curr_indice[index];
+	}
+
+	Tensor<_T> tensor(*this, *_cnt_rank + 1);
+
+	tensor._indice[*_cnt_rank] = m_indice;
 	*_cnt_rank = 0;
 
 	return tensor;
