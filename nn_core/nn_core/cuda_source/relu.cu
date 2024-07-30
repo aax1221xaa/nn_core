@@ -55,7 +55,7 @@ void NN_ReLU::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_
 	output_shape.append(input_shape[0].val());
 }
 
-void NN_ReLU::build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights) {
+void NN_ReLU::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
 
 }
 
@@ -75,8 +75,8 @@ void NN_ReLU::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_Li
 	//check_cuda(cudaGetLastError());
 }
 
-NN_Backward* NN_ReLU::create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask) {
-	return new NN_dReLU(*this, optimizer);
+NN_Backward* NN_ReLU::create_backward(std::vector<bool>& mask) {
+	return new NN_dReLU(*this);
 }
 
 
@@ -86,14 +86,9 @@ NN_Backward* NN_ReLU::create_backward(NN_Optimizer& optimizer, std::vector<bool>
 /*                                            */
 /**********************************************/
 
-NN_dReLU::NN_dReLU(NN_ReLU& relu, NN_Optimizer& optimizer) :
-	NN_Backward(optimizer),
+NN_dReLU::NN_dReLU(NN_ReLU& relu) :
 	_relu(relu)
 {
-
-}
-
-void NN_dReLU::get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape) {
 
 }
 

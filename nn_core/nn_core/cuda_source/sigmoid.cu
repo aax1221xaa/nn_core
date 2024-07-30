@@ -37,7 +37,7 @@ void NN_Sigmoid::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<
 	output_shape.append(input_shape[0].val());
 }
 
-void NN_Sigmoid::build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights) {
+void NN_Sigmoid::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
 
 }
 
@@ -54,8 +54,8 @@ void NN_Sigmoid::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN
 		);
 }
 
-NN_Backward* NN_Sigmoid::create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask) {
-	return new NN_dSigmoid(*this, optimizer);
+NN_Backward* NN_Sigmoid::create_backward(std::vector<bool>& mask) {
+	return new NN_dSigmoid(*this);
 }
 
 
@@ -65,14 +65,9 @@ NN_Backward* NN_Sigmoid::create_backward(NN_Optimizer& optimizer, std::vector<bo
 /*                                            */
 /**********************************************/
 
-NN_dSigmoid::NN_dSigmoid(NN_Sigmoid& sigmoid, NN_Optimizer& optimizer) :
-	NN_Backward(optimizer),
+NN_dSigmoid::NN_dSigmoid(NN_Sigmoid& sigmoid) :
 	_sigmoid(sigmoid)
 {
-
-}
-
-void NN_dSigmoid::get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape) {
 
 }
 

@@ -1,43 +1,88 @@
 #pragma once
+#include "../cpp_source/nn_list.h"
 #include "../cpp_source/nn_tensor.h"
 
 
 
+/**********************************************/
+/*                                            */
+/*                NN_Optimizer                */
+/*                                            */
+/**********************************************/
+
 class NN_Optimizer {
 public:
+	NN_Optimizer();
 	virtual ~NN_Optimizer();
 
-	virtual void run(const GpuTensor<nn_type>& gradient, GpuTensor<nn_type>& weights);
+	virtual NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights);
+	virtual void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
 };
 
 
+/**********************************************/
+/*                                            */
+/*					   SGD                    */
+/*                                            */
+/**********************************************/
+
+class SGD : public NN_Optimizer {
+	std::vector<GpuTensor<nn_type>> _weights;
+	std::vector<GpuTensor<nn_type>> _moments;
+
+	float _l_rate;
+	float _m_rate;
+
+	SGD(const std::vector<GpuTensor<nn_type>> weights);
+
+public:
+	SGD(float l_rate, float m_rate);
+	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights);
+	void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
+};
 
 
-void sgd(
-	nn_type* gradient,
-	nn_type* momentum,
-	nn_type* weight,
-	const uint len,
-	float learn_rate,
-	float momentum_rate
-);
+/**********************************************/
+/*                                            */
+/*					 RmsProp                  */
+/*                                            */
+/**********************************************/
 
-void rms_prop(
-	nn_type* gradient,
-	nn_type* square_g,
-	nn_type* weight,
-	const uint len,
-	float decay_rate,
-	float learn_rate
-);
+class RmsProp : public NN_Optimizer {
+	std::vector<GpuTensor<nn_type>> _weights;
+	std::vector<GpuTensor<nn_type>> _square_g;
 
-void adam(
-	nn_type* gradient,
-	nn_type* square_g,
-	nn_type* decay_g,
-	nn_type* weight,
-	const uint len,
-	float learn_rate,
-	float beta_1,
-	float beta_2
-);
+	float _d_rate;
+	float _l_rate;
+
+	RmsProp(const std::vector<GpuTensor<nn_type>> weights);
+
+public:
+	RmsProp(float d_rate, float l_rate);
+	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights);
+	void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
+};
+
+
+/**********************************************/
+/*                                            */
+/*					   Adam                   */
+/*                                            */
+/**********************************************/
+
+class Adam : public NN_Optimizer {
+	std::vector<GpuTensor<nn_type>> _weights;
+	std::vector<GpuTensor<nn_type>> _square_g;
+	std::vector<GpuTensor<nn_type>> _decay_g;
+
+	float _l_rate;
+	float _beta1;
+	float _beta2;
+
+	Adam(const std::vector<GpuTensor<nn_type>> weights);
+
+public:
+	Adam(float l_rate, float beta1, float beta2);
+	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights);
+	void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
+};

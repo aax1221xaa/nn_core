@@ -25,9 +25,9 @@ public:
 	NN_Conv2D(int amounts, const NN_Shape& filter_size, const NN_Shape& stride, Pad pad, const char* name);
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights);
+	void build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights);
 	void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
-	NN_Backward* create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask);
+	NN_Backward* create_backward(std::vector<bool>& mask);
 
 	NN_List<GpuTensor<nn_type>> get_weight();
 };
@@ -42,15 +42,15 @@ class NN_dConv2D : public NN_Backward {
 	NN_Conv2D& _conv;
 
 public:
-	NN_dConv2D(NN_Conv2D& conv, NN_Optimizer& optimizer);
+	NN_dConv2D(NN_Conv2D& conv);
 
-	void get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape);
 	void run(
 		NN_Stream& st,
 		const NN_List<GpuTensor<nn_type>>& input,
 		const NN_List<GpuTensor<nn_type>>& doutput,
 		NN_List<GpuTensor<nn_type>>& dinput
 	);
+	NN_Optimizer* create_optimizer(NN_Optimizer& optimizer);
 };
 
 

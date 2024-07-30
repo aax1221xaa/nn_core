@@ -22,9 +22,9 @@ public:
 	NN_Maxpool2D(const NN_Shape& k_size, const NN_Shape& stride, const Pad pad, const char* name);
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights);
+	void build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights);
 	void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
-	NN_Backward* create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask);
+	NN_Backward* create_backward(std::vector<bool>& mask);
 };
 
 
@@ -38,9 +38,8 @@ class NN_dMaxpool2D : public NN_Backward {
 public:
 	NN_Maxpool2D& _maxpool;
 
-	NN_dMaxpool2D(NN_Maxpool2D& maxpool, NN_Optimizer& optimizer);
+	NN_dMaxpool2D(NN_Maxpool2D& maxpool);
 
-	void get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape);
 	void run(
 		NN_Stream& st,
 		const NN_List<GpuTensor<nn_type>>& input,

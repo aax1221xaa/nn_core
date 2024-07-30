@@ -99,7 +99,7 @@ void NN_Dense::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN
 	output_shape.append(NN_Shape({ shape[0], _amounts }));
 }
 
-void NN_Dense::build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights) {
+void NN_Dense::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
 	const NN_Shape& shape = input_shape[0].val();
 
 
@@ -111,8 +111,8 @@ void NN_Dense::build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor
 	tmp = 0.f;
 	_bias = tmp;
 
-	weights.push_back(_weight);
-	weights.push_back(_bias);
+	weights.append(_weight);
+	weights.append(_bias);
 }
 
 void NN_Dense::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
@@ -143,8 +143,8 @@ void NN_Dense::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_L
 	add_bias_1d(m_output, _bias, m_output);
 }
 
-NN_Backward* NN_Dense::create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask) {
-	return new NN_dDense(*this, optimizer);
+NN_Backward* NN_Dense::create_backward(std::vector<bool>& mask) {
+	return new NN_dDense(*this);
 }
 
 NN_List<GpuTensor<nn_type>> NN_Dense::get_weight() {
@@ -158,14 +158,9 @@ NN_List<GpuTensor<nn_type>> NN_Dense::get_weight() {
 /*                                            */
 /**********************************************/
 
-NN_dDense::NN_dDense(NN_Dense& dense, NN_Optimizer& optimizer) :
-	NN_Backward(optimizer),
+NN_dDense::NN_dDense(NN_Dense& dense) :
 	_dense(dense)
 {
-
-}
-
-void NN_dDense::get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape) {
 
 }
 
@@ -176,4 +171,8 @@ void NN_dDense::run(
 	NN_List<GpuTensor<nn_type>>& dinput
 ) {
 
+}
+
+NN_Optimizer* NN_dDense::create_optimizer(NN_Optimizer& optimizer) {
+	return optimizer.create({ _dense._weight, _dense._bias });
 }

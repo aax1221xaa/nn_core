@@ -16,18 +16,16 @@ typedef	NN_List<NN_Ptr> Layer_t;
 
 class NN_Backward {
 public:
-	NN_Optimizer& _optimizer;
-
-	NN_Backward(NN_Optimizer& optimizer);
+	NN_Backward();
 	virtual ~NN_Backward();
 
-	virtual void get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape);
 	virtual void run(
 		NN_Stream& st, 
 		const NN_List<GpuTensor<nn_type>>& input,
 		const NN_List<GpuTensor<nn_type>>& doutput,
 		NN_List<GpuTensor<nn_type>>& dinput
 	);
+	virtual NN_Optimizer* create_optimizer(NN_Optimizer& optimizer);
 };
 
 
@@ -45,9 +43,9 @@ public:
 	virtual ~NN_Layer();
 
 	virtual void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	virtual void build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights);
+	virtual void build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights);
 	virtual void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
-	virtual NN_Backward* create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask);
+	virtual NN_Backward* create_backward(std::vector<bool>& mask);
 	virtual NN_List<GpuTensor<nn_type>> get_weight();
 
 	virtual void set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
@@ -70,10 +68,10 @@ public:
 	~NN_Input();
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
-	void build(const NN_List<NN_Shape>& input_shape, std::vector<GpuTensor<nn_type>>& weights);
+	void build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights);
 	template <typename _sT, typename _dT>
 	void trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) const;
-	NN_Backward* create_backward(NN_Optimizer& optimizer, std::vector<bool>& mask);
+	NN_Backward* create_backward(std::vector<bool>& mask);
 
 	void set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 };
@@ -126,9 +124,8 @@ class NN_dInput : public NN_Backward {
 public:
 	NN_Input& _input;
 
-	NN_dInput(NN_Input& input, NN_Optimizer& optimizer);
+	NN_dInput(NN_Input& input);
 	
-	void get_dinput_shape(const NN_List<NN_Shape>& dout_shape, NN_List<NN_Shape>& din_shape);
 	void run(
 		NN_Stream& st,
 		const NN_List<GpuTensor<nn_type>>& input,
@@ -153,6 +150,7 @@ protected:
 
 	NN_Layer* _layer;
 	NN_Backward* _backward;
+	NN_Optimizer* _optimizer;
 
 public:
 	bool trainable;
@@ -168,14 +166,13 @@ public:
 
 	NN_Layer& get_layer();
 	void set_layer(NN_Layer* layer);
-	NN_Backward& get_backward();
+	NN_Backward* get_backward();
 	void set_backward(NN_Backward* backward);
+	NN_Optimizer* get_optimizer();
+	void set_optimizer(NN_Optimizer* optimizer);
 
 	const int& get_index() const;
 	void set_index(int index);
-
-	void set_weights(GpuTensor<nn_type>& weight);
-	std::vector<GpuTensor<nn_type>>& get_weights();
 
 	Layer_t operator()(Layer_t prev_node);
 
@@ -203,10 +200,11 @@ class NN_Manager {
 	std::vector<NN_Link*> _nodes;
 	std::vector<NN_Layer*> _layers;
 	std::vector<NN_Backward*> _backward;
+	std::vector<NN_Optimizer*> _optimizer;
 
 	int _node_counter;
 
-	std::vector<GpuTensor<nn_type>> _weights;
+	NN_List<GpuTensor<nn_type>> _weights;
 	NN_List<NN_Shape> _out_shapes;
 	NN_List<GpuTensor<nn_type>> _outputs;
 	NN_List<GpuTensor<nn_type>> _dinputs;
@@ -221,13 +219,15 @@ public:
 	std::vector<NN_Layer*>& get_layers();
 	const std::vector<NN_Input*>& get_input_layers();
 	std::vector<NN_Backward*>& get_backward();
+	void set_optimizer(NN_Optimizer* optimizer);
 
-	std::vector<GpuTensor<nn_type>>& get_weights();
+	NN_List<GpuTensor<nn_type>>& get_weights();
 
 	void set_nodes(NN_Link* node);
 	void set_static_node(NN_Link* const node);
 	void set_backward(NN_Backward* backward);
 
+	void set_reserved_weights();
 	void set_reserved_shapes();
 	void set_reserved_outputs();
 	void set_reserved_dinputs();
