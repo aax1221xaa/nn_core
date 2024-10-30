@@ -8,15 +8,18 @@
 /*                                        */
 /******************************************/
 
-NN_Flatten::NN_Flatten(const char* name) :
+NN_Flatten::NN_Flatten(const std::string& name) :
 	NN_Layer(name)
 {
 }
 
 void NN_Flatten::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
-	const NC in = input_shape[0].val().get_nc();
+	const NN_Shape& in = input_shape[0].val();
+	int n_nodes = 1;
 
-	output_shape.append(NN_Shape({ in.n, in.c }));
+	for (const int& n : in) n_nodes *= n;
+
+	output_shape.append(NN_Shape({ in[0], n_nodes }));
 }
 
 void NN_Flatten::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
@@ -27,7 +30,7 @@ void NN_Flatten::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN
 	const GpuTensor<nn_type>& m_input = input[0].val();
 	GpuTensor<nn_type>& m_output = output[0].val();
 
-	int shape_ranks = m_input.get_shape().get_len();
+	int shape_ranks = m_input.get_shape().ranks();
 
 	if (shape_ranks > 2) {
 		std::vector<uint> ranks(shape_ranks, 0);

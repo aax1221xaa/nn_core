@@ -12,7 +12,7 @@
 
 class NN_Sigmoid : public NN_Layer {
 public:
-	NN_Sigmoid(const char* name);
+	NN_Sigmoid(const std::string& name);
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
 	void build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights);

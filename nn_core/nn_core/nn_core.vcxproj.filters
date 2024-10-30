@@ -42,9 +42,6 @@
     <ClCompile Include="cpp_source\nn_model.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\nn_loss.cpp">
-      <Filter>소스 파일\cpp</Filter>
-    </ClCompile>
     <ClCompile Include="cpp_source\nn_base.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
@@ -72,9 +69,6 @@
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_model.h">
-      <Filter>헤더 파일\h</Filter>
-    </ClInclude>
-    <ClInclude Include="cpp_source\nn_loss.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
     <ClInclude Include="cpp_source\nn_base.h">
@@ -131,6 +125,9 @@
     <ClInclude Include="cpp_source\nn_list.h">
       <Filter>헤더 파일\h</Filter>
     </ClInclude>
+    <ClInclude Include="cuda_source\nn_loss.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_source\relu.cu">
@@ -155,6 +152,9 @@
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_source\sigmoid.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\nn_loss.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
   </ItemGroup>

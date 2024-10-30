@@ -2,7 +2,7 @@
 #include "nn_base.h"
 #include "nn_sample.h"
 #include "../cuda_source/optimizer.cuh"
-#include "nn_loss.h"
+#include "../cuda_source/nn_loss.cuh"
 #include <time.h>
 #include <H5Cpp.h>
 
@@ -15,60 +15,41 @@
 
 class Model : public NN_Layer, public NN_Link {
 private:
-	/******************** NN_Layer ******************/
-	// const char* _layer 
-	
-	/******************* NN_Link ********************/
-	// int _index
-	// std::vector<NN_Link*> _prev;
-	// std::vector<NN_Link*> _next;
-
-	// NN_Layer* _layer;
-	// NN_Backward* _backward;
-
-	// std::vector<GpuTensor<nn_type>> _weights;
-
-	// bool trainable
-
-	/***********************************************/
+	int _status;
 
 	std::vector<NN_Link*> _input_nodes;
 	std::vector<NN_Link*> _output_nodes;
 	std::vector<NN_Link*> _layers;
 
-	std::vector<NN_Loss> _losses;
+	std::vector<const NN_Loss*> _losses;
 	NN_Optimizer _optimizer;
 
-	std::vector<int> _output_indice;
-
 	NN_Manager& _manager;
+
+	static int get_n_input(const std::vector<NN_Link*>& input_node, const NN_Link* curr_node);
+	static std::vector<std::string> get_layer_names(const H5::H5File& fp);
+	static void parsing_weight(const H5::Group& group, NN_List<GpuTensor<nn_type>>& g_tensor);
+	static NN_List<GpuTensor<nn_type>> zero_clone(const NN_List<GpuTensor<nn_type>>& tensor);
 
 	const NN_Input* get_input_layer(NN_Link* link);
 	void find_path(Layer_t& inputs, Layer_t& outputs, std::vector<int>& find_mask);
 	void count_branch(std::vector<int>& mask);
 	void set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask);
 
-	static int get_n_node_prev_for_next(const NN_Link* prev_node, const NN_Link* curr_node);
-	static int get_n_input(const std::vector<NN_Link*>& input_node, const NN_Link* curr_node);
+	void set_weights();
+	void set_shapes();
 
-	const std::vector<int>& get_output_indice() const;
-	void set_output_indice(const std::vector<int>& indice);
-
-	static std::vector<std::string> get_layer_names(const H5::H5File& fp);
-	static void set_weight(const H5::Group& group, NN_List<GpuTensor<nn_type>>& g_tensor);
+	void put_error();
 
 public:
 	static int _stack;
 
-	Model(NN_Manager& manager, const char* model_name);
+	Model(NN_Manager& manager, const std::string& model_name);
 	Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* model_name);
 	~Model();
 
-	Layer_t operator()(Layer_t prev_node);
-
 	/************************** NN_Link **************************/
 	NN_Link* create_child();
-	void set_next_link(NN_Link* node, int index);
 	/*************************************************************/
 
 	/************************** NN_Layer **************************/
@@ -80,6 +61,7 @@ public:
 	void set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 	/**************************************************************/
 
+	Layer_t operator()(Layer_t prev_node);
 	void load_weights(const std::string& path, bool skip_mismatch = false);
 	void summary();
 
@@ -206,13 +188,14 @@ NN_List<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x, int ba
 
 template <typename _xT, typename _yT>
 NN_List<Tensor<nn_type>> Model::fit(const DataSet<_xT, _yT>& samples, int batch, int steps) {
+	/*
 	_manager.set_reserved_shapes();
 	_manager.set_reserved_outputs();
-	_manager.set_reserved_dinputs();
+	_manager.set_reserved_doutputs();
 
 	NN_List<NN_Shape>& nodes_shapes = _manager.get_node_shape();
 	NN_List<GpuTensor<nn_type>>& nodes_outputs = _manager.get_node_output();
-	NN_List<GpuTensor<nn_type>>& nodes_doutputs = _manager.get_node_dinput();
+	NN_List<GpuTensor<nn_type>>& nodes_doutputs = _manager.get_node_doutput();
 
 	for (int i = 0; i < steps; ++i) {
 		std::vector<Tensor<nn_type>> batch_x;
@@ -280,9 +263,7 @@ NN_List<Tensor<nn_type>> Model::fit(const DataSet<_xT, _yT>& samples, int batch,
 				//node->get_layer().build(m_input_shape, node);
 				node->get_layer().set_output(m_output_shape, m_input, m_output);
 
-				if (node->get_backward()) {
-
-				}
+				if (node->get_backward()) m_doutput = zero_clone(m_output);
 			}
 		}
 
@@ -291,7 +272,7 @@ NN_List<Tensor<nn_type>> Model::fit(const DataSet<_xT, _yT>& samples, int batch,
 		for (int j = 0; j < x.size(); ++j) {
 			NN_Shape x_shape = x[j].get_shape();
 			int amounts = x_shape[0];
-			std::vector<int> indice(batch_size);
+			std::vector<int> indice(batch_size, 0);
 
 			for (int n = 0; n < batch_size; ++n) indice[n] = (batch_start + n) % amounts;
 
@@ -331,8 +312,7 @@ NN_List<Tensor<nn_type>> Model::fit(const DataSet<_xT, _yT>& samples, int batch,
 		for (NN_Link* p_out_link : _output_nodes) {
 			const GpuTensor<nn_type>& out_tensor = nodes_outputs[p_out_link->get_index()][0].val();
 
-			outputs[i][n].val().resize(out_tensor.get_shape());
-			outputs[i][n++].val() = out_tensor;
+
 		}
 	}
 
@@ -343,6 +323,9 @@ NN_List<Tensor<nn_type>> Model::fit(const DataSet<_xT, _yT>& samples, int batch,
 	_manager.clear_shapes();
 
 	return outputs;
+	*/
+
+	return NN_List<Tensor<nn_type>>();
 }
 
 

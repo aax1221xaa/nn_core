@@ -12,14 +12,14 @@
 
 class NN_Maxpool2D : public NN_Layer {
 public:
-	const Pad _pad;
+	const std::string _pad;
 
 	const NN_Shape _k_size;
 	const NN_Shape _stride;
 
 	GpuTensor<uint> _indice;
 
-	NN_Maxpool2D(const NN_Shape& k_size, const NN_Shape& stride, const Pad pad, const char* name);
+	NN_Maxpool2D(const NN_Shape& k_size, const NN_Shape& stride, const std::string& pad, const std::string& name);
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
 	void build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights);

@@ -60,34 +60,7 @@ __global__ void __matmul(
 /*                                            */
 /**********************************************/
 
-void test_matmul(
-	const GpuTensor<nn_type>& input,
-	const GpuTensor<nn_type>& weight,
-	const GpuTensor<nn_type>& bias,
-	GpuTensor<nn_type>& output
-) {
-	const NC in = input.get_shape().get_nc();
-	const NC out = output.get_shape().get_nc();
-
-	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, out.c, out.n);
-
-	__matmul<<<blocks, threads>>>(
-		input.get_ptr(),
-		weight.get_ptr(),
-		output.get_ptr(),
-		in.n,
-		in.c,
-		out.c
-	);
-
-	check_cuda(cudaDeviceSynchronize());
-	check_cuda(cudaGetLastError());
-
-	add_bias_1d(output, bias, output);
-}
-
-NN_Dense::NN_Dense(const int amounts, const char* name) :
+NN_Dense::NN_Dense(const int amounts, const std::string& name) :
 	NN_Layer(name),
 	_amounts(amounts)
 {
@@ -119,11 +92,11 @@ void NN_Dense::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_L
 	const GpuTensor<nn_type>& m_input = input[0].val();
 	GpuTensor<nn_type>& m_output = output[0].val();
 
-	const NC in = m_input.get_shape().get_nc();
-	const NC out = m_output.get_shape().get_nc();
+	const NN_Shape& in = m_input.get_shape();
+	const NN_Shape& out = m_output.get_shape();
 
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, out.c, out.n);
+	dim3 blocks = get_grid_size(threads, out[1], out[0]);
 
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());
@@ -132,9 +105,9 @@ void NN_Dense::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_L
 		m_input.get_ptr(),
 		_weight.get_ptr(),
 		m_output.get_ptr(),
-		in.n,
-		in.c,
-		out.c
+		(uint)in[0],
+		(uint)in[1],
+		(uint)out[1]
 	);
 
 	check_cuda(cudaDeviceSynchronize());

@@ -38,7 +38,7 @@ NN_Optimizer* NN_Backward::create_optimizer(NN_Optimizer& optimizer) {
 /*                                            */
 /**********************************************/
 
-NN_Layer::NN_Layer(const char* layer_name) :
+NN_Layer::NN_Layer(const std::string& layer_name) :
 	_layer_name(layer_name)
 {
 }
@@ -84,7 +84,7 @@ void NN_Layer::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTens
 /*                                            */
 /**********************************************/
 
-NN_Input::NN_Input(const NN_Shape& input_size, int batch, const char* layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&)) :
+NN_Input::NN_Input(const NN_Shape& input_size, int batch, const std::string& layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&)) :
 	NN_Layer(layer_name),
 	_shape(input_size),
 	p_convert(convert_f)
@@ -109,7 +109,7 @@ void NN_Input::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN
 	else {
 		const NN_Shape& in_shape = input_shape[0].val();
 
-		if (in_shape.get_len() != _shape.get_len()) {
+		if (in_shape.ranks() != _shape.ranks()) {
 			ErrorExcept(
 				"[NN_Input::get_output_shape] Input excpected dimensions are %s. but take dimensions are %s.",
 				shape_to_str(_shape),
@@ -117,7 +117,7 @@ void NN_Input::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN
 			);
 		}
 
-		NN_Shape out_shape(_shape.get_len());
+		NN_Shape out_shape(_shape.ranks());
 
 		int i = 0;
 		for (const int& n : in_shape) {
@@ -182,7 +182,7 @@ NN_Link::NN_Link() :
 	_layer(NULL),
 	_backward(NULL),
 	_optimizer(NULL),
-	_index(0),
+	_n_id(0),
 	trainable(true)
 {
 }
@@ -196,6 +196,7 @@ NN_Link* NN_Link::create_child() {
 
 	child_node->_layer = _layer;
 	child_node->trainable = trainable;
+	child_node->_out_indices = _out_indices;
 
 	return child_node;
 }
@@ -241,26 +242,60 @@ void NN_Link::set_layer(NN_Layer* layer) {
 }
 
 const int& NN_Link::get_index() const {
-	return _index;
+	return _n_id;
 }
 
 void NN_Link::set_index(int index) {
-	_index = index;
+	_n_id = index;
 }
 
 Layer_t NN_Link::operator()(Layer_t prev_node) {
+	NN_List<NN_Shape> in_shapes;
+	NN_List<NN_Shape> out_shapes;
+
 	for (Layer_t& p_prev_node : prev_node) {
 		NN_Ptr& prev_ptr = p_prev_node.val();
 
 		set_prev_node(prev_ptr._node);
-		prev_ptr._node->set_next_link(this, prev_ptr._index);
+		prev_ptr._node->set_next_link(this, prev_ptr._n_port);
+
+		in_shapes.append(prev_ptr._shape);
 	}
 
-	return NN_Ptr({ 0, this });
+	_layer->get_output_shape(in_shapes, out_shapes);
+
+	Layer_t out_ports;
+	int i = 0;
+	for (NN_List<NN_Shape>& out_shape : out_shapes) {
+		out_ports.append({ i++, this, out_shape.val() });
+	}
+
+	return out_ports;
 }
 
 void NN_Link::set_next_link(NN_Link* node, int index) {
 	_next.push_back(node);
+	_out_indices.push_back(index);
+}
+
+int NN_Link::get_out_port(NN_Link* current) {
+	int i = -1;
+	for (NN_Link* p_next : _next) {
+		++i;
+		if (p_next == current) break;
+	}
+
+	return _out_indices[i];
+}
+
+int NN_Link::get_out_port(NN_Link* current) const {
+	int i = -1;
+	for (NN_Link* p_next : _next) {
+		++i;
+		if (p_next == current) break;
+	}
+
+	return _out_indices[i];
 }
 
 
@@ -352,8 +387,8 @@ void NN_Manager::set_reserved_outputs() {
 	_outputs.reserve(_nodes.size());
 }
 
-void NN_Manager::set_reserved_dinputs() {
-	_dinputs.reserve(_nodes.size());
+void NN_Manager::set_reserved_doutputs() {
+	_doutputs.reserve(_nodes.size());
 }
 
 NN_List<NN_Shape>& NN_Manager::get_node_shape() {
@@ -364,8 +399,8 @@ NN_List<GpuTensor<nn_type>>& NN_Manager::get_node_output() {
 	return _outputs;
 }
 
-NN_List<GpuTensor<nn_type>>& NN_Manager::get_node_dinput() {
-	return _dinputs;
+NN_List<GpuTensor<nn_type>>& NN_Manager::get_node_doutput() {
+	return _doutputs;
 }
 
 void NN_Manager::clear_weights() {
@@ -381,7 +416,7 @@ void NN_Manager::clear_outputs() {
 }
 
 void NN_Manager::clear_dinputs() {
-	_dinputs.clear();
+	_doutputs.clear();
 }
 
 Layer_t NN_Manager::input(const NN_Shape& input_size, int batch, const char* layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&)) {
@@ -393,8 +428,12 @@ Layer_t NN_Manager::input(const NN_Shape& input_size, int batch, const char* lay
 
 	set_nodes(node);
 	_layers.push_back(layer);
+	
+	NN_List<NN_Shape> out_shape;
 
-	return NN_Ptr({ 0, node });
+	layer->get_output_shape(NN_List<NN_Shape>(), out_shape);
+
+	return NN_Ptr({ 0, node, out_shape.val() });
 }
 
 
@@ -408,7 +447,7 @@ void set_random_uniform(GpuTensor<nn_type>& tensor, nn_type a, nn_type b) {
 	std::random_device rd;
 	cv::RNG rng(rd());
 
-	cv::Mat tmp(tensor.get_shape().get_vector(), CV_32FC1);
+	cv::Mat tmp(tensor.get_shape().get_dims(), CV_32FC1);
 
 	rng.fill(tmp, cv::RNG::UNIFORM, a, b, true);
 

@@ -8,13 +8,17 @@ char str_buff[BUFF_LEN];
 size_t buff_begin = 0;
 
 
+/**********************************************/
+/*                                            */
+/*                   NN_Shape				  */
+/*                                            */
+/**********************************************/
+
 NN_Shape::NN_Shape() {
 
 }
 
-NN_Shape::NN_Shape(int len) :
-	NN_Shape()
-{
+NN_Shape::NN_Shape(size_t len) {
 	if (len < 1) {
 		ErrorExcept(
 			"[NN_Shape::NN_Shape] Len must be greater than 0. but %d",
@@ -24,10 +28,19 @@ NN_Shape::NN_Shape(int len) :
 
 	_dims.resize(len, 0);
 }
-
-NN_Shape::NN_Shape(const std::initializer_list<int>& list) :
-	_dims(list)
+/*
+NN_Shape::NN_Shape(const std::vector<int>& list) :
+	_dims(list.size())
 {
+	int i = 0;
+	for (const int& n : list) _dims[i++] = n;
+}
+*/
+NN_Shape::NN_Shape(const std::initializer_list<int>& list) :
+	_dims(list.size())
+{	
+	int i = 0;
+	for (const int& n : list) _dims[i++] = n;
 }
 
 NN_Shape::NN_Shape(const NN_Shape& p) :
@@ -92,20 +105,38 @@ const int& NN_Shape::operator[](int index) const {
 	return _dims[index];
 }
 
-int NN_Shape::get_len() const {
+int NN_Shape::ranks() {
 	return (int)_dims.size();
 }
 
-size_t NN_Shape::total_size() const {
-	size_t size = _dims.size() > 0 ? 1 : 0;
+int NN_Shape::ranks() const {
+	return (int)_dims.size();
+}
 
-	for (size_t i = 0; i < _dims.size(); ++i) {
-		if (_dims[i] < 1) size = 0;
+size_t NN_Shape::total_size() {
+	size_t size = 1;
 
-		size *= (size_t)_dims[i];
-	}
+	for (int& n : _dims) size *= n;
 
 	return size;
+}
+
+size_t NN_Shape::total_size() const {
+	size_t size = 1;
+
+	for (const uint& n : _dims) size *= n;
+
+	return size;
+}
+
+std::ostream& NN_Shape::put_shape(std::ostream& os) {
+	os << '[';
+
+	for (const int& n : _dims) os << std::to_string(n) << ", ";
+
+	os << ']';
+
+	return os;
 }
 
 std::ostream& NN_Shape::put_shape(std::ostream& os) const {
@@ -116,6 +147,18 @@ std::ostream& NN_Shape::put_shape(std::ostream& os) const {
 	os << ']';
 
 	return os;
+}
+
+bool NN_Shape::is_empty() {
+	return _dims.empty();
+}
+
+bool NN_Shape::is_empty() const {
+	return _dims.empty();
+}
+
+void NN_Shape::clear() {
+	_dims.clear();
 }
 
 std::vector<int>::iterator NN_Shape::begin() {
@@ -132,14 +175,6 @@ std::vector<int>::const_iterator NN_Shape::begin() const {
 
 std::vector<int>::const_iterator NN_Shape::end() const {
 	return _dims.cend();
-}
-
-bool NN_Shape::is_empty() const {
-	return _dims.empty();
-}
-
-void NN_Shape::clear() {
-	_dims.clear();
 }
 
 void NN_Shape::push_front(int n) {
@@ -166,64 +201,84 @@ void NN_Shape::push_back(const std::initializer_list<int>& list) {
 	_dims.insert(_dims.end(), list);
 }
 
-const std::vector<int>& NN_Shape::get_vector() {
+std::vector<int>& NN_Shape::get_dims() {
 	return _dims;
 }
 
-NCHW NN_Shape::get_nchw() {
-	int arr[4] = { 1, 1, 1, 1 };
-	int i = 0;
-
-	for (std::vector<int>::reverse_iterator n = _dims.rbegin(); n != _dims.rend(); ++n, ++i) {
-		if (i < 4) arr[3 - i] = *n;
-		else {
-			arr[0] *= *n;
-		}
-	}
-
-	return { arr[0], arr[1], arr[2], arr[3] };
+const std::vector<int>& NN_Shape::get_dims() const {
+	return _dims;
 }
 
-NC NN_Shape::get_nc() {
-	int arr[2] = { 1, 1 };
-	int i = 0;
-
-	for (std::vector<int>::iterator n = _dims.begin(); n != _dims.end(); ++n, ++i) {
-		if (i < 1) arr[i] = *n;
-		else {
-			arr[1] *= *n;
-		}
+NN_Tensor4dShape NN_Shape::get_4d_shape() {
+	if (_dims.size() > 4) {
+		ErrorExcept(
+			"[NN_Tensor4dShape::get_4d_shape()] Can't return to tensor4d shape. because ranks are %ld",
+			_dims.size()
+		);
 	}
+	
+	NN_Tensor4dShape shape;
 
-	return { arr[0], arr[1] };
+	shape._n = _dims[0];
+	shape._h = _dims[1];
+	shape._w = _dims[2];
+	shape._c = _dims[3];
+
+	return shape;
 }
 
-NCHW NN_Shape::get_nchw() const {
-	int arr[4] = { 1, 1, 1, 1 };
-	int i = 0;
-
-	for (std::vector<int>::const_reverse_iterator n = _dims.rbegin(); n != _dims.rend(); ++n, ++i) {
-		if (i < 4) arr[3 - i] = *n;
-		else {
-			arr[0] *= *n;
-		}
+NN_Tensor4dShape NN_Shape::get_4d_shape() const {
+	if (_dims.size() > 4) {
+		ErrorExcept(
+			"[NN_Tensor4dShape::get_4d_shape()] Can't return to tensor4d shape. because ranks are %ld",
+			_dims.size()
+		);
 	}
 
-	return { arr[0], arr[1], arr[2], arr[3] };
+	NN_Tensor4dShape shape;
+
+	shape._n = _dims[0];
+	shape._h = _dims[1];
+	shape._w = _dims[2];
+	shape._c = _dims[3];
+
+	return shape;
 }
 
-NC NN_Shape::get_nc() const {
-	int arr[2] = { 1, 1 };
-	int i = 0;
-
-	for (NN_Shape::c_iterator n = _dims.begin(); n != _dims.end(); ++n, ++i) {
-		if (i < 1) arr[i] = *n;
-		else {
-			arr[1] *= *n;
-		}
+NN_Filter4dShape NN_Shape::get_filter_shape() {
+	if (_dims.size() > 4) {
+		ErrorExcept(
+			"[NN_Tensor4dShape::get_filter_shape()] Can't return to tensor4d shape. because ranks are %ld",
+			_dims.size()
+		);
 	}
 
-	return { arr[0], arr[1] };
+	NN_Filter4dShape shape;
+
+	shape._h = _dims[0];
+	shape._w = _dims[1];
+	shape._in_c = _dims[2];
+	shape._out_c = _dims[3];
+
+	return shape;
+}
+
+NN_Filter4dShape NN_Shape::get_filter_shape() const {
+	if (_dims.size() > 4) {
+		ErrorExcept(
+			"[NN_Tensor4dShape::get_filter_shape()] Can't return to tensor4d shape. because ranks are %ld",
+			_dims.size()
+		);
+	}
+
+	NN_Filter4dShape shape;
+
+	shape._h = _dims[0];
+	shape._w = _dims[1];
+	shape._in_c = _dims[2];
+	shape._out_c = _dims[3];
+
+	return shape;
 }
 
 const char* shape_to_str(const NN_Shape& shape) {
@@ -236,7 +291,7 @@ const char* shape_to_str(const NN_Shape& shape) {
 	}
 
 	buff += "]";
-	
+
 	char* str_out = NULL;
 	size_t size = strlen(buff.c_str()) + 1;
 
@@ -253,7 +308,19 @@ const char* shape_to_str(const NN_Shape& shape) {
 
 	return str_out;
 }
+/*
+std::string shape_to_str(const std::vector<int>& shape) {
+	std::string buff = "[";
 
+	for (const int& n : shape) {
+		buff += std::to_string(n) + ", ";
+	}
+
+	buff += "]";
+
+	return buff;
+}
+*/
 std::ostream& operator<<(std::ostream& os, const NN_Shape& shape) {
 	return shape.put_shape(os);
 }

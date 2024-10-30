@@ -13,14 +13,13 @@
 
 int main() {
 	try {
-		Tensor<int> a({ 3, 3 });
+		Tensor<int> a = Tensor<int>::zeros({ 3, 3, 3 });
+		Tensor<int> b = Tensor<int>::zeros({ 2, 2, 2 });
 
-		a = 1;
-		std::cout << a;
+		b(0, 2)(0, 2)(0, 2) = 1;
+		a(0, 2)(0, 2)(0, 2) = b;
 
-		a.expand_dims(1);
-
-		std::cout << a;
+		std::cout << a << std::endl;
 	}
 	catch (const NN_Exception& e) {
 		e.put();

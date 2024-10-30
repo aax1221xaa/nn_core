@@ -15,14 +15,14 @@ public:
 	const int _amounts;
 	const NN_Shape _filter_size;
 	const NN_Shape _stride;
-	const Pad _pad;
+	const std::string _pad;
 
 	GpuTensor<nn_type> _filter;
 	GpuTensor<nn_type> _bias;
 
-	void set_indice(const NCHW& in, const NCHW& k);
+	void set_indice(const NN_Tensor4dShape& in, const NN_Filter4dShape& k);
 
-	NN_Conv2D(int amounts, const NN_Shape& filter_size, const NN_Shape& stride, Pad pad, const char* name);
+	NN_Conv2D(cuint amounts, const NN_Shape& filter_size, const NN_Shape& stride, const std::string& pad, const std::string& name);
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
 	void build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights);

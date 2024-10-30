@@ -4,10 +4,6 @@
 #include "../cuda_source/optimizer.cuh"
 
 
-struct NN_Ptr;
-
-typedef	NN_List<NN_Ptr> Layer_t;
-
 /**********************************************/
 /*                                            */
 /*                 NN_Backward                */
@@ -37,9 +33,9 @@ public:
 
 class NN_Layer {
 public:
-	const char* _layer_name;
+	const std::string _layer_name;
 
-	NN_Layer(const char* layer_name);
+	NN_Layer(const std::string& layer_name);
 	virtual ~NN_Layer();
 
 	virtual void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
@@ -47,7 +43,6 @@ public:
 	virtual void run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 	virtual NN_Backward* create_backward(std::vector<bool>& mask);
 	virtual NN_List<GpuTensor<nn_type>> get_weight();
-
 	virtual void set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 };
 
@@ -64,7 +59,7 @@ public:
 
 	void(*p_convert)(const void* p_src, void* p_dst, const tbb::blocked_range<size_t>& q);
 
-	NN_Input(const NN_Shape& input_size, int batch = -1, const char* layer_name = "Input", void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&) = NULL);
+	NN_Input(const NN_Shape& input_size, int batch = -1, const std::string& layer_name = "Input", void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&) = NULL);
 	~NN_Input();
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
@@ -141,12 +136,17 @@ public:
 /*                                            */
 /**********************************************/
 
+struct NN_Ptr;
+
+typedef	NN_List<NN_Ptr> Layer_t;
+
 class NN_Link {
 protected:
-	int _index;
+	int _n_id;
 
 	std::vector<NN_Link*> _prev;
 	std::vector<NN_Link*> _next;
+	std::vector<int> _out_indices;
 
 	NN_Layer* _layer;
 	NN_Backward* _backward;
@@ -177,12 +177,16 @@ public:
 	Layer_t operator()(Layer_t prev_node);
 
 	virtual NN_Link* create_child();
-	virtual void set_next_link(NN_Link* node, int index);
+	void set_next_link(NN_Link* node, int index);
+
+	int get_out_port(NN_Link* current);
+	int get_out_port(NN_Link* current) const;
 };
 
 struct NN_Ptr {
-	int _index;
+	int _n_port;
 	NN_Link* _node;
+	NN_Shape _shape;
 };
 
 
@@ -207,7 +211,7 @@ class NN_Manager {
 	NN_List<GpuTensor<nn_type>> _weights;
 	NN_List<NN_Shape> _out_shapes;
 	NN_List<GpuTensor<nn_type>> _outputs;
-	NN_List<GpuTensor<nn_type>> _dinputs;
+	NN_List<GpuTensor<nn_type>> _doutputs;
 
 public:
 	NN_Manager();
@@ -230,11 +234,11 @@ public:
 	void set_reserved_weights();
 	void set_reserved_shapes();
 	void set_reserved_outputs();
-	void set_reserved_dinputs();
+	void set_reserved_doutputs();
 
 	NN_List<NN_Shape>& get_node_shape();
 	NN_List<GpuTensor<nn_type>>& get_node_output();
-	NN_List<GpuTensor<nn_type>>& get_node_dinput();
+	NN_List<GpuTensor<nn_type>>& get_node_doutput();
 
 	void clear_weights();
 	void clear_shapes();

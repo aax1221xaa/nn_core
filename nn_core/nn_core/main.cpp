@@ -21,15 +21,15 @@ int main() {
 			}
 		};
 
-		Layer_t x_input = nn.input(NN_Shape({ 1, 28, 28 }), -1, "input", convert_func);
+		Layer_t x_input = nn.input({ 28, 28, 1 }, -1, "input", convert_func);
 
-		Layer_t x = nn(NN_Conv2D(32, { 5, 5 }, { 1, 1 }, Pad::VALID, "conv_1"))(x_input);
+		Layer_t x = nn(NN_Conv2D(32, { 5, 5 }, { 1, 1 }, "valid", "conv_1"))(x_input);
 		x = nn(NN_ReLU("relu_1"))(x);
-		x = nn(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, Pad::VALID, "maxpool_1"))(x);
+		x = nn(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, "valid", "maxpool_1"))(x);
 		
-		x = nn(NN_Conv2D(64, { 5, 5 }, { 1, 1 }, Pad::VALID, "conv_2"))(x);
+		x = nn(NN_Conv2D(64, { 5, 5 }, { 1, 1 }, "valid", "conv_2"))(x);
 		x = nn(NN_ReLU("relu_2"))(x);
-		x = nn(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, Pad::VALID, "maxpool_2"))(x);
+		x = nn(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, "valid", "maxpool_2"))(x);
 
 		x = nn(NN_Flatten("flat"))(x);
 
@@ -47,22 +47,13 @@ int main() {
 		DataSet<uchar, uchar>& train = samples[0];
 		DataSet<uchar, uchar>& test = samples[1];
 
-		Tensor<uchar> mx = Tensor<uchar>::expand_dims(test._x[0], 1);
+		//Tensor<uchar> mx = Tensor<uchar>::expand_dims(test._x[0], 1);
 		//Tensor<uchar> my = Tensor<uchar>::expand_dims(train._y[0], 1);
 
-		std::vector<Tensor<uchar>> _x = { mx };
+		//std::vector<Tensor<uchar>> _x = { mx };
 
 		model.summary();
-		model.load_weights("E:\\data_set\\mnist\\mnist.h5");
-		
-		NN_List<Tensor<nn_type>> result = model.predict(_x, 16, 1);
 
-		
-		for (NN_List<Tensor<nn_type>>& m_result : result) {
-			for (NN_List<Tensor<nn_type>>& p_result : m_result) {
-				std::cout << std::endl << p_result.val();
-			}
-		}
 		
 	}
 	catch (NN_Exception& e) {

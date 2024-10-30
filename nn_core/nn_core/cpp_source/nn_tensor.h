@@ -9,6 +9,7 @@ class GpuTensor;
 
 template <typename _T>
 class Tensor {
+	int _status;
 
 	std::shared_ptr<_T[]> _data;
 	std::vector<size_t> _steps;
@@ -93,6 +94,8 @@ public:
 
 	static Tensor squeeze(const Tensor& tensor, int axis = 0);
 	static Tensor squeeze(const Tensor& tensor, std::initializer_list<int>& axis);
+
+	static Tensor zeros(const NN_Shape& shape);
 };
 
 template <typename _T>
@@ -107,7 +110,7 @@ std::ostream& operator<<(std::ostream& os, const Tensor<_T>& tensor) {
 
 template <typename _T>
 std::vector<size_t> Tensor<_T>::calc_step(const NN_Shape& shape) {
-	std::vector<size_t> steps(shape.get_len(), 1);
+	std::vector<size_t> steps(shape.ranks(), 1);
 
 	int n = 0;
 	for (NN_Shape::c_iterator i = shape.begin(); i != shape.end(); ++i) {
@@ -163,8 +166,8 @@ NN_Shape Tensor<_T>::calc_shape(const std::vector<std::vector<size_t>>& indice) 
 template <typename _T>
 bool Tensor<_T>::is_valid_src_shape(const NN_Shape& dst_shape, const NN_Shape& src_shape) {
 	bool is_valid = true;
-	const int dst_len = dst_shape.get_len();
-	const int src_len = src_shape.get_len();
+	const int dst_len = dst_shape.ranks();
+	const int src_len = src_shape.ranks();
 
 	if (dst_len < src_len) is_valid = false;
 	if (src_len > 0) {
@@ -212,6 +215,7 @@ void Tensor<_T>::put_tensor(std::ostream& os, const Tensor& tensor, size_t offse
 
 template <typename _T>
 Tensor<_T>::Tensor(const Tensor& p, int cnt_rank) :
+	_status(p._status),
 	_data(p._data),
 	_steps(p._steps),
 	_indice(p._indice),
@@ -221,13 +225,15 @@ Tensor<_T>::Tensor(const Tensor& p, int cnt_rank) :
 
 template <typename _T>
 Tensor<_T>::Tensor() :
+	_status(0),
 	_cnt_rank(new int(0))
 {
 }
 
 template <typename _T>
 Tensor<_T>::Tensor(const NN_Shape& shape) :
-	_indice(shape.get_len()),
+	_status(0),
+	_indice(shape.ranks()),
 	_cnt_rank(new int(0))
 {
 	int i = 0;
@@ -253,6 +259,7 @@ Tensor<_T>::Tensor(const NN_Shape& shape) :
 
 template <typename _T>
 Tensor<_T>::Tensor(const size_t* p_dims, int n_dims) :
+	_status(0),
 	_indice(n_dims),
 	_cnt_rank(new int(0))
 {
@@ -275,6 +282,7 @@ Tensor<_T>::Tensor(const size_t* p_dims, int n_dims) :
 
 template <typename _T>
 Tensor<_T>::Tensor(const std::initializer_list<int>& shape) :
+	_status(0),
 	_indice(shape.size()),
 	_cnt_rank(new int(0))
 {
@@ -301,6 +309,7 @@ Tensor<_T>::Tensor(const std::initializer_list<int>& shape) :
 
 template <typename _T>
 Tensor<_T>::Tensor(const Tensor& p) :
+	_status(p._status),
 	_data(p._data),
 	_steps(p._steps),
 	_indice(p._indice),
@@ -310,11 +319,13 @@ Tensor<_T>::Tensor(const Tensor& p) :
 
 template <typename _T>
 Tensor<_T>::Tensor(Tensor&& p) :
+	_status(p._status),
 	_data(std::move(p._data)),
 	_steps(std::move(p._steps)),
 	_indice(std::move(p._indice)),
-	_cnt_rank(new int(0))
+	_cnt_rank(p._cnt_rank)
 {
+	p._cnt_rank = NULL;
 }
 
 template <typename _T>
@@ -326,7 +337,7 @@ template <typename _T>
 Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 	if (this == &p) return *this;
 
-	if (_steps.empty()) {
+	if (_status == 0) {
 		_data = p._data;
 		_steps = p._steps;
 		_indice = p._indice;
@@ -359,6 +370,7 @@ Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 	}
 
 	*_cnt_rank = 0;
+	_status = 0;
 
 	return *this;
 }
@@ -391,9 +403,11 @@ Tensor<_T>& Tensor<_T>::operator=(const GpuTensor<_T>& p) {
 
 template <typename _T>
 Tensor<_T>& Tensor<_T>::operator=(_T scalar) {
-	if (_steps.empty()) {
+	if (_status == 0) {
 		_data = std::shared_ptr<_T[]>(new _T[1]);
+		_steps.clear();
 		_steps.push_back(1);
+		_indice.clear();
 		_indice.push_back({ 0 });
 
 		_data[0] = scalar;
@@ -414,6 +428,7 @@ Tensor<_T>& Tensor<_T>::operator=(_T scalar) {
 	}
 
 	*_cnt_rank = 0;
+	_status = 0;
 
 	return *this;
 }
@@ -441,6 +456,7 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
+	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], begin, end, step);
 	*_cnt_rank = 0;
 
@@ -470,6 +486,7 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) const {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
+	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], begin, end, step);
 	*_cnt_rank = 0;
 
@@ -497,6 +514,7 @@ Tensor<_T> Tensor<_T>::operator()(int index) {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
+	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], index, index + 1, 1);
 	*_cnt_rank = 0;
 
@@ -524,6 +542,7 @@ Tensor<_T> Tensor<_T>::operator()(int index) const {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
+	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], index, index + 1, 1);
 	*_cnt_rank = 0;
 
@@ -558,6 +577,7 @@ Tensor<_T> Tensor<_T>::operator()(const std::vector<int>& indice) {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
+	tensor._status = 1;
 	tensor._indice[*_cnt_rank] = m_indice;
 	*_cnt_rank = 0;
 
@@ -592,6 +612,7 @@ Tensor<_T> Tensor<_T>::operator()(const std::vector<int>& indice) const {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
+	tensor._status = 1;
 	tensor._indice[*_cnt_rank] = m_indice;
 	*_cnt_rank = 0;
 
@@ -619,6 +640,7 @@ Tensor<_T> Tensor<_T>::operator[](int index) {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
+	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], index, index + 1, 1);
 	*_cnt_rank = 0;
 
@@ -646,6 +668,7 @@ Tensor<_T> Tensor<_T>::operator[](int index) const {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
+	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], index, index + 1, 1);
 	*_cnt_rank = 0;
 
@@ -1312,7 +1335,7 @@ std::ostream& Tensor<_T>::put(std::ostream& os) const {
 
 template <typename _T>
 void Tensor<_T>::resize(const NN_Shape& shape) {
-	if ((int)_indice.size() != shape.get_len()) _indice.resize(shape.get_len());
+	if ((int)_indice.size() != shape.ranks()) _indice.resize(shape.ranks());
 
 	int i = 0;
 	for (const int& n : shape) {
@@ -1366,7 +1389,7 @@ Tensor<_cT> Tensor<_T>::cast() const {
 template <typename _T>
 Tensor<_T> Tensor<_T>::expand_dims(const Tensor& tensor, int axis) {
 	NN_Shape shape = calc_shape(tensor._indice);
-	const int ranks = shape.get_len();
+	const int ranks = shape.ranks();
 	const int curr_axis = axis < 0 ? ranks - axis : axis;
 
 	if (ranks <= curr_axis || 0 > curr_axis) {
@@ -1389,7 +1412,7 @@ Tensor<_T> Tensor<_T>::expand_dims(const Tensor& tensor, int axis) {
 template <typename _T>
 Tensor<_T> Tensor<_T>::expand_dims(const Tensor& tensor, std::initializer_list<int>& axis) {
 	NN_Shape shape = calc_shape(tensor._indice);
-	const int ranks = shape.get_len();
+	const int ranks = shape.ranks();
 
 	Tensor<_T> m_tensor = tensor;
 
@@ -1399,7 +1422,7 @@ Tensor<_T> Tensor<_T>::expand_dims(const Tensor& tensor, std::initializer_list<i
 		if (ranks <= curr_axis || 0 > curr_axis) {
 			ErrorExcept(
 				"[Tensor<_T>::expand_dims] %s axis is out of range.",
-				shape_to_str(NN_Shape(axis))
+				shape_to_str(axis)
 			);
 		}
 
@@ -1415,7 +1438,7 @@ Tensor<_T> Tensor<_T>::expand_dims(const Tensor& tensor, std::initializer_list<i
 template <typename _T>
 Tensor<_T> Tensor<_T>::squeeze(const Tensor& tensor, int axis) {
 	NN_Shape shape = calc_shape(tensor._indice);
-	const int ranks = shape.get_len();
+	const int ranks = shape.ranks();
 	const int curr_axis = axis < 0 ? ranks - axis : axis;
 
 	if (ranks <= curr_axis || 0 > curr_axis) {
@@ -1444,7 +1467,7 @@ Tensor<_T> Tensor<_T>::squeeze(const Tensor& tensor, int axis) {
 template <typename _T>
 Tensor<_T> Tensor<_T>::squeeze(const Tensor& tensor, std::initializer_list<int>& axis) {
 	NN_Shape shape = calc_shape(tensor._indice);
-	const int ranks = shape.get_len();
+	const int ranks = shape.ranks();
 
 	Tensor<_T> m_tensor = tensor;
 
@@ -1454,13 +1477,13 @@ Tensor<_T> Tensor<_T>::squeeze(const Tensor& tensor, std::initializer_list<int>&
 		if (ranks <= curr_axis || 0 > curr_axis) {
 			ErrorExcept(
 				"[Tensor<_T>::squeeze] %s axis is out of range.",
-				shape_to_str(NN_Shape(axis))
+				shape_to_str(axis)
 			);
 		}
 		else if (shape[curr_axis] > 1) {
 			ErrorExcept(
 				"[Tensor<_T>::squeeze] Can't squeeze %d axis.",
-				shape_to_str(NN_Shape(axis))
+				shape_to_str(axis)
 			);
 		}
 
@@ -1471,6 +1494,17 @@ Tensor<_T> Tensor<_T>::squeeze(const Tensor& tensor, std::initializer_list<int>&
 	*tensor._cnt_rank = 0;
 
 	return m_tensor;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::zeros(const NN_Shape& shape) {
+	Tensor<_T> tensor(shape);
+
+	tensor._status = 1;
+	tensor = _T(0);
+	tensor._status = 0;
+
+	return tensor;
 }
 
 

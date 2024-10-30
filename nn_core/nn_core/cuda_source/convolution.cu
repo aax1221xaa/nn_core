@@ -18,7 +18,7 @@
 /*				 kernel function			  */
 /*										      */
 /**********************************************/
-
+#if 0
 __global__ void __conv2d(
 	const nn_type* input,
 	const nn_type* kernel,
@@ -75,6 +75,65 @@ __global__ void __conv2d(
 	}
 }
 
+#else
+
+__global__ void __conv2d(
+	const nn_type* input,
+	const nn_type* kernel,
+	nn_type* output,
+	cuint* indice,
+	cuint in_h,
+	cuint in_w,
+	cuint in_c,
+	cuint k_h,
+	cuint k_w,
+	cuint out_h,
+	cuint out_w,
+	cuint out_c,
+	cuint st_h,
+	cuint st_w
+) {
+	cuint cx = blockIdx.x * blockDim.x + threadIdx.x;
+	cuint cy = blockIdx.y * blockDim.y + threadIdx.y;
+	cuint sidx = threadIdx.y * BLOCK_32 + threadIdx.x;
+
+	cuint x0 = (cx % out_w) * st_w;
+	cuint y0 = (cx / out_w) * st_h;
+
+	cuint k = k_w * k_h * in_c;
+	cuint n = out_w * out_h;
+
+	__shared__ nn_type share_in[BLOCK_32 * BLOCK_32];
+	__shared__ nn_type share_k[BLOCK_32 * BLOCK_32];
+
+	const nn_type* p_input = input + (y0 * in_w + x0);
+	const nn_type* p_kernel = kernel + (cy * k_w * k_h * in_c);
+
+	nn_type sum = 0.f;
+
+	for (uint i = 0; i < k; i += BLOCK_32) {
+		uint th_x = i + threadIdx.x;
+		uint th_y = i + threadIdx.y;
+
+		__syncthreads();
+
+		share_k[sidx] = th_x < k && cy < out_c ? p_kernel[th_x] : 0.f;
+		share_in[sidx] = cx < n && th_y < k ? p_input[indice[th_y]] : 0.f;
+
+		__syncthreads();
+
+#pragma unroll
+		for (uint e = 0; e < BLOCK_32; ++e) {
+			sum += share_in[e * BLOCK_32 + threadIdx.x] * share_k[threadIdx.y * BLOCK_32 + e];
+		}
+	}
+
+	if (cx < n && cy < out_c) {
+		output[cy * k + cx] = sum;
+	}
+}
+
+#endif
 /*
 __global__ void __kernel_conv2d(
 	const uint* indice,
@@ -139,27 +198,27 @@ __global__ void __kernel_conv2d(
 /*                                            */
 /**********************************************/
 
-void NN_Conv2D::set_indice(const NCHW& in, const NCHW& k) {
-	uint* h_idx = new uint[k.c * k.h * k.w];
+void NN_Conv2D::set_indice(const NN_Tensor4dShape& in, const NN_Filter4dShape& k) {
+	uint* h_idx = new uint[k._h * k._w * k._in_c];
 
-	for (int c = 0; c < k.c; ++c) {
-		cuint kc = (uint)(k.h * k.w * c);
-		cuint pc = (uint)(in.h * in.w * c);
-		for (int h = 0; h < k.h; ++h) {
-			cuint kh = (uint)(k.w * h);
-			cuint ph = (uint)(in.w * h);
-			for (int w = 0; w < k.w; ++w) {
-				h_idx[kc + kh + w] = pc + ph + w;
+	for (int h = 0; h < k._h; ++h) {
+		cuint kh = k._w * k._in_c * h;
+		cuint in_h = in._w * in._c * h;
+		for (int w = 0; w < k._w; ++w) {
+			cuint kw = k._in_c * w;
+			cuint in_w = in._c * w;
+			for (int c = 0; c < k._in_c; ++c) {
+				h_idx[kh + kw + c] = in_h + in_w + c;
 			}
 		}
 	}
 
-	set_const_mem(h_idx, (k.c * k.h * k.w), 0);
+	set_const_mem(h_idx, k._h * k._w * k._in_c, 0);
 
 	delete[] h_idx;
 }
 
-NN_Conv2D::NN_Conv2D(int amounts, const NN_Shape& filter_size, const NN_Shape& stride, Pad pad, const char* name) :
+NN_Conv2D::NN_Conv2D(cuint amounts, const NN_Shape& filter_size, const NN_Shape& stride, const std::string& pad, const std::string& name) :
 	_amounts(amounts),
 	_filter_size(filter_size),
 	_stride(stride),
@@ -171,28 +230,29 @@ NN_Conv2D::NN_Conv2D(int amounts, const NN_Shape& filter_size, const NN_Shape& s
 void NN_Conv2D::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
 	const NN_Shape& shape = input_shape[0].val();
 
-	if (_pad == Pad::SAME) {
+	if (_pad == "same") {
 		int n = shape[0];
+		int h = (int)ceil((float)shape[1] / _stride[1]);
+		int w = (int)ceil((float)shape[2] / _stride[0]);
 		int c = _amounts;
-		int h = (int)ceil((float)shape[2] / _stride[0]);
-		int w = (int)ceil((float)shape[3] / _stride[1]);
 
-		output_shape.append(NN_Shape({ n, c, h, w }));
+		output_shape.append(NN_Shape({ n, h, w, c }));
 	}
 	else {
 		int n = shape[0];
+		int h = (int)floorf((float)(shape[1] - _filter_size[1]) / _stride[1] + 1);
+		int w = (int)floorf((float)(shape[2] - _filter_size[0]) / _stride[0] + 1);
 		int c = _amounts;
-		int h = (int)floorf((float)(shape[2] - _filter_size[0]) / _stride[0] + 1);
-		int w = (int)floorf((float)(shape[3] - _filter_size[1]) / _stride[1] + 1);
 
-		output_shape.append(NN_Shape({ n, c, h, w }));
+		output_shape.append(NN_Shape({ n, h, w, c }));
 	}
 }
 
 void NN_Conv2D::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
 	const NN_Shape& shape = input_shape[0].val();
+	
 
-	_filter.resize({ _amounts, shape[1], _filter_size[0], _filter_size[1] });
+	_filter.resize(NN_Shape({ _filter_size[1], _filter_size[0], shape[3], _amounts }));
 	_bias = GpuTensor<nn_type>::zeros({ _amounts });
 
 	set_random_uniform(_filter, -0.1f, 0.1f);
@@ -209,16 +269,16 @@ void NN_Conv2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_
 	//std::cout << "kernel: " << _filter.get_shape();
 	//std::cout << "output: " << m_output.get_shape();
 
-	const NCHW in = m_input.get_shape().get_nchw();
-	const NCHW out = m_output.get_shape().get_nchw();
-	const NCHW k = _filter.get_shape().get_nchw();
+	const NN_Tensor4dShape& in = m_input.get_shape().get_4d_shape();
+	const NN_Tensor4dShape& out = m_output.get_shape().get_4d_shape();
+	const NN_Filter4dShape& k = _filter.get_shape().get_filter_shape();
 
 	//printf("input: [%d, %d, %d, %d]\n", in.n, in.c, in.h, in.w);
 	//printf("kernel: [%d, %d, %d, %d]\n", k.n, k.c, k.h, k.w);
 	//printf("output: [%d, %d, %d, %d]\n", out.n, out.c, out.h, out.w);
 
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, out.h * out.w, out.c);
+	dim3 blocks = get_grid_size(threads, out._h * out._w * out._c);
 
 	const nn_type* input_data = m_input.get_ptr();
 	nn_type* output_data = m_output.get_ptr();
@@ -226,38 +286,42 @@ void NN_Conv2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_
 
 	cudaStream_t* p_st = st.get_stream();
 
-	if (_pad == Pad::SAME) {
-		NCHW pad = { in.n, in.c, 0, 0 };
+	if (_pad == "same") {
+		NN_Tensor4dShape pad = in;
+
+		pad._h = 0;
+		pad._w = 0;
 
 		if (_stride[0] == 1) {
-			pad.h = in.h - 1 + k.h;
+			pad._w = in._w - 1 + k._w;
 		}
 		else {
-			pad.h = (in.h / _stride[0]) + k.h;
+			pad._w = (in._w / _stride[0]) + k._w;
 		}
 
 		if (_stride[1] == 1) {
-			pad.w = in.w - 1 + k.w;
+			pad._h = in._h - 1 + k._h;
 		}
 		else {
-			pad.w = (in.w / _stride[1]) + k.w;
+			pad._h = (in._h / _stride[1]) + k._h;
 		}
 
-		printf("input=[%d, %d, %d, %d]\n", in.n, in.c, in.h, in.w);
-		printf("pad=[%d, %d, %d, %d]\n", pad.n, pad.c, pad.h, pad.w);
-
 		set_indice(pad, k);
-		cuint* c_indice = get_const_mem(k.c * k.h * k.w, 0);
+		cuint* c_indice = get_const_mem(k._in_c * k._h * k._w, 0);
 
-		for (int n = 0; n < in.n; ++n) {
-			const nn_type* in_data = input_data + (n * in.c * in.h * in.w);
-			nn_type* out_data = output_data + (n * out.c * out.h * out.w);
+		for (uint n = 0; n < (uint)in._n; ++n) {
+			cuint in_index = n * in._h * in._w * in._c;
+			cuint out_index = n * out._h * out._w * out._c;
 
-			if (pad.h != in.h || pad.w != in.w) {
+			const nn_type* in_data = input_data + in_index;
+			nn_type* out_data = output_data + out_index;
+
+			if (pad._h != in._h || pad._w != in._w) {
 				nn_type* pad_space = NULL;
+				cuint pad_size = pad._h * pad._w * pad._c;
 
-				cudaMallocAsync(&pad_space, sizeof(nn_type) * pad.c * pad.h * pad.w, p_st[n % STREAMS]);
-				cudaMemsetAsync(pad_space, 0, sizeof(nn_type) * pad.c * pad.h * pad.w, p_st[n % STREAMS]);
+				cudaMallocAsync(&pad_space, sizeof(nn_type) * pad_size, p_st[n % STREAMS]);
+				cudaMemsetAsync(pad_space, 0, sizeof(nn_type) * pad_size, p_st[n % STREAMS]);
 
 				padding_dilation(
 					p_st[n % STREAMS],
@@ -265,8 +329,8 @@ void NN_Conv2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_
 					pad_space,
 					in,
 					pad,
-					_stride[1] == 1 ? (pad.w - in.w) / 2 : 0,
-					_stride[0] == 1 ? (pad.h - in.h) / 2 : 0,
+					_stride[1] == 1 ? (pad._w - in._w) / 2 : 0,
+					_stride[0] == 1 ? (pad._h - in._h) / 2 : 0,
 					1, 1
 				);
 
@@ -278,17 +342,17 @@ void NN_Conv2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_
 					filter_data,
 					out_data,
 					c_indice,
-					pad.h,
-					pad.w,
-					k.n,
-					k.c,
-					k.h,
-					k.w,
-					out.h,
-					out.w,
-					_stride[0],
-					_stride[1]
-				);
+					(uint)in._h,
+					(uint)in._w,
+					(uint)in._c,
+					(uint)k._h,
+					(uint)k._w,
+					(uint)out._h,
+					(uint)out._w,
+					(uint)out._c,
+					(uint)_stride[1],
+					(uint)_stride[0]
+					);
 
 				//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
 				//check_cuda(cudaGetLastError());
@@ -301,16 +365,16 @@ void NN_Conv2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_
 					filter_data,
 					out_data,
 					c_indice,
-					in.h,
-					in.w,
-					k.n,
-					k.c,
-					k.h,
-					k.w,
-					out.h,
-					out.w,
-					_stride[0],
-					_stride[1]
+					(uint)in._h,
+					(uint)in._w,
+					(uint)in._c,
+					(uint)k._h,
+					(uint)k._w,
+					(uint)out._h,
+					(uint)out._w,
+					(uint)out._c,
+					(uint)_stride[1],
+					(uint)_stride[0]
 				);
 
 				//check_cuda(cudaStreamSynchronize(st[n % STREAMS]));
@@ -320,28 +384,28 @@ void NN_Conv2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_
 	}
 	else {
 		set_indice(in, k);
-		cuint* c_indice = get_const_mem(k.c * k.h * k.w, 0);
+		cuint* c_indice = get_const_mem(k._in_c * k._h * k._w, 0);
 
-		for (int n = 0; n < in.n; ++n) {
-			const nn_type* in_data = input_data + (n * in.c * in.h * in.w);
-			nn_type* out_data = output_data + (n * out.c * out.h * out.w);
+		for (uint n = 0; n < (uint)in._n; ++n) {
+			const nn_type* in_data = input_data + (n * in._c * in._h * in._w);
+			nn_type* out_data = output_data + (n * out._c * out._h * out._w);
 
-			__conv2d<<<blocks, threads, 0, st[n % STREAMS]>>>(
+			__conv2d<<<blocks, threads, 0, p_st[n % STREAMS]>>>(
 				in_data,
 				filter_data,
 				out_data,
 				c_indice,
-				in.h,
-				in.w,
-				k.n,
-				k.c,
-				k.h,
-				k.w,
-				out.h,
-				out.w,
-				_stride[0],
-				_stride[1]
-			);
+				(uint)in._h,
+				(uint)in._w,
+				(uint)in._c,
+				(uint)k._h,
+				(uint)k._w,
+				(uint)out._h,
+				(uint)out._w,
+				(uint)out._c,
+				(uint)_stride[1],
+				(uint)_stride[0]
+				);
 		}
 
 		//Tensor<nn_type> tmp(_filter.get_shape());
@@ -351,9 +415,6 @@ void NN_Conv2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_
 	}
 
 	add_bias_2d(st, m_output, _bias, m_output);
-
-	check_cuda(cudaDeviceSynchronize());
-	check_cuda(cudaGetLastError());
 }
 
 NN_Backward* NN_Conv2D::create_backward(std::vector<bool>& mask) {

@@ -28,7 +28,7 @@ __global__ void __sigmoid(
 }
 
 
-NN_Sigmoid::NN_Sigmoid(const char* name) :
+NN_Sigmoid::NN_Sigmoid(const std::string& name) :
 	NN_Layer(name)
 {
 }

@@ -2,20 +2,42 @@
 #include "cuda_common.h"
 
 
-struct NCHW {
-	int n;
-	int c;
-	int h;
-	int w;
+/**********************************************/
+/*                                            */
+/*               NN_Tensor4dShape			  */
+/*                                            */
+/**********************************************/
+
+struct NN_Tensor4dShape {
+	int _n;
+	int _h;
+	int _w;
+	int _c;
 };
 
-struct NC {
-	int n;
-	int c;
+
+/**********************************************/
+/*                                            */
+/*               NN_Filter4dShape			  */
+/*                                            */
+/**********************************************/
+
+struct NN_Filter4dShape {
+	int _h;
+	int _w;
+	int _in_c;
+	int _out_c;
 };
+
+
+/**********************************************/
+/*                                            */
+/*                   NN_Shape				  */
+/*                                            */
+/**********************************************/
 
 class NN_Shape {
-private:
+protected:
 	std::vector<int> _dims;
 
 public:
@@ -23,7 +45,8 @@ public:
 	typedef std::vector<int>::iterator iterator;
 
 	NN_Shape();
-	NN_Shape(int len);
+	NN_Shape(size_t len);
+	//NN_Shape(const std::vector<int>& list);
 	NN_Shape(const std::initializer_list<int>& list);
 	NN_Shape(const NN_Shape& p);
 	NN_Shape(NN_Shape&& p);
@@ -34,9 +57,13 @@ public:
 	const int& operator[](int index) const;
 	bool operator!=(const NN_Shape& shape) const;
 
-	int get_len() const;
+	int ranks();
+	int ranks() const;
+	size_t total_size();
 	size_t total_size() const;
+	std::ostream& put_shape(std::ostream& os);
 	std::ostream& put_shape(std::ostream& os) const;
+	bool is_empty();
 	bool is_empty() const;
 	void clear();
 
@@ -54,14 +81,17 @@ public:
 	void push_back(const NN_Shape& p);
 	void push_back(const std::initializer_list<int>& list);
 
-	const std::vector<int>& get_vector();
+	std::vector<int>& get_dims();
+	const std::vector<int>& get_dims() const;
 
-	NCHW get_nchw();
-	NC get_nc();
+	NN_Tensor4dShape get_4d_shape();
+	NN_Tensor4dShape get_4d_shape() const;
 
-	NCHW get_nchw() const;
-	NC get_nc() const;
+	NN_Filter4dShape get_filter_shape();
+	NN_Filter4dShape get_filter_shape() const;
 };
 
 const char* shape_to_str(const NN_Shape& shape);
+//std::string shape_to_str(const std::vector<int>& shape);
+
 std::ostream& operator<<(std::ostream& os, const NN_Shape& shape);

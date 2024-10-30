@@ -9,6 +9,113 @@
 
 int Model::_stack = 0;
 
+/***************************** static method start ***************************/
+
+int Model::get_n_input(const std::vector<NN_Link*>& input_node, const NN_Link* curr_node) {
+	int n = -1;
+
+	for (const NN_Link* p_input : input_node) {
+		++n;
+
+		if (p_input == curr_node) break;
+	}
+
+	return n;
+}
+
+std::vector<std::string> Model::get_layer_names(const H5::H5File& fp) {
+	H5::Group main_group = fp.openGroup("/");
+	H5::Attribute attr = main_group.openAttribute("layer_names");
+	H5::DataType dtype = attr.getDataType();
+	H5::DataSpace space = attr.getSpace();
+
+	hsize_t layer_amounts = 0;
+
+	space.getSimpleExtentDims(&layer_amounts);
+
+	char** p_layer_names = new char*[layer_amounts];
+	std::vector<std::string> layer_names(layer_amounts);
+
+	attr.read(dtype, p_layer_names);
+
+	for (hsize_t i = 0; i < layer_amounts; ++i) layer_names[i] = p_layer_names[i];
+
+	delete[] p_layer_names;
+	attr.close();
+
+	return layer_names;
+}
+
+void Model::parsing_weight(const H5::Group& group, NN_List<GpuTensor<nn_type>>& g_tensor) {
+	if (g_tensor.size() == 0) return;
+
+	H5::Attribute attr = group.openAttribute("weight_names");
+	H5::DataType dtype = attr.getDataType();
+	H5::DataSpace space = attr.getSpace();
+
+	hsize_t n_weights = 0;
+
+	space.getSimpleExtentDims(&n_weights);
+
+	char** p_weight_names = new char*[n_weights];
+	std::vector<std::string> weight_names(n_weights);
+
+	attr.read(dtype, p_weight_names);
+
+	for (hsize_t i = 0; i < n_weights; ++i) weight_names[i] = p_weight_names[i];
+
+	delete[] p_weight_names;
+	attr.close();
+
+	int i = 0;
+	for (const std::string& name : weight_names) {
+		H5::DataSet data_set = group.openDataSet(name);
+		H5::DataSpace d_space = data_set.getSpace();
+		H5::DataType data_type = data_set.getDataType();
+
+		int n_dims = d_space.getSimpleExtentNdims();
+		hsize_t* dims = new hsize_t[n_dims];
+
+		d_space.getSimpleExtentDims(dims);
+
+		Tensor<nn_type> tensor(dims, n_dims);
+
+		data_set.read(tensor.get_ptr(), data_type);
+
+		if (n_dims == 4) {
+			g_tensor[i].val() = tensor.transpose({ 3, 2, 0, 1 });
+		}
+		else {
+			g_tensor[i].val() = tensor;
+		}
+
+		++i;
+		delete[] dims;
+		data_set.close();
+	}
+}
+
+NN_List<GpuTensor<nn_type>> Model::zero_clone(const NN_List<GpuTensor<nn_type>>& tensor) {
+	NN_List<GpuTensor<nn_type>> tmp;
+
+	if (tensor.is_scalar()) {
+		const NN_Shape shape = tensor.val().get_shape();
+
+		tmp.append(GpuTensor<nn_type>::zeros(shape));
+	}
+	else {
+		for (const NN_List<GpuTensor<nn_type>>& m_tensor : tensor) {
+			tmp.append(zero_clone(tensor));
+		}
+	}
+
+	return tmp;
+}
+
+/***************************** static method end ***************************/
+
+/***************************** private method start ***************************/
+
 const NN_Input* Model::get_input_layer(NN_Link* link) {
 	const NN_Input* input_layer = NULL;
 
@@ -160,117 +267,85 @@ void Model::set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask
 	}
 }
 
-int Model::get_n_node_prev_for_next(const NN_Link* prev_node, const NN_Link* curr_node) {
-	int n = -1;
-
-	for (const NN_Link* p_next : prev_node->get_next_nodes()) {
-		++n;
-
-		if (p_next == curr_node) break;
+void Model::set_weights() {
+	if (_status == 0) {
+		ErrorExcept(
+			"[Model::create_weights()] Please set layers."
+		);
 	}
+	else if (_status > 1) return;
 
-	return n;
-}
+	NN_List<NN_Shape>& nodes_shape = _manager.get_node_shape();
+	NN_List<GpuTensor<nn_type>>& weights = _manager.get_weights();
 
-int Model::get_n_input(const std::vector<NN_Link*>& input_node, const NN_Link* curr_node) {
-	int n = -1;
+	if (nodes_shape.is_empty()) _manager.set_reserved_shapes();
+	if (weights.is_empty()) _manager.set_reserved_weights();
 
-	for (const NN_Link* p_input : input_node) {
-		++n;
+	for (NN_Link* node : _layers) {
+		NN_List<NN_Shape>& m_output_shape = nodes_shape[node->get_index()];
+		NN_List<NN_Shape> m_input_shape;
 
-		if (p_input == curr_node) break;
-	}
-
-	return n;
-}
-
-const std::vector<int>& Model::get_output_indice() const {
-	return _output_indice;
-}
-
-void Model::set_output_indice(const std::vector<int>& indice) {
-	_output_indice = indice;
-}
-
-std::vector<std::string> Model::get_layer_names(const H5::H5File& fp) {
-	H5::Group main_group = fp.openGroup("/");
-	H5::Attribute attr = main_group.openAttribute("layer_names");
-	H5::DataType dtype = attr.getDataType();
-	H5::DataSpace space = attr.getSpace();
-
-	hsize_t layer_amounts = 0;
-
-	space.getSimpleExtentDims(&layer_amounts);
-
-	char** p_layer_names = new char*[layer_amounts];
-	std::vector<std::string> layer_names(layer_amounts);
-
-	attr.read(dtype, p_layer_names);
-
-	for (hsize_t i = 0; i < layer_amounts; ++i) layer_names[i] = p_layer_names[i];
-
-	delete[] p_layer_names;
-	attr.close();
-
-	return layer_names;
-}
-
-void Model::set_weight(const H5::Group& group, NN_List<GpuTensor<nn_type>>& g_tensor) {
-	if (g_tensor.size() == 0) return;
-
-	H5::Attribute attr = group.openAttribute("weight_names");
-	H5::DataType dtype = attr.getDataType();
-	H5::DataSpace space = attr.getSpace();
-
-	hsize_t n_weights = 0;
-
-	space.getSimpleExtentDims(&n_weights);
-
-	char** p_weight_names = new char*[n_weights];
-	std::vector<std::string> weight_names(n_weights);
-
-	attr.read(dtype, p_weight_names);
-
-	for (hsize_t i = 0; i < n_weights; ++i) weight_names[i] = p_weight_names[i];
-
-	delete[] p_weight_names;
-	attr.close();
-
-	int i = 0;
-	for (const std::string& name : weight_names) {
-		H5::DataSet data_set = group.openDataSet(name);
-		H5::DataSpace d_space = data_set.getSpace();
-		H5::DataType data_type = data_set.getDataType();
-
-		int n_dims = d_space.getSimpleExtentNdims();
-		hsize_t* dims = new hsize_t[n_dims];
-
-		d_space.getSimpleExtentDims(dims);
-
-		Tensor<nn_type> tensor(dims, n_dims);
-
-		data_set.read(tensor.get_ptr(), data_type);
-
-		if (n_dims == 4) {	
-			g_tensor[i].val() = tensor.transpose({ 3, 2, 0, 1 });
-		}
-		else {
-			g_tensor[i].val() = tensor;
+		if (node->get_prev_nodes().size() > 0) {
+			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
+				int curr_n_out = p_prev_node->get_out_port(node);
+				m_input_shape.append(nodes_shape[p_prev_node->get_index()][curr_n_out]);
+			}
 		}
 
-		++i;
-		delete[] dims;
-		data_set.close();
+		node->get_layer().get_output_shape(m_input_shape, m_output_shape);
+		node->get_layer().build(m_input_shape, weights);
+	}
+
+	_status = 2;
+}
+
+void Model::set_shapes() {
+	if (_status == 0) put_error();
+	else if (_status != 1) return;
+
+	_manager.set_reserved_shapes();
+
+	NN_List<NN_Shape>& node_shape = _manager.get_node_shape();
+	
+	for (NN_Link* node : _layers) {
+		NN_List<NN_Shape>& out_shape = node_shape[node->get_index()];
+		NN_List<NN_Shape> in_shape;
+
+		if (node->get_prev_nodes().size() > 0) {
+			for (NN_Link* p_prev_layer : node->get_prev_nodes()) {
+				
+			}
+		}
+
+		node->get_layer().get_output_shape(in_shape, out_shape);
 	}
 }
 
-Model::Model(NN_Manager& manager, const char* model_name) :
+void Model::put_error() {
+	switch (_status)
+	{
+	case 0:
+		ErrorExcept(
+			"[Model::put_error()] Please set layers"
+		);
+	default:
+		break;
+	}
+}
+
+/***************************** private method end ***************************/
+
+/***************************** public create & destroy method start ***************************/
+
+Model::Model(NN_Manager& manager, const std::string& model_name) :
+	_status(0),
 	NN_Layer(model_name),
 	_manager(manager)
 {
 }
 
 Model::Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* model_name) :
+	_status(1),
 	NN_Layer(model_name),
 	_manager(manager)
 {
@@ -290,24 +365,9 @@ Model::~Model() {
 
 }
 
-Layer_t Model::operator()(Layer_t prev_node) {
-	int i = 0;
+/***************************** public create & destroy method end ***************************/
 
-	for (Layer_t& p_prev_node : prev_node) {
-		NN_Ptr& prev_ptr = p_prev_node.val();
-
-		set_prev_node(prev_ptr._node);
-		prev_ptr._node->set_next_link(this, i++);
-	}
-
-	_manager.set_static_node(this);
-
-	Layer_t output_nodes;
-
-	for (i = 0; i < _output_nodes.size(); ++i) output_nodes.append(NN_Ptr({ i, this }));
-
-	return output_nodes;
-}
+/***************************** Inheritanced NN_Link method start ***************************/
 
 NN_Link* Model::create_child() {
 	std::vector<NN_Link*>& nodes = _manager.get_nodes();
@@ -317,7 +377,7 @@ NN_Link* Model::create_child() {
 
 	child_model->set_layer(child_model);
 	child_model->trainable = trainable;
-	child_model->set_output_indice(_output_indice);
+	child_model->_out_indices = _out_indices;
 
 	for (NN_Link* p_node : _layers) {
 		NN_Link* child_node = p_node->create_child();
@@ -349,10 +409,9 @@ NN_Link* Model::create_child() {
 	return child_model;
 }
 
-void Model::set_next_link(NN_Link* node, int index) {
-	set_next_node(node);
-	_output_indice.push_back(index);
-}
+/***************************** Inheritanced NN_Link method end ***************************/
+
+/***************************** Inheritanced NN_Layer method start ***************************/
 
 void Model::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
 	NN_List<NN_Shape>& nodes_shape = _manager.get_node_shape();
@@ -363,7 +422,7 @@ void Model::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Sh
 
 		if (node->get_prev_nodes().size() > 0) {
 			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-				int curr_n_out = get_n_node_prev_for_next(p_prev_node, node);
+				int curr_n_out = p_prev_node->get_out_port(node);
 				m_input_shape.append(nodes_shape[p_prev_node->get_index()][curr_n_out]);
 			}
 		}
@@ -380,7 +439,7 @@ void Model::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Sh
 	}
 
 	for (size_t i = 0; i < _output_nodes.size(); ++i) {
-		NN_List<NN_Shape>& out_shape = nodes_shape[_output_nodes[_output_indice[i]]->get_index()];
+		NN_List<NN_Shape>& out_shape = nodes_shape[_output_nodes[_out_indices[i]]->get_index()];
 		output_shape.append(out_shape);
 	}
 }
@@ -388,12 +447,12 @@ void Model::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Sh
 void Model::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
 	const NN_List<NN_Shape>& shapes = _manager.get_node_shape();
 
-	for (NN_Link* node: _layers) {
+	for (NN_Link* node : _layers) {
 		NN_List<NN_Shape> m_input_shape;
 
 		if (node->get_prev_nodes().size() > 0) {
 			for (const NN_Link* p_prev : node->get_prev_nodes()) {
-				int n_prev_out = get_n_node_prev_for_next(p_prev, node);
+				int n_prev_out = p_prev->get_out_port(node);
 				int n_prev = p_prev->get_index();
 
 				m_input_shape.append(shapes[n_prev][n_prev_out]);
@@ -419,7 +478,7 @@ void Model::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List
 
 		if (p_node->get_prev_nodes().size() > 0) {
 			for (NN_Link* p_prev_node : p_node->get_prev_nodes()) {
-				const int n_prev_out = get_n_node_prev_for_next(p_prev_node, p_node);
+				const int n_prev_out = p_prev_node->get_out_port(p_node);
 				const int prev_index = p_prev_node->get_index();
 
 				m_input.append(nodes_output[prev_index][n_prev_out]);
@@ -486,7 +545,7 @@ void Model::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<
 
 		if (node->get_prev_nodes().size() > 0) {
 			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-				const int n_prev_out = get_n_node_prev_for_next(p_prev_node, node);
+				const int n_prev_out = p_prev_node->get_out_port(node);
 				const int prev_index = p_prev_node->get_index();
 
 				m_input.append(nodes_output[prev_index][n_prev_out]);
@@ -501,32 +560,49 @@ void Model::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<
 		node->get_layer().set_output(node_shape[n_node], m_input, m_output);
 	}
 
-	for (int& n : _output_indice) output.append(nodes_output[_output_nodes[n]->get_index()]);
+	for (int& n : _out_indices) output.append(nodes_output[_output_nodes[n]->get_index()]);
+}
+
+/***************************** Inheritanced NN_Layer method end ***************************/
+
+/***************************** public ex method start ***************************/
+
+Layer_t Model::operator()(Layer_t prev_node) {
+	if (_status == 0) {
+		ErrorExcept(
+			"[Model::operator()()] Please set layers."
+		);
+	}
+
+	NN_List<NN_Shape> in_shapes;
+	NN_List<NN_Shape> out_shapes;
+
+	for (Layer_t& p_prev_node : prev_node) {
+		NN_Ptr& prev_ptr = p_prev_node.val();
+
+		set_prev_node(prev_ptr._node);
+		prev_ptr._node->set_next_link(this, prev_ptr._n_port);
+		in_shapes.append(prev_ptr._shape);
+	}
+
+	get_output_shape(in_shapes, out_shapes);
+	_manager.set_static_node(this);
+
+	Layer_t output_nodes;
+	int i = 0;
+	for (NN_List<NN_Shape> out_shape : out_shapes) output_nodes.append(NN_Ptr({ i, this, out_shape.val() }));
+
+	return output_nodes;
 }
 
 void Model::load_weights(const std::string& path, bool skip_mismatch) {
-	NN_List<NN_Shape>& nodes_shape = _manager.get_node_shape();
-	NN_List<GpuTensor<nn_type>>& weights = _manager.get_weights();
-
-	_manager.set_reserved_shapes();
-	_manager.set_reserved_weights();
-
-	for (NN_Link* node : _layers) {
-		NN_List<NN_Shape>& m_output_shape = nodes_shape[node->get_index()];
-		NN_List<NN_Shape> m_input_shape;
-
-		if (node->get_prev_nodes().size() > 0) {
-			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-				int curr_n_out = get_n_node_prev_for_next(p_prev_node, node);
-				m_input_shape.append(nodes_shape[p_prev_node->get_index()][curr_n_out]);
-			}
-		}
-
-		node->get_layer().get_output_shape(m_input_shape, m_output_shape);
-		node->get_layer().build(m_input_shape, weights);
+	if (_status == 0) {
+		ErrorExcept(
+			"[Model::load_weights()] Please set layers."
+		);
 	}
 
-	_manager.clear_shapes();
+	set_weights();
 
 	H5::H5File fp(path, H5F_ACC_RDONLY);
 	std::vector<std::string> layer_names = get_layer_names(fp);
@@ -538,7 +614,7 @@ void Model::load_weights(const std::string& path, bool skip_mismatch) {
 				NN_List<GpuTensor<nn_type>> weight = p_link->get_layer().get_weight();
 
 				H5::Group group = fp.openGroup('/' + name);
-				set_weight(group, weight);
+				parsing_weight(group, weight);
 
 				std::cout << "Done." << std::endl;
 				group.close();
@@ -547,28 +623,37 @@ void Model::load_weights(const std::string& path, bool skip_mismatch) {
 	}
 
 	fp.close();
+	_status = 3;
 }
 
 void Model::summary() {
+	if (_status == 0) {
+		ErrorExcept(
+			"[Model::summary()] Please set layers."
+		);
+	}
+
 	int i = 0;
 	NN_List<NN_Shape>& nodes_shape = _manager.get_node_shape();
 
 	std::cout << '[' << _layer_name << ']' << std::endl;
 	
-	_manager.set_reserved_shapes();
-	
-	for (NN_Link* node : _layers) {
-		NN_List<NN_Shape>& m_output_shape = nodes_shape[node->get_index()];
-		NN_List<NN_Shape> m_input_shape;
+	if (_status == 1) {
+		_manager.set_reserved_shapes();
 
-		if (node->get_prev_nodes().size() > 0) {
-			for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-				int curr_n_out = get_n_node_prev_for_next(p_prev_node, node);
-				m_input_shape.append(nodes_shape[p_prev_node->get_index()][curr_n_out]);
+		for (NN_Link* node : _layers) {
+			NN_List<NN_Shape>& m_output_shape = nodes_shape[node->get_index()];
+			NN_List<NN_Shape> m_input_shape;
+
+			if (node->get_prev_nodes().size() > 0) {
+				for (NN_Link* p_prev_node : node->get_prev_nodes()) {
+					int curr_n_out = p_prev_node->get_out_port(node);
+					m_input_shape.append(nodes_shape[p_prev_node->get_index()][curr_n_out]);
+				}
 			}
-		}
 
-		node->get_layer().get_output_shape(m_input_shape, m_output_shape);
+			node->get_layer().get_output_shape(m_input_shape, m_output_shape);
+		}
 	}
 	
 	for (NN_Link* p_node : _layers) {
@@ -580,7 +665,7 @@ void Model::summary() {
 }
 
 void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& loss) {
-	_losses = loss;
+	for (const NN_Loss& p : loss) _losses.push_back(&p);
 
 	NN_List<GpuTensor<nn_type>>& weights = _manager.get_weights();
 	std::vector<bool> mask(_manager.get_nodes().size(), false);
@@ -590,9 +675,12 @@ void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& lo
 			mask[p_node->get_index()] = true;
 
 			NN_Backward* p_backward = p_node->get_layer().create_backward(mask);
+			NN_Optimizer* p_optimizer = p_backward->create_optimizer(optimizer);
 			
 			_manager.set_backward(p_backward);
+			_manager.set_optimizer(p_optimizer);
 			p_node->set_backward(p_backward);
+			p_node->set_optimizer(p_optimizer);
 		}
 		else {
 			for (NN_Link* p_prev_node : p_node->get_prev_nodes()) {
@@ -600,19 +688,22 @@ void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& lo
 					mask[p_node->get_index()] = true;
 
 					NN_Backward* p_backward = p_node->get_layer().create_backward(mask);
-					NN_Optimizer* p_optimizer = p_backward->create_optimizer(optimizer);
 
 					_manager.set_backward(p_backward);
-					_manager.set_optimizer(p_optimizer);
 					p_node->set_backward(p_backward);
-					p_node->set_optimizer(p_optimizer);
 
 					break;
 				}
 			}
 		}
 	}
+
+	_manager.set_reserved_doutputs();
+
+	NN_List<GpuTensor<nn_type>>& d_output = _manager.get_node_doutput();
 }
+
+/***************************** public ex method end ***************************/
 
 
 /**********************************************/

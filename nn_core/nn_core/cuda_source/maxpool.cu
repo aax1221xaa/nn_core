@@ -22,6 +22,7 @@ __global__ void __maxpool_2d(
 	uint* mark,
 	cuint a_h,
 	cuint a_w,
+	cuint a_c,
 	cuint b_h,
 	cuint b_w,
 	cuint k_h,
@@ -39,9 +40,9 @@ __global__ void __maxpool_2d(
 	cuint y0 = blockIdx.y * blockDim.y * st_h;
 	cuint z0 = blockIdx.z;
 
-	const nn_type* pa = a + ((z0 * a_w * a_h) + (y0 * a_w) + x0);
-	nn_type* pb = b + (b_w * b_h * z0);
-	uint* pmark = mark + (b_w * b_h * z0);
+	const nn_type* pa = a + ((y0 * a_w * a_c) + (x0 * a_c) + z0);
+	nn_type* pb = b + z0;
+	uint* pmark = mark + z0;
 
 	for (uint h = 0; h < tile_h; h += blockDim.y) {
 		cuint ty = threadIdx.y + h;
@@ -52,7 +53,7 @@ __global__ void __maxpool_2d(
 			cuint in_x = tx + x0;
 
 			if (tx < tile_w && ty < tile_h && in_x < a_w && in_y < a_h) {
-				sm[ty * tile_w + tx] = pa[ty * a_w + tx];
+				sm[ty * tile_w + tx] = pa[(ty * a_w * a_c) + (tx * a_c)];
 			}
 		}
 	}
@@ -76,8 +77,8 @@ __global__ void __maxpool_2d(
 			}
 		}
 
-		pb[out_y * b_w + out_x] = val;
-		pmark[out_y * b_w + out_x] = index;
+		pb[(out_y * b_w * a_c) + out_x * a_c] = val;
+		pmark[(out_y * b_w * a_c) + out_x * a_c] = index;
 	}
 }
 
@@ -161,7 +162,7 @@ void maxpool2d(
 /*                                            */
 /**********************************************/
 
-NN_Maxpool2D::NN_Maxpool2D(const NN_Shape& k_size, const NN_Shape& stride, const Pad pad, const char* name) :
+NN_Maxpool2D::NN_Maxpool2D(const NN_Shape& k_size, const NN_Shape& stride, const std::string& pad, const std::string& name) :
 	_pad(pad),
 	_k_size(k_size),
 	_stride(stride),
@@ -173,21 +174,21 @@ void NN_Maxpool2D::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_Lis
 	const NN_Shape& shape = input_shape[0].val();
 
 	int n = shape[0];
-	int c = shape[1];
 	int h = 0;
 	int w = 0;
+	int c = shape[3];
 
-	if (_pad == Pad::SAME) {
-		h = (int)ceil((float)(shape[2] - _k_size[0]) / _stride[0] + 1);
-		w = (int)ceil((float)(shape[3] - _k_size[1]) / _stride[1] + 1);
+	if (_pad == "same") {
+		h = (int)ceil((float)(shape[1] - _k_size[1]) / _stride[1] + 1);
+		w = (int)ceil((float)(shape[2] - _k_size[0]) / _stride[0] + 1);
 	}
 	else {
-		h = (int)floorf((float)(shape[2] - _k_size[0]) / _stride[0] + 1);
-		w = (int)floorf((float)(shape[3] - _k_size[1]) / _stride[1] + 1);
+		h = (int)floorf((float)(shape[1] - _k_size[1]) / _stride[1] + 1);
+		w = (int)floorf((float)(shape[2] - _k_size[0]) / _stride[0] + 1);
 	}
 
-	output_shape.append(NN_Shape({ n, c, h, w }));
-	if (n > 0) _indice = GpuTensor<uint>::zeros({ n, c, h, w });
+	output_shape.append(NN_Shape({ n, h, w, c }));
+	if (n > 0) _indice = GpuTensor<uint>::zeros(NN_Shape({ n, h, w, c }));
 }
 
 void NN_Maxpool2D::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
@@ -199,15 +200,15 @@ void NN_Maxpool2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, 
 	nn_type* m_output = output[0].val().get_ptr();
 	uint* m_indice = _indice.get_ptr();
 
-	const NCHW in = input[0].val().get_shape().get_nchw();
-	const NCHW out = output[0].val().get_shape().get_nchw();
+	const NN_Tensor4dShape in = input[0].val().get_shape().get_4d_shape();
+	const NN_Tensor4dShape out = output[0].val().get_shape().get_4d_shape();
 
 	int tile_h = (BLOCK_32 - 1) * _stride[0] + _k_size[0];
 	int tile_w = (BLOCK_32 - 1) * _stride[1] + _k_size[1];
 
 	size_t smem_size = sizeof(nn_type) * tile_h * tile_w;
 	dim3 threads(BLOCK_32, BLOCK_32);
-	dim3 blocks = get_grid_size(threads, in.w, in.h, in.c);
+	dim3 blocks = get_grid_size(threads, in._w, in._h, in._c);
 
 	cuint kh = _k_size[0];
 	cuint kw = _k_size[1];
@@ -216,25 +217,26 @@ void NN_Maxpool2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, 
 	
 	cudaStream_t* p_st = st.get_stream();
 
-	for (int n = 0; n < in.n; ++n) {
-		const nn_type* in_data = m_input + (n * in.c * in.h * in.w);
-		nn_type* out_data = m_output + (n * out.c * out.h * out.w);
-		uint* indice = m_indice + (n * out.c * out.h * out.w);
+	for (uint n = 0; n < (uint)in._n; ++n) {
+		const nn_type* in_data = m_input + (n * in._c * in._h * in._w);
+		nn_type* out_data = m_output + (n * out._c * out._h * out._w);
+		uint* indice = m_indice + (n * out._c * out._h * out._w);
 
 		__maxpool_2d<<<blocks, threads, smem_size, p_st[n % STREAMS]>>>(
 			in_data,
 			out_data,
 			indice,
-			in.h,
-			in.w,
-			out.h,
-			out.w,
+			(uint)in._h,
+			(uint)in._w,
+			(uint)in._c,
+			(uint)out._h,
+			(uint)out._w,
 			kh,
 			kw,
 			sh,
 			sw,
-			tile_h,
-			tile_w
+			(uint)tile_h,
+			(uint)tile_w
 		);
 	}
 	check_cuda(cudaDeviceSynchronize());

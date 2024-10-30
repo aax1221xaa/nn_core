@@ -48,7 +48,7 @@ __global__ void __softmax(
 /*                                            */
 /**********************************************/
 
-NN_Softmax::NN_Softmax(const char* name) :
+NN_Softmax::NN_Softmax(const std::string& name) :
 	NN_Layer(name)
 {
 }
@@ -62,7 +62,7 @@ void NN_Softmax::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<n
 }
 
 void NN_Softmax::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
-	const NC in = input[0].val().get_shape().get_nc();
+	const NN_Shape in = input[0].val().get_shape();
 
 	const nn_type* in_data = input[0].val().get_ptr();
 	nn_type* out_data = output[0].val().get_ptr();
@@ -71,14 +71,14 @@ void NN_Softmax::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN
 	dim3 threads(BLOCK_1024);
 	dim3 blocks(1);
 
-	for (int n = 0; n < in.n; ++n) {
-		const nn_type* m_in_data = in_data + (n * in.c);
-		nn_type* m_out_data = out_data + (n * in.c);
+	for (int n = 0; n < in[0]; ++n) {
+		const nn_type* m_in_data = in_data + (n * in[1]);
+		nn_type* m_out_data = out_data + (n * in[1]);
 
 		__softmax<<<blocks, threads, 0, st[n % STREAMS]>>>(
 			m_in_data,
 			m_out_data,
-			in.c
+			in[1]
 		);
 	}
 }

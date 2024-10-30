@@ -76,6 +76,9 @@ public:
 	size_t size() const;
 	const _T& val() const;
 
+	bool is_empty();
+	bool is_empty() const;
+
 	const NN_List& operator[](int index) const;
 
 	typename Iterator begin();
@@ -621,6 +624,18 @@ bool NN_List<_T>::is_scalar() const {
 	if (_p_list.front() == this) flag = true;
 
 	return flag;
+}
+
+template <class _T>
+bool NN_List<_T>::is_empty() {
+	if (_data == NULL && _p_list.empty()) return true;
+	else return false;
+}
+
+template <class _T>
+bool NN_List<_T>::is_empty() const {
+	if (_data == NULL && _p_list.empty()) return true;
+	else return false;
 }
 
 template <class _T>

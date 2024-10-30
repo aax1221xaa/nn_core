@@ -46,7 +46,7 @@ __global__ void __d_relu(
 /*                                            */
 /**********************************************/
 
-NN_ReLU::NN_ReLU(const char* name) :
+NN_ReLU::NN_ReLU(const std::string& name) :
 	NN_Layer(name)
 {
 }

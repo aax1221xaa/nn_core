@@ -24,14 +24,6 @@ dim3 get_grid_size(const dim3 block, unsigned int x = 1, unsigned int y = 1, uns
 std::vector<int> random_choice(int min, int max, int amounts, bool replace = true);
 
 
-/*******************************************
-
-					 Pad
-
-*******************************************/
-
-enum class Pad { VALID, SAME };
-
 
 /**********************************************/
 /*                                            */
@@ -56,14 +48,14 @@ public:
 	class Iterator {
 	public:
 		cudaStream_t* m_st;
-		int _index;
+		int _n_id;
 
-		Iterator(cudaStream_t* st, int index) : m_st(st), _index(index) {}
-		Iterator(const typename Iterator& p) : m_st(p.m_st), _index(p._index) {}
+		Iterator(cudaStream_t* st, int index) : m_st(st), _n_id(index) {}
+		Iterator(const typename Iterator& p) : m_st(p.m_st), _n_id(p._n_id) {}
 
-		bool operator!=(const typename Iterator& p) const { return _index != p._index; }
-		void operator++() { ++_index; }
-		cudaStream_t& operator*() const { return m_st[_index]; }
+		bool operator!=(const typename Iterator& p) const { return _n_id != p._n_id; }
+		void operator++() { ++_n_id; }
+		cudaStream_t& operator*() const { return m_st[_n_id]; }
 	};
 
 	NN_Stream(int amounts = STREAMS);
