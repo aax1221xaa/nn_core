@@ -27,7 +27,7 @@ void NN_Backward::run(
 
 }
 
-NN_Optimizer* NN_Backward::create_optimizer(NN_Optimizer& optimizer) {
+NN_Optimizer* NN_Backward::create_optimizer(const NN_Optimizer& optimizer) {
 	return NULL;
 }
 
@@ -158,7 +158,7 @@ void NN_Input::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTens
 /**********************************************/
 
 NN_dInput::NN_dInput(NN_Input& input) :
-	_input(input)
+	NN_Backward_t(input)
 {
 }
 
@@ -168,7 +168,7 @@ void NN_dInput::run(
 	const NN_List<GpuTensor<nn_type>>& doutput,
 	NN_List<GpuTensor<nn_type>>& dinput
 ) {
-
+	
 }
 
 
@@ -247,6 +247,10 @@ const int& NN_Link::get_index() const {
 
 void NN_Link::set_index(int index) {
 	_n_id = index;
+}
+
+std::vector<int>& NN_Link::get_out_indices() {
+	return _out_indices;
 }
 
 Layer_t NN_Link::operator()(Layer_t prev_node) {

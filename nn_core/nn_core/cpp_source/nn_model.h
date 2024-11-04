@@ -15,7 +15,16 @@
 
 class Model : public NN_Layer, public NN_Link {
 private:
-	int _status;
+	/*
+	bit
+	0: set nodes
+	1: set shapes
+	2: set weights
+	3: set outputs
+	4: set backporps
+	5: changed input shapes
+	*/
+	uint _status;
 
 	std::vector<NN_Link*> _input_nodes;
 	std::vector<NN_Link*> _output_nodes;
@@ -25,6 +34,8 @@ private:
 	NN_Optimizer _optimizer;
 
 	NN_Manager& _manager;
+
+	void put_error(int n_error);
 
 	static int get_n_input(const std::vector<NN_Link*>& input_node, const NN_Link* curr_node);
 	static std::vector<std::string> get_layer_names(const H5::H5File& fp);
@@ -39,10 +50,7 @@ private:
 	void set_weights();
 	void set_shapes();
 
-	void put_error();
-
 public:
-	static int _stack;
 
 	Model(NN_Manager& manager, const std::string& model_name);
 	Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* model_name);
@@ -68,7 +76,7 @@ public:
 	template <typename _T>
 	NN_List<Tensor<nn_type>> predict(const std::vector<Tensor<_T>>& x, int batch_size, int steps);
 
-	void stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& loss);
+	void stand_by(const NN_Optimizer& optimizer, const std::initializer_list<NN_Loss>& loss);
 
 	template <typename _xT, typename _yT>
 	NN_List<Tensor<nn_type>> fit(const DataSet<_xT, _yT>& samples, int batch, int steps);
@@ -335,10 +343,8 @@ NN_List<Tensor<nn_type>> Model::fit(const DataSet<_xT, _yT>& samples, int batch,
 /*                                            */
 /**********************************************/
 
-class dModel : public NN_Backward {
+class dModel : public NN_Backward_t<Model> {
 public:
-	Model& _model;
-
 	dModel(Model& model);
 
 	void run(

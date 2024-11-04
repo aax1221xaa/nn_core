@@ -27,11 +27,9 @@ public:
 /*                                            */
 /**********************************************/
 
-class NN_dSoftmax : public NN_Backward {
+class NN_dSoftmax : public NN_Backward_t<NN_Softmax> {
 public:
-	NN_Softmax& _softmax;
-
-	NN_dSoftmax(NN_Softmax& softmax);
+	NN_dSoftmax(NN_Softmax& layer);
 
 	void run(
 		NN_Stream& st,

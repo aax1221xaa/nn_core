@@ -432,8 +432,8 @@ NN_List<GpuTensor<nn_type>> NN_Conv2D::get_weight() {
 /*                                            */
 /**********************************************/
 
-NN_dConv2D::NN_dConv2D(NN_Conv2D& conv) :
-	_conv(conv)
+NN_dConv2D::NN_dConv2D(NN_Conv2D& layer) :
+	NN_Backward_t(layer)
 {
 }
 
@@ -446,8 +446,8 @@ void NN_dConv2D::run(
 
 }
 
-NN_Optimizer* NN_dConv2D::create_optimizer(NN_Optimizer& optimizer) {
-	return optimizer.create({ _conv._filter, _conv._bias });
+NN_Optimizer* NN_dConv2D::create_optimizer(const NN_Optimizer& optimizer) {
+	return optimizer.create({ _layer._filter, _layer._bias });
 }
 
 

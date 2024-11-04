@@ -15,7 +15,7 @@ public:
 	NN_Optimizer();
 	virtual ~NN_Optimizer();
 
-	virtual NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights);
+	virtual NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights) const;
 	virtual void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
 };
 
@@ -37,7 +37,7 @@ class SGD : public NN_Optimizer {
 
 public:
 	SGD(float l_rate, float m_rate);
-	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights);
+	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights) const;
 	void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
 };
 
@@ -59,7 +59,7 @@ class RmsProp : public NN_Optimizer {
 
 public:
 	RmsProp(float d_rate, float l_rate);
-	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights);
+	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights) const;
 	void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
 };
 
@@ -83,6 +83,6 @@ class Adam : public NN_Optimizer {
 
 public:
 	Adam(float l_rate, float beta1, float beta2);
-	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights);
+	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights) const;
 	void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
 };

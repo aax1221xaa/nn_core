@@ -86,10 +86,9 @@ NN_Backward* NN_ReLU::create_backward(std::vector<bool>& mask) {
 /*                                            */
 /**********************************************/
 
-NN_dReLU::NN_dReLU(NN_ReLU& relu) :
-	_relu(relu)
+NN_dReLU::NN_dReLU(NN_ReLU& layer) :
+	NN_Backward_t(layer)
 {
-
 }
 
 void NN_dReLU::run(

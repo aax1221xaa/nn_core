@@ -27,11 +27,9 @@ public:
 /*                                            */
 /**********************************************/
 
-class NN_dReLU : public NN_Backward {
+class NN_dReLU : public NN_Backward_t<NN_ReLU> {
 public:
-	NN_ReLU& _relu;
-
-	NN_dReLU(NN_ReLU& relu);
+	NN_dReLU(NN_ReLU& layer);
 
 	void run(
 		NN_Stream& st,

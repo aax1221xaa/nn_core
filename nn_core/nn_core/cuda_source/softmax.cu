@@ -94,8 +94,8 @@ NN_Backward* NN_Softmax::create_backward(std::vector<bool>& mask) {
 /*                                            */
 /**********************************************/
 
-NN_dSoftmax::NN_dSoftmax(NN_Softmax& softmax) :
-	_softmax(softmax)
+NN_dSoftmax::NN_dSoftmax(NN_Softmax& layer) :
+	NN_Backward_t(layer)
 {
 }
 

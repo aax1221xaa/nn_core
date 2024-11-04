@@ -254,10 +254,9 @@ NN_Backward* NN_Maxpool2D::create_backward(std::vector<bool>& mask) {
 /*                                            */
 /**********************************************/
 
-NN_dMaxpool2D::NN_dMaxpool2D(NN_Maxpool2D& maxpool) :
-	_maxpool(maxpool)
+NN_dMaxpool2D::NN_dMaxpool2D(NN_Maxpool2D& layer) :
+	NN_Backward_t(layer)
 {
-
 }
 
 void NN_dMaxpool2D::run(

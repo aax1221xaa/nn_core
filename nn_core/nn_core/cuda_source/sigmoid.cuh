@@ -27,11 +27,9 @@ public:
 /*                                            */
 /**********************************************/
 
-class NN_dSigmoid : public NN_Backward {
+class NN_dSigmoid : public NN_Backward_t<NN_Sigmoid> {
 public:
-	NN_Sigmoid& _sigmoid;
-
-	NN_dSigmoid(NN_Sigmoid& sigmoid);
+	NN_dSigmoid(NN_Sigmoid& layer);
 
 	void run(
 		NN_Stream& st,

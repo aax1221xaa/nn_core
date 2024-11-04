@@ -65,10 +65,9 @@ NN_Backward* NN_Sigmoid::create_backward(std::vector<bool>& mask) {
 /*                                            */
 /**********************************************/
 
-NN_dSigmoid::NN_dSigmoid(NN_Sigmoid& sigmoid) :
-	_sigmoid(sigmoid)
+NN_dSigmoid::NN_dSigmoid(NN_Sigmoid& layer) :
+	NN_Backward_t(layer)
 {
-
 }
 
 void NN_dSigmoid::run(

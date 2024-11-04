@@ -7,9 +7,49 @@
 /*                                            */
 /**********************************************/
 
-int Model::_stack = 0;
-
 /***************************** static method start ***************************/
+
+void Model::put_error(int n_error) {
+	switch (n_error)
+	{
+	case 0:
+		ErrorExcept(
+			"[Model::put_error()] Please set layers."
+		);
+	case 1:
+		ErrorExcept(
+			"[Model::put_error()] No calculate output shapes."
+		);
+	case 2:
+		ErrorExcept(
+			"[Model::put_error()] No create weights of layers."
+		);
+	case 3:
+		ErrorExcept(
+			"[Model::put_error()] Please set outputs"
+		);
+	case 4:
+		ErrorExcept(
+			"[Model::put_error()] Please set backprops."
+		);
+	case 5:
+		{
+			std::string str;
+			NN_List<NN_Shape>& in_shapes = _manager.get_node_shape();
+
+			for (NN_Link* p_input : _input_nodes) {
+				str += shape_to_str(in_shapes[p_input->get_index()].val());
+			}
+
+			ErrorExcept(
+				"[Model::put_error()] This model can't accept input shapes. %s",
+				str.c_str()
+			);
+		}
+	default:
+		break;
+	}
+}
 
 int Model::get_n_input(const std::vector<NN_Link*>& input_node, const NN_Link* curr_node) {
 	int n = -1;
@@ -268,18 +308,17 @@ void Model::set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask
 }
 
 void Model::set_weights() {
-	if (_status == 0) {
-		ErrorExcept(
-			"[Model::create_weights()] Please set layers."
-		);
-	}
-	else if (_status > 1) return;
+	NN_List<NN_Shape> dummy_shape;
+	NN_List<GpuTensor<nn_type>> dummy_tensor;
+
+	build(dummy_shape, dummy_tensor);
+}
+
+void Model::set_shapes() {
+	if (!(_status & 0x01)) put_error(_status);
+	else if (!(_status & 0x02)) _manager.set_reserved_shapes();
 
 	NN_List<NN_Shape>& nodes_shape = _manager.get_node_shape();
-	NN_List<GpuTensor<nn_type>>& weights = _manager.get_weights();
-
-	if (nodes_shape.is_empty()) _manager.set_reserved_shapes();
-	if (weights.is_empty()) _manager.set_reserved_weights();
 
 	for (NN_Link* node : _layers) {
 		NN_List<NN_Shape>& m_output_shape = nodes_shape[node->get_index()];
@@ -293,44 +332,9 @@ void Model::set_weights() {
 		}
 
 		node->get_layer().get_output_shape(m_input_shape, m_output_shape);
-		node->get_layer().build(m_input_shape, weights);
 	}
 
-	_status = 2;
-}
-
-void Model::set_shapes() {
-	if (_status == 0) put_error();
-	else if (_status != 1) return;
-
-	_manager.set_reserved_shapes();
-
-	NN_List<NN_Shape>& node_shape = _manager.get_node_shape();
-	
-	for (NN_Link* node : _layers) {
-		NN_List<NN_Shape>& out_shape = node_shape[node->get_index()];
-		NN_List<NN_Shape> in_shape;
-
-		if (node->get_prev_nodes().size() > 0) {
-			for (NN_Link* p_prev_layer : node->get_prev_nodes()) {
-				
-			}
-		}
-
-		node->get_layer().get_output_shape(in_shape, out_shape);
-	}
-}
-
-void Model::put_error() {
-	switch (_status)
-	{
-	case 0:
-		ErrorExcept(
-			"[Model::put_error()] Please set layers"
-		);
-	default:
-		break;
-	}
+	_status |= 0x02;
 }
 
 /***************************** private method end ***************************/
@@ -345,7 +349,7 @@ Model::Model(NN_Manager& manager, const std::string& model_name) :
 }
 
 Model::Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* model_name) :
-	_status(1),
+	_status(0),
 	NN_Layer(model_name),
 	_manager(manager)
 {
@@ -355,6 +359,10 @@ Model::Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* m
 		find_path(inputs, outputs, mask);
 		count_branch(mask);
 		set_childs(inputs, outputs, mask);
+		
+		_status = 1;
+		set_shapes();
+		set_weights();
 	}
 	catch (const NN_Exception& e) {
 		e.put();
@@ -370,6 +378,8 @@ Model::~Model() {
 /***************************** Inheritanced NN_Link method start ***************************/
 
 NN_Link* Model::create_child() {
+	if (!(_status & 0x01)) put_error(0);
+
 	std::vector<NN_Link*>& nodes = _manager.get_nodes();
 	std::vector<int> child_index(nodes.size(), -1);
 
@@ -393,7 +403,7 @@ NN_Link* Model::create_child() {
 
 		for (NN_Link* p_next_node : p_node->get_next_nodes()) {
 			NN_Link* p_next_child = nodes[child_index[p_next_node->get_index()]];
-
+			
 			p_child->set_next_node(p_next_child);
 			p_next_child->set_prev_node(p_child);
 		}
@@ -406,6 +416,8 @@ NN_Link* Model::create_child() {
 		child_model->_output_nodes.push_back(nodes[child_index[p_output->get_index()]]);
 	}
 
+	child_model->_status |= 0x01;
+
 	return child_model;
 }
 
@@ -414,6 +426,8 @@ NN_Link* Model::create_child() {
 /***************************** Inheritanced NN_Layer method start ***************************/
 
 void Model::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
+	if (!(_status & 0x01)) put_error(0);
+
 	NN_List<NN_Shape>& nodes_shape = _manager.get_node_shape();
 
 	for (NN_Link* node : _layers) {
@@ -438,33 +452,43 @@ void Model::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Sh
 		node->get_layer().get_output_shape(m_input_shape, m_output_shape);
 	}
 
-	for (size_t i = 0; i < _output_nodes.size(); ++i) {
-		NN_List<NN_Shape>& out_shape = nodes_shape[_output_nodes[_out_indices[i]]->get_index()];
-		output_shape.append(out_shape);
+	if (_out_indices.size() > 0) {
+		for (size_t i = 0; i < _output_nodes.size(); ++i) {
+			NN_List<NN_Shape>& out_shape = nodes_shape[_output_nodes[_out_indices[i]]->get_index()];
+			output_shape.append(out_shape);
+		}
 	}
+	else {
+		for (size_t i = 0; i < _output_nodes.size(); ++i) {
+			NN_List<NN_Shape>& out_shape = nodes_shape[_output_nodes[i]->get_index()];
+			output_shape.append(out_shape);
+		}
+	}
+
+	_status |= 0x02;
 }
 
 void Model::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
-	const NN_List<NN_Shape>& shapes = _manager.get_node_shape();
+	if (!(_status & 0x01)) put_error(_status);
+	else if (!(_status & 0x02)) put_error(_status);
+	else if (!(_status & 0x04)) {
+		_manager.set_reserved_weights();
 
-	for (NN_Link* node : _layers) {
-		NN_List<NN_Shape> m_input_shape;
+		NN_List<NN_Shape>& nodes_shape = _manager.get_node_shape();
+		NN_List<GpuTensor<nn_type>>& weights = _manager.get_weights();
 
-		if (node->get_prev_nodes().size() > 0) {
-			for (const NN_Link* p_prev : node->get_prev_nodes()) {
-				int n_prev_out = p_prev->get_out_port(node);
-				int n_prev = p_prev->get_index();
+		for (NN_Link* node : _layers) {
+			NN_List<NN_Shape> m_input_shape;
 
-				m_input_shape.append(shapes[n_prev][n_prev_out]);
+			if (node->get_prev_nodes().size() > 0) {
+				for (NN_Link* p_prev_node : node->get_prev_nodes()) {
+					int curr_n_out = p_prev_node->get_out_port(node);
+					m_input_shape.append(nodes_shape[p_prev_node->get_index()][curr_n_out]);
+				}
 			}
+			node->get_layer().build(m_input_shape, weights);
 		}
-		else {
-			int n_input = get_n_input(_input_nodes, node);
-
-			m_input_shape.append(input_shape[n_input]);
-		}
-
-		node->get_layer().build(m_input_shape, weights);
+		_status |= 0x04;
 	}
 }
 
@@ -493,18 +517,27 @@ NN_Backward* Model::create_backward(std::vector<bool>& mask) {
 	NN_List<GpuTensor<nn_type>>& weights = _manager.get_weights();
 
 	for (NN_Link* node : _layers) {
-		bool do_create = false;
-
 		if (node->get_prev_nodes().size() > 0) {
 			if (weights[node->get_index()].size() > 0) {
-				do_create = true;
+				mask[node->get_index()] = true;
+
+				NN_Backward* backward = node->get_layer().create_backward(mask);
+				NN_Optimizer* optimizer = node->get_backward()->create_optimizer(_optimizer);
+
+				node->set_backward(backward);
+				node->set_optimizer(optimizer);
+				_manager.set_backward(backward);
+				_manager.set_optimizer(optimizer);
 			}
 			else {
 				for (NN_Link* prev_node : node->get_prev_nodes()) {
 					if (mask[prev_node->get_index()]) {
-						do_create = true;
+						mask[node->get_index()] = true;
 
-						break;
+						NN_Backward* backward = node->get_layer().create_backward(mask);
+
+						node->set_backward(backward);
+						_manager.set_backward(backward);
 					}
 				}
 			}
@@ -513,17 +546,13 @@ NN_Backward* Model::create_backward(std::vector<bool>& mask) {
 			const int n_input = get_n_input(_input_nodes, node);
 
 			if (mask[_prev[n_input]->get_index()]) {
-				do_create = true;
+				mask[node->get_index()] = true;
+
+				NN_Backward* backward = node->get_layer().create_backward(mask);
+
+				node->set_backward(backward);
+				_manager.set_backward(backward);
 			}
-		}
-
-		if (do_create) {
-			NN_Backward* backward = node->get_layer().create_backward(mask);
-
-			node->set_backward(backward);
-			_manager.set_backward(backward);
-
-			mask[node->get_index()] = true;
 		}
 	}
 
@@ -535,6 +564,8 @@ NN_List<GpuTensor<nn_type>> Model::get_weight() {
 }
 
 void Model::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	if ((_status & 0x07) != 0x07) put_error(_status);
+
 	NN_List<GpuTensor<nn_type>>& nodes_output = _manager.get_node_output();
 	NN_List<NN_Shape>& node_shape = _manager.get_node_shape();
 
@@ -561,6 +592,9 @@ void Model::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<
 	}
 
 	for (int& n : _out_indices) output.append(nodes_output[_output_nodes[n]->get_index()]);
+
+	_status &= ~0x0100;
+	_status |= 0x08;
 }
 
 /***************************** Inheritanced NN_Layer method end ***************************/
@@ -568,11 +602,7 @@ void Model::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<
 /***************************** public ex method start ***************************/
 
 Layer_t Model::operator()(Layer_t prev_node) {
-	if (_status == 0) {
-		ErrorExcept(
-			"[Model::operator()()] Please set layers."
-		);
-	}
+	if (!(_status & 0x01)) put_error(0);
 
 	NN_List<NN_Shape> in_shapes;
 	NN_List<NN_Shape> out_shapes;
@@ -585,6 +615,8 @@ Layer_t Model::operator()(Layer_t prev_node) {
 		in_shapes.append(prev_ptr._shape);
 	}
 
+	if (!(_status & 0x02)) _manager.set_reserved_shapes();
+
 	get_output_shape(in_shapes, out_shapes);
 	_manager.set_static_node(this);
 
@@ -596,13 +628,7 @@ Layer_t Model::operator()(Layer_t prev_node) {
 }
 
 void Model::load_weights(const std::string& path, bool skip_mismatch) {
-	if (_status == 0) {
-		ErrorExcept(
-			"[Model::load_weights()] Please set layers."
-		);
-	}
-
-	set_weights();
+	if (!(_status & 0x01)) put_error(0);
 
 	H5::H5File fp(path, H5F_ACC_RDONLY);
 	std::vector<std::string> layer_names = get_layer_names(fp);
@@ -623,48 +649,23 @@ void Model::load_weights(const std::string& path, bool skip_mismatch) {
 	}
 
 	fp.close();
-	_status = 3;
 }
 
 void Model::summary() {
-	if (_status == 0) {
-		ErrorExcept(
-			"[Model::summary()] Please set layers."
-		);
-	}
-
-	int i = 0;
-	NN_List<NN_Shape>& nodes_shape = _manager.get_node_shape();
+	if (!(_status & 0x01)) put_error(_status);
 
 	std::cout << '[' << _layer_name << ']' << std::endl;
+
+	NN_List<NN_Shape>& nodes_shape = _manager.get_node_shape();
 	
-	if (_status == 1) {
-		_manager.set_reserved_shapes();
-
-		for (NN_Link* node : _layers) {
-			NN_List<NN_Shape>& m_output_shape = nodes_shape[node->get_index()];
-			NN_List<NN_Shape> m_input_shape;
-
-			if (node->get_prev_nodes().size() > 0) {
-				for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-					int curr_n_out = p_prev_node->get_out_port(node);
-					m_input_shape.append(nodes_shape[p_prev_node->get_index()][curr_n_out]);
-				}
-			}
-
-			node->get_layer().get_output_shape(m_input_shape, m_output_shape);
-		}
-	}
-	
+	int i = 0;
 	for (NN_Link* p_node : _layers) {
 		std::cout << ++i << " : layer_name = " << p_node->get_layer()._layer_name << ", output shape = ";
 		std::cout << nodes_shape[p_node->get_index()];
 	}
-
-	_manager.clear_shapes();
 }
 
-void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& loss) {
+void Model::stand_by(const NN_Optimizer& optimizer, const std::initializer_list<NN_Loss>& loss) {
 	for (const NN_Loss& p : loss) _losses.push_back(&p);
 
 	NN_List<GpuTensor<nn_type>>& weights = _manager.get_weights();
@@ -698,9 +699,7 @@ void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& lo
 		}
 	}
 
-	_manager.set_reserved_doutputs();
-
-	NN_List<GpuTensor<nn_type>>& d_output = _manager.get_node_doutput();
+	_status |= 0x10;
 }
 
 /***************************** public ex method end ***************************/
@@ -713,7 +712,7 @@ void Model::stand_by(NN_Optimizer& optimizer, std::initializer_list<NN_Loss>& lo
 /**********************************************/
 
 dModel::dModel(Model& model) :
-	_model(model)
+	NN_Backward_t(model)
 {
 
 }

@@ -25,10 +25,8 @@ public:
 /*                                        */
 /******************************************/
 
-class NN_dFlatten : public NN_Backward {
+class NN_dFlatten : public NN_Backward_t<NN_Flatten> {
 public:
-	NN_Flatten& _flatten;
-
 	NN_dFlatten(NN_Flatten& flatten);
 
 	void run(

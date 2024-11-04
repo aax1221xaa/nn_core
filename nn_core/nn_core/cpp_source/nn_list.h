@@ -303,13 +303,12 @@ template <class _T>
 NN_List<_T>& NN_List<_T>::operator=(NN_List&& p) {
 	if (&p == this) return *this;
 
-	_data = p._data;
-	_p_list = p._p_list;
+	clear();
+
+	_data = std::move(p._data);
+	_p_list = std::move(p._p_list);
 
 	if (_p_list.front() == &p) _p_list.front() = this;
-
-	p._data = NULL;
-	p._p_list.clear();
 
 	return *this;
 }

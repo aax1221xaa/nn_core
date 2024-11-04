@@ -38,11 +38,9 @@ public:
 /*                                            */
 /**********************************************/
 
-class NN_dConv2D : public NN_Backward {
-	NN_Conv2D& _conv;
-
+class NN_dConv2D : public NN_Backward_t<NN_Conv2D> {
 public:
-	NN_dConv2D(NN_Conv2D& conv);
+	NN_dConv2D(NN_Conv2D& layer);
 
 	void run(
 		NN_Stream& st,
@@ -50,7 +48,7 @@ public:
 		const NN_List<GpuTensor<nn_type>>& doutput,
 		NN_List<GpuTensor<nn_type>>& dinput
 	);
-	NN_Optimizer* create_optimizer(NN_Optimizer& optimizer);
+	NN_Optimizer* create_optimizer(const NN_Optimizer& optimizer);
 };
 
 

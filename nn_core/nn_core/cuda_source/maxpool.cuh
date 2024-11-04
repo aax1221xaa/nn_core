@@ -34,11 +34,9 @@ public:
 /*                                            */
 /**********************************************/
 
-class NN_dMaxpool2D : public NN_Backward {
+class NN_dMaxpool2D : public NN_Backward_t<NN_Maxpool2D> {
 public:
-	NN_Maxpool2D& _maxpool;
-
-	NN_dMaxpool2D(NN_Maxpool2D& maxpool);
+	NN_dMaxpool2D(NN_Maxpool2D& layer);
 
 	void run(
 		NN_Stream& st,

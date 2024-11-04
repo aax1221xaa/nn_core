@@ -77,12 +77,8 @@ void NN_Dense::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_
 
 
 	_weight = GpuTensor<nn_type>({ shape[1], _amounts });
-	_bias = GpuTensor<nn_type>(NN_Shape({ _amounts }));
+	_bias = GpuTensor<nn_type>::zeros(NN_Shape({ _amounts }));
 	set_random_uniform(_weight, -0.1f, 0.1f);
-
-	Tensor<nn_type> tmp(NN_Shape({ _amounts }));
-	tmp = 0.f;
-	_bias = tmp;
 
 	weights.append(_weight);
 	weights.append(_bias);
@@ -132,9 +128,8 @@ NN_List<GpuTensor<nn_type>> NN_Dense::get_weight() {
 /**********************************************/
 
 NN_dDense::NN_dDense(NN_Dense& dense) :
-	_dense(dense)
+	NN_Backward_t(dense)
 {
-
 }
 
 void NN_dDense::run(
@@ -146,6 +141,6 @@ void NN_dDense::run(
 
 }
 
-NN_Optimizer* NN_dDense::create_optimizer(NN_Optimizer& optimizer) {
-	return optimizer.create({ _dense._weight, _dense._bias });
+NN_Optimizer* NN_dDense::create_optimizer(const NN_Optimizer& optimizer) {
+	return optimizer.create({ _layer._weight, _layer._bias });
 }

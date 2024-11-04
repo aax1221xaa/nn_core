@@ -21,8 +21,22 @@ public:
 		const NN_List<GpuTensor<nn_type>>& doutput,
 		NN_List<GpuTensor<nn_type>>& dinput
 	);
-	virtual NN_Optimizer* create_optimizer(NN_Optimizer& optimizer);
+	virtual NN_Optimizer* create_optimizer(const NN_Optimizer& optimizer);
 };
+
+template <class _T>
+class NN_Backward_t : public NN_Backward{
+public:
+	_T& _layer;
+
+	NN_Backward_t(_T& layer);
+};
+
+template <class _T>
+NN_Backward_t<_T>::NN_Backward_t(_T& layer) :
+	_layer(layer)
+{
+}
 
 
 /**********************************************/
@@ -111,14 +125,12 @@ void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) con
 
 /**********************************************/
 /*                                            */
-/*                 NN_dInput                  */
+/*                  NN_dInput                 */
 /*                                            */
 /**********************************************/
 
-class NN_dInput : public NN_Backward {
+class NN_dInput : public NN_Backward_t<NN_Input> {
 public:
-	NN_Input& _input;
-
 	NN_dInput(NN_Input& input);
 	
 	void run(
@@ -173,6 +185,8 @@ public:
 
 	const int& get_index() const;
 	void set_index(int index);
+
+	std::vector<int>& get_out_indices();
 
 	Layer_t operator()(Layer_t prev_node);
 

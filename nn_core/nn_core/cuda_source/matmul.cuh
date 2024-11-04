@@ -33,10 +33,8 @@ public:
 /*                                            */
 /**********************************************/
 
-class NN_dDense : public NN_Backward {
+class NN_dDense : public NN_Backward_t<NN_Dense> {
 public:
-	NN_Dense& _dense;
-
 	NN_dDense(NN_Dense& dense);
 
 	void run(
@@ -45,7 +43,7 @@ public:
 		const NN_List<GpuTensor<nn_type>>& doutput,
 		NN_List<GpuTensor<nn_type>>& dinput
 	);
-	NN_Optimizer* create_optimizer(NN_Optimizer& optimizer);
+	NN_Optimizer* create_optimizer(const NN_Optimizer& optimizer);
 };
 
 

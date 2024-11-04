@@ -93,7 +93,7 @@ NN_Optimizer::~NN_Optimizer() {
 
 }
 
-NN_Optimizer* NN_Optimizer::create(const std::vector<GpuTensor<nn_type>>& weights) {
+NN_Optimizer* NN_Optimizer::create(const std::vector<GpuTensor<nn_type>>& weights) const {
 	ErrorExcept(
 		"[NN_Optimizer::create] make this function."
 	);
@@ -132,7 +132,7 @@ SGD::SGD(float l_rate, float m_rate) :
 {
 }
 
-NN_Optimizer* SGD::create(const std::vector<GpuTensor<nn_type>>& weights) {
+NN_Optimizer* SGD::create(const std::vector<GpuTensor<nn_type>>& weights) const {
 	SGD* optimizer = new SGD(weights);
 
 	optimizer->_l_rate = _l_rate;
@@ -184,7 +184,7 @@ RmsProp::RmsProp(float d_rate, float l_rate) :
 {
 }
 
-NN_Optimizer* RmsProp::create(const std::vector<GpuTensor<nn_type>>& weights) {
+NN_Optimizer* RmsProp::create(const std::vector<GpuTensor<nn_type>>& weights) const {
 	RmsProp* optimizer = new RmsProp(weights);
 
 	optimizer->_d_rate = _d_rate;
@@ -239,7 +239,7 @@ Adam::Adam(float l_rate, float beta1, float beta2) :
 {
 }
 
-NN_Optimizer* Adam::create(const std::vector<GpuTensor<nn_type>>& weights) {
+NN_Optimizer* Adam::create(const std::vector<GpuTensor<nn_type>>& weights) const {
 	Adam* optimizer = new Adam(weights);
 
 	optimizer->_l_rate = _l_rate;

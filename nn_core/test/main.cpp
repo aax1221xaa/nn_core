@@ -13,13 +13,13 @@
 
 int main() {
 	try {
-		Tensor<int> a = Tensor<int>::zeros({ 3, 3, 3 });
-		Tensor<int> b = Tensor<int>::zeros({ 2, 2, 2 });
+		NN_List<int> a = { 1, 2, 3 };
 
-		b(0, 2)(0, 2)(0, 2) = 1;
-		a(0, 2)(0, 2)(0, 2) = b;
+		std::cout << a;
 
-		std::cout << a << std::endl;
+		a = { 4, 5, 6 };
+
+		std::cout << a;
 	}
 	catch (const NN_Exception& e) {
 		e.put();
