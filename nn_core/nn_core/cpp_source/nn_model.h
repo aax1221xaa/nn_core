@@ -354,3 +354,5 @@ public:
 		NN_List<GpuTensor<nn_type>>& dinput
 	);
 };
+
+

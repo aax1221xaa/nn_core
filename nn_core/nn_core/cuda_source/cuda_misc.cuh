@@ -2,6 +2,7 @@
 #define _CUDA_MISC_CUH_
 
 #include "../cpp_source/nn_tensor.h"
+#include "../cpp_source/gpu_tensor.h"
 
 
 void set_const_mem(cuint* h_mem, size_t len, size_t offset);

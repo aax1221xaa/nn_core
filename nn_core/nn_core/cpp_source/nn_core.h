@@ -8,3 +8,5 @@
 #include "../cuda_source/softmax.cuh"
 #include "flatten.h"
 #include "nn_model.h"
+#include "nn_operator.h"
+#include "nn_lambda.h"

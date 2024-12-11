@@ -48,9 +48,7 @@ NN_Layer::~NN_Layer() {
 }
 
 void NN_Layer::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
-	ErrorExcept(
-		"[NN_Layer::get_output_shape] Make this function."
-	);
+	output_shape = input_shape;
 }
 
 void NN_Layer::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
@@ -84,10 +82,9 @@ void NN_Layer::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTens
 /*                                            */
 /**********************************************/
 
-NN_Input::NN_Input(const NN_Shape& input_size, int batch, const std::string& layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&)) :
+NN_Input::NN_Input(const NN_Shape& input_size, int batch, const std::string& layer_name) :
 	NN_Layer(layer_name),
-	_shape(input_size),
-	p_convert(convert_f)
+	_shape(input_size)
 {
 	_shape.push_front(batch);
 }
@@ -369,6 +366,10 @@ void NN_Manager::set_nodes(NN_Link* node) {
 	_is_static.push_back(false);
 }
 
+void NN_Manager::set_layers(NN_Layer* layer) {
+	_layers.push_back(layer);
+}
+
 void NN_Manager::set_static_node(NN_Link* const node) {
 	node->set_index(_node_counter++);
 	_nodes.push_back(node);
@@ -423,8 +424,8 @@ void NN_Manager::clear_dinputs() {
 	_doutputs.clear();
 }
 
-Layer_t NN_Manager::input(const NN_Shape& input_size, int batch, const char* layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&)) {
-	NN_Input* layer = new NN_Input(input_size, batch, layer_name, convert_f);
+Layer_t NN_Manager::input(const NN_Shape& input_size, int batch, const std::string& layer_name) {
+	NN_Input* layer = new NN_Input(input_size, batch, layer_name);
 	NN_Link* node = new NN_Link;
 
 	_input_layers.push_back(layer);

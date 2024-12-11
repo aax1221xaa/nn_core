@@ -1,6 +1,6 @@
 #pragma once
-#include "nn_list.h"
 #include "nn_tensor.h"
+#include "gpu_tensor.h"
 #include "../cuda_source/optimizer.cuh"
 
 
@@ -71,18 +71,16 @@ class NN_Input : public NN_Layer {
 public:
 	NN_Shape _shape;
 
-	void(*p_convert)(const void* p_src, void* p_dst, const tbb::blocked_range<size_t>& q);
-
-	NN_Input(const NN_Shape& input_size, int batch = -1, const std::string& layer_name = "Input", void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&) = NULL);
+	NN_Input(const NN_Shape& input_size, int batch = -1, const std::string& layer_name = "Input");
 	~NN_Input();
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
 	void build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights);
+	NN_Backward* create_backward(std::vector<bool>& mask);
+	void set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
+
 	template <typename _sT, typename _dT>
 	void trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) const;
-	NN_Backward* create_backward(std::vector<bool>& mask);
-
-	void set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 };
 
 template <typename _sT, typename _dT>
@@ -91,34 +89,6 @@ void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) con
 	Tensor<_dT> dst(output.get_shape());
 
 	src = sample;
-
-	if (p_convert) {
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, src.get_shape().total_size()),
-			[&](const tbb::blocked_range<size_t>& q) {
-
-			const _sT* p_src = src.get_ptr();
-			_dT* p_dst = dst.get_ptr();
-
-			(*p_convert)(p_src, p_dst, q);
-		}
-		);
-	}
-	else {
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, src.get_shape().total_size()),
-			[&](const tbb::blocked_range<size_t>& q) {
-
-			const _sT* p_src = src.get_ptr();
-			_dT* p_dst = dst.get_ptr();
-
-			for (size_t i = q.begin(); i < q.end(); ++i) {
-				p_dst[i] = (_dT)p_src[i];
-			}
-		}
-		);
-	}
-
 	output = dst;
 }
 
@@ -242,6 +212,7 @@ public:
 	NN_List<GpuTensor<nn_type>>& get_weights();
 
 	void set_nodes(NN_Link* node);
+	void set_layers(NN_Layer* layer);
 	void set_static_node(NN_Link* const node);
 	void set_backward(NN_Backward* backward);
 
@@ -259,7 +230,7 @@ public:
 	void clear_outputs();
 	void clear_dinputs();
 
-	Layer_t input(const NN_Shape& input_size, int batch, const char* layer_name, void(*convert_f)(const void*, void*, const tbb::blocked_range<size_t>&) = NULL);
+	Layer_t input(const NN_Shape& input_size, int batch, const std::string& layer_name);
 
 	template <class _T>
 	NN_Link& operator()(const _T& layer);

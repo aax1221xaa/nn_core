@@ -17,7 +17,7 @@
 /**********************************************/
 
 __global__ void __sgd(
-	float* gradient,
+	const float* gradient,
 	float* weight,
 	float* w_momentum,
 	cuint w_len,
@@ -34,7 +34,7 @@ __global__ void __sgd(
 }
 
 __global__ void __rms_prop(
-	float* gradient,
+	const float* gradient,
 	float* weight,
 	float* g,
 	cuint w_len,
@@ -53,7 +53,7 @@ __global__ void __rms_prop(
 }
 
 __global__ void __adam(
-	float* gradient,
+	const float* gradient,
 	float* weight,
 	float* square_g,
 	float* decay_g,

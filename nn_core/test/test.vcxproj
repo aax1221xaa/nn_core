@@ -83,25 +83,23 @@
     <ClCompile Include="..\nn_core\cpp_source\CudaCheck.cpp" />
     <ClCompile Include="..\nn_core\cpp_source\cuda_common.cpp" />
     <ClCompile Include="..\nn_core\cpp_source\Exception.cpp" />
-    <ClCompile Include="..\nn_core\cpp_source\mnist.cpp" />
     <ClCompile Include="..\nn_core\cpp_source\nn_sample.cpp" />
     <ClCompile Include="..\nn_core\cpp_source\nn_shape.cpp" />
-    <ClCompile Include="..\nn_core\cpp_source\nn_tensor.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\nn_core\cpp_source\CudaCheck.h" />
     <ClInclude Include="..\nn_core\cpp_source\cuda_common.h" />
     <ClInclude Include="..\nn_core\cpp_source\Exception.h" />
-    <ClInclude Include="..\nn_core\cpp_source\mnist.h" />
+    <ClInclude Include="..\nn_core\cpp_source\gpu_tensor.h" />
     <ClInclude Include="..\nn_core\cpp_source\nn_list.h" />
     <ClInclude Include="..\nn_core\cpp_source\nn_sample.h" />
     <ClInclude Include="..\nn_core\cpp_source\nn_shape.h" />
     <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h" />
-    <ClInclude Include="..\nn_core\cuda_source\cuda_misc.cuh" />
+    <ClInclude Include="..\nn_core\cuda_source\nn_operators.cuh" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="..\nn_core\cuda_source\cuda_misc.cu" />
+    <CudaCompile Include="..\nn_core\cuda_source\nn_operators.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

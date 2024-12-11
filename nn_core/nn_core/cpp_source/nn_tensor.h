@@ -1,4 +1,5 @@
 #pragma once
+#include "nn_list.h"
 #include "nn_shape.h"
 #include <tbb/tbb.h>
 #include <memory>
@@ -6,6 +7,13 @@
 
 template <typename _T>
 class GpuTensor;
+
+
+/**********************************************/
+/*                                            */
+/*                    Tensor                  */
+/*                                            */
+/**********************************************/
 
 template <typename _T>
 class Tensor {
@@ -96,6 +104,8 @@ public:
 	static Tensor squeeze(const Tensor& tensor, std::initializer_list<int>& axis);
 
 	static Tensor zeros(const NN_Shape& shape);
+
+	Tensor& all();
 };
 
 template <typename _T>
@@ -389,13 +399,13 @@ Tensor<_T>& Tensor<_T>::operator=(const GpuTensor<_T>& p) {
 	}
 
 	Tensor tmp(g_shape);
-	_T* g_ptr = p.get_ptr();
+	const _T* g_ptr = p.get_ptr();
 	_T* h_ptr = tmp.get_ptr();
 
 	check_cuda(cudaMemcpy(h_ptr, g_ptr, sizeof(_T) * h_shape.total_size(), cudaMemcpyDeviceToHost));
 
 	*this = tmp;
-	
+
 	*_cnt_rank = 0;
 
 	return *this;
@@ -1367,7 +1377,7 @@ Tensor<_cT> Tensor<_T>::cast() const {
 	Tensor<_T> src(calc_shape(_indice));
 
 	src = *this;
-	
+
 	tbb::parallel_for(
 		tbb::blocked_range<size_t>(0, calc_size(_indice)),
 		[&](const tbb::blocked_range<size_t>& q) {
@@ -1418,7 +1428,7 @@ Tensor<_T> Tensor<_T>::expand_dims(const Tensor& tensor, std::initializer_list<i
 
 	for (const int& n : axis) {
 		const int curr_axis = n < 0 ? ranks - n : n;
-		
+
 		if (ranks <= curr_axis || 0 > curr_axis) {
 			ErrorExcept(
 				"[Tensor<_T>::expand_dims] %s axis is out of range.",
@@ -1460,7 +1470,7 @@ Tensor<_T> Tensor<_T>::squeeze(const Tensor& tensor, int axis) {
 	m_tensor._indice.erase(m_tensor._indice.begin() + curr_axis);
 
 	*tensor._cnt_rank = 0;
-	
+
 	return m_tensor;
 }
 
@@ -1507,175 +1517,9 @@ Tensor<_T> Tensor<_T>::zeros(const NN_Shape& shape) {
 	return tensor;
 }
 
-
-/**********************************************/
-/*                                            */
-/*                  GpuTensor                 */
-/*                                            */
-/**********************************************/
-
 template <typename _T>
-class GpuTensor {
-	std::shared_ptr<_T> _data;
-	NN_Shape _shape;
-
-	static void del_func(_T* ptr);
-
-public:
-	GpuTensor();
-	GpuTensor(const NN_Shape& shape);
-	GpuTensor(const GpuTensor& p);
-	GpuTensor(GpuTensor&& p);
-	~GpuTensor();
-
-	GpuTensor& operator=(const GpuTensor& p);
-	GpuTensor& operator=(const GpuTensor&& p);
-	GpuTensor& operator=(const Tensor<_T>& p);
-
-	NN_Shape& get_shape();
-	const NN_Shape& get_shape() const;
-	_T* get_ptr() const;
-
-	void reshape(const NN_Shape& shape);
-	void resize(const NN_Shape& shape);
-
-	static GpuTensor<_T> zeros(const NN_Shape& shape);
-};
-
-template <typename _T>
-void GpuTensor<_T>::del_func(_T* ptr) {
-	cudaFree(ptr);
-}
-
-template <typename _T>
-GpuTensor<_T>::GpuTensor() {
-}
-
-template <typename _T>
-GpuTensor<_T>::GpuTensor(const NN_Shape& shape) :
-	_shape(shape)
-{
-	_T* ptr = NULL;
-
-	check_cuda(cudaMalloc(&ptr, sizeof(_T) * _shape.total_size()));
-
-	_data.reset(ptr, del_func);
-}
-
-template <typename _T>
-GpuTensor<_T>::GpuTensor(const GpuTensor& p) :
-	_data(p._data),
-	_shape(p._shape)
-{
-}
-
-template <typename _T>
-GpuTensor<_T>::GpuTensor(GpuTensor&& p) :
-	_data(std::move(p._data)),
-	_shape(std::move(p._shape))
-{
-}
-
-template <typename _T>
-GpuTensor<_T>::~GpuTensor() {
-
-}
-
-template <typename _T>
-GpuTensor<_T>& GpuTensor<_T>::operator=(const GpuTensor& p) {
-	if (this == &p) return *this;
-
-	_data = p._data;
-	_shape = p._shape;
+Tensor<_T>& Tensor<_T>::all() {
+	_status = 1;
 
 	return *this;
-}
-
-template <typename _T>
-GpuTensor<_T>& GpuTensor<_T>::operator=(const GpuTensor&& p) {
-	if (this == &p) return *this;
-
-	_data = std::move(p._data);
-	_shape = std::move(p._shape);
-
-	return *this;
-}
-
-template <typename _T>
-GpuTensor<_T>& GpuTensor<_T>::operator=(const Tensor<_T>& p) {
-	const NN_Shape h_shape = p.get_shape();
-
-	if (h_shape != _shape) {
-		ErrorExcept(
-			"[GpuTensor<_T>::operator=] GPU and Host shape are different. GPU: %s, Host: %s",
-			shape_to_str(_shape),
-			shape_to_str(h_shape)
-		);
-	}
-
-	Tensor<_T> tmp(h_shape);
-
-	tmp = p;
-
-	_T* h_ptr = tmp.get_ptr();
-	_T* g_ptr = get_ptr();
-
-	check_cuda(cudaMemcpy(g_ptr, h_ptr, sizeof(_T) * h_shape.total_size(), cudaMemcpyHostToDevice));
-
-	return *this;
-}
-
-template <typename _T>
-NN_Shape& GpuTensor<_T>::get_shape() {
-	return _shape;
-}
-
-template <typename _T>
-const NN_Shape& GpuTensor<_T>::get_shape() const {
-	return _shape;
-}
-
-template <typename _T>
-_T* GpuTensor<_T>::get_ptr() const {
-	return _data.get();
-}
-
-template <typename _T>
-void GpuTensor<_T>::reshape(const NN_Shape& shape) {
-	if (_shape.total_size() != shape.total_size()) {
-		ErrorExcept(
-			"[GpuTensor<_T>::reshape] Can't reshape tensor. %s != %s",
-			shape_to_str(_shape),
-			shape_to_str(shape)
-		);
-	}
-
-	_shape = shape;
-}
-
-template <typename _T>
-void GpuTensor<_T>::resize(const NN_Shape& shape) {
-	const size_t size = shape.total_size();
-
-	if (size == 0) {
-		ErrorExcept(
-			"[GpuTensor<_T>::resize] Can't resize this shape. %s",
-			shape_to_str(shape)
-		);
-	}
-
-	_T* ptr = NULL;
-
-	_shape = shape;
-	check_cuda(cudaMalloc(&ptr, sizeof(_T) * size));
-	_data = std::shared_ptr<_T>(ptr, del_func);
-}
-
-template <typename _T>
-GpuTensor<_T> GpuTensor<_T>::zeros(const NN_Shape& shape) {
-	GpuTensor<_T> tmp(shape);
-
-	check_cuda(cudaMemset(tmp.get_ptr(), 0, sizeof(_T) * shape.total_size()));
-
-	return tmp;
 }

@@ -234,7 +234,7 @@ void Model::count_branch(std::vector<int>& mask) {
 	for (const NN_Link* node : nodes) {
 		if (mask[node->get_index()] < 0) {
 			for (const NN_Link* prev_node : node->get_prev_nodes()) {
-				if (mask[node->get_index()] < 0) {
+				if (mask[prev_node->get_index()] < 0) {
 					++counter[node->get_index()];
 				}
 			}
@@ -507,9 +507,14 @@ void Model::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List
 
 				m_input.append(nodes_output[prev_index][n_prev_out]);
 			}
-
-			p_node->get_layer().run(st, m_input, m_output);
 		}
+		else {
+			const int n_prev_out = get_n_input(_input_nodes, p_node);
+
+			m_input.append(input[n_prev_out]);
+		}
+
+		p_node->get_layer().run(st, m_input, m_output);
 	}
 }
 

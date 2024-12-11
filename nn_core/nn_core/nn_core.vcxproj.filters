@@ -48,9 +48,6 @@
     <ClCompile Include="cpp_source\mnist.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_source\nn_tensor.cpp">
-      <Filter>소스 파일\cpp</Filter>
-    </ClCompile>
     <ClCompile Include="cpp_source\nn_shape.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
@@ -58,6 +55,12 @@
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
     <ClCompile Include="cpp_source\flatten.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\nn_lambda.cpp">
+      <Filter>소스 파일\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="cpp_source\nn_operator.cpp">
       <Filter>소스 파일\cpp</Filter>
     </ClCompile>
   </ItemGroup>
@@ -127,6 +130,15 @@
     </ClInclude>
     <ClInclude Include="cuda_source\nn_loss.cuh">
       <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\nn_lambda.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\gpu_tensor.h">
+      <Filter>헤더 파일\h</Filter>
+    </ClInclude>
+    <ClInclude Include="cpp_source\nn_operator.h">
+      <Filter>헤더 파일\h</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
