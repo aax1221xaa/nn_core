@@ -27,28 +27,20 @@ void NN_Flatten::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<n
 }
 
 void NN_Flatten::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
-	const GpuTensor<nn_type>& m_input = input[0].val();
-	GpuTensor<nn_type>& m_output = output[0].val();
 
-	int shape_ranks = m_input.get_shape().ranks();
-
-	if (shape_ranks > 2) {
-		std::vector<uint> ranks(shape_ranks, 0);
-
-		for (uint i = 0; i < shape_ranks; ++i) ranks[i] = i;
-
-		uint c_tmp = ranks[shape_ranks - 3];
-		ranks[shape_ranks - 3] = ranks[shape_ranks - 2];
-		ranks[shape_ranks - 2] = ranks[shape_ranks - 1];
-		ranks[shape_ranks - 1] = c_tmp;
-
-		transpose(m_input, m_output, ranks);
-	}
-	else m_output = m_input;
 }
 
 NN_Backward* NN_Flatten::create_backward(std::vector<bool>& mask) {
 	return new NN_dFlatten(*this);
+}
+
+void NN_Flatten::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	GpuTensor<nn_type>& in_tensor = input[0].val();
+	const NN_Shape& out_shape = output_shape[0].val();
+	
+	GpuTensor<nn_type> out_tensor(in_tensor, out_shape);
+
+	output.append(out_tensor);
 }
 
 

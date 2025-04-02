@@ -238,9 +238,15 @@ void NN_Maxpool2D::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, 
 			(uint)tile_h,
 			(uint)tile_w
 		);
+#if _DEBUG
+		check_cuda(cudaStreamSynchronize(p_st[n % STREAMS]));
+		check_cuda(cudaGetLastError());
+#endif
 	}
+#if _DEBUG
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());
+#endif
 }
 
 NN_Backward* NN_Maxpool2D::create_backward(std::vector<bool>& mask) {

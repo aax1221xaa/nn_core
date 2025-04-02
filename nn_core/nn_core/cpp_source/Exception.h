@@ -10,11 +10,12 @@
 /**********************************************/
 
 class NN_Check {
-	static bool _is_valid;
+	static bool _is_error;
 
 public:
-	static void set_flag(bool is_valid);
-	static const bool& get_flag();
+	static void set();
+	static void clear();
+	static bool get_flag();
 };
 
 

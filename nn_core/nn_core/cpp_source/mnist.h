@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 
 
+
 template <typename _xT, typename _yT>
 class DataSetType {
 public:
@@ -13,7 +14,7 @@ public:
 
 
 class MNIST : public DataSetType<uchar, uchar> {
-private:
+public:
 	DataSet<uchar, uchar> _train, _test;
 
 	static DataSet<uchar, uchar> read_file(const std::string& img_path, const std::string& label_path);

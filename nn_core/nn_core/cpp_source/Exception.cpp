@@ -7,14 +7,18 @@
 /*                                            */
 /**********************************************/
 
-bool NN_Check::_is_valid = true;
+bool NN_Check::_is_error = true;
 
-void NN_Check::set_flag(bool is_valid) {
-	_is_valid = is_valid;
+void NN_Check::set() {
+	_is_error = true;
 }
 
-const bool& NN_Check::get_flag() {
-	return _is_valid;
+void NN_Check::clear() {
+	_is_error = false;
+}
+
+bool NN_Check::get_flag() {
+	return _is_error;
 }
 
 
@@ -23,7 +27,7 @@ NN_Exception::NN_Exception(const std::string& message_, const std::string& file_
 	file(file_),
 	line(line_)
 {
-	NN_Check::set_flag(false);
+	NN_Check::set();
 }
 
 void NN_Exception::put() const {

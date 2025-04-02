@@ -54,7 +54,7 @@ DataSet<uchar, uchar> MNIST::read_file(const std::string& img_path, const std::s
 	Tensor<uchar> x;
 	Tensor<uchar> y;
 
-	x.resize({ img_head[1], img_head[2], img_head[3] });
+	x.resize({ img_head[1], img_head[2], img_head[3], 1 });
 	y.resize({ img_head[1] });
 
 	img_fp.read((char*)x.get_ptr(), sizeof(uchar) * x.get_shape().total_size());

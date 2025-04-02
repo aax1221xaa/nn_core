@@ -5,12 +5,12 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(HDF5)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(HDF5)\hdf5-1.14.4\src\H5FDsubfiling;$(HDF5)\src;$(HDF5)\hdf5-1.14.4\src;$(HDF5)\hdf5-1.14.4\c++\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>H5_BUILT_AS_DYNAMIC_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(HDF5)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>hdf5_D.lib;hdf5_cpp_D.lib;hdf5_hl_cpp_D.lib;hdf5_hl_D.lib;hdf5_tools_D.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(HDF5)\bin\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>hdf5_D.lib;hdf5_cpp_D.lib;hdf5_hl_D.lib;hdf5_hl_cpp_D.lib;hdf5_tools_D.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />

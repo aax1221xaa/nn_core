@@ -121,13 +121,7 @@ void Model::parsing_weight(const H5::Group& group, NN_List<GpuTensor<nn_type>>& 
 		Tensor<nn_type> tensor(dims, n_dims);
 
 		data_set.read(tensor.get_ptr(), data_type);
-
-		if (n_dims == 4) {
-			g_tensor[i].val() = tensor.transpose({ 3, 2, 0, 1 });
-		}
-		else {
-			g_tensor[i].val() = tensor;
-		}
+		g_tensor[i].val() = tensor;
 
 		++i;
 		delete[] dims;
@@ -366,6 +360,7 @@ Model::Model(NN_Manager& manager, Layer_t inputs, Layer_t outputs, const char* m
 	}
 	catch (const NN_Exception& e) {
 		e.put();
+		throw e;
 	}
 }
 

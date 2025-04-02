@@ -3,6 +3,32 @@
 
 /**********************************************/
 /*                                            */
+/*				  NN_BwdOperator              */
+/*                                            */
+/**********************************************/
+/*
+NN_BwdOperator::NN_BwdOperator() {
+
+}
+
+NN_BwdOperator::~NN_BwdOperator() {
+
+}
+
+void NN_BwdOperator::run(
+	NN_Stream& st,
+	const GpuTensor<nn_type>& input,
+	const GpuTensor<nn_type>& doutput,
+	GpuTensor<nn_type>& dinput
+) {
+	ErrorExcept(
+		"[NN_BwdOperator::op] Make this function."
+	);
+}
+*/
+
+/**********************************************/
+/*                                            */
 /*				   NN_Operator                */
 /*                                            */
 /**********************************************/
@@ -25,38 +51,45 @@ NN_Operator::~NN_Operator() {
 
 }
 
-void NN_Operator::op(NN_Stream& st, const GpuTensor<nn_type>& a, GpuTensor<nn_type>& b) {
-	ErrorExcept(
-		"[NN_Operator::op] Make this function."
-	);
+void NN_Operator::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
+	switch (_status)
+	{
+	case 3:
+		if (input_shape[0].val() != input_shape[1].val()) {
+			ErrorExcept(
+				"[NN_Operator::get_output_shape] a_shape and b_shape are different. %s != %s",
+				shape_to_str(input_shape[0].val()),
+				shape_to_str(input_shape[1].val())
+			);
+		}
+	case 0:
+	case 1:
+	case 2:
+		output_shape = input_shape;
+		break;
+	default:
+		break;
+	}
 }
 
-void NN_Operator::op(NN_Stream& st, const GpuTensor<nn_type>& a, const GpuTensor<nn_type>& b, GpuTensor<nn_type>& c) {
-	ErrorExcept(
-		"[NN_Operator::op] Make this function."
-	);
-}
-
-void NN_Operator::op(NN_Stream& st, const GpuTensor<nn_type>& a, nn_type b, GpuTensor<nn_type>& c) {
-	ErrorExcept(
-		"[NN_Operator::op] Make this function."
-	);
-}
-
-void NN_Operator::op(NN_Stream& st, nn_type a, const GpuTensor<nn_type>& b, GpuTensor<nn_type>& c) {
-	ErrorExcept(
-		"[NN_Operator::op] Make this function."
-	);
-}
+//void NN_Operator::run(NN_Stream& st, const GpuTensor<nn_type>& a, const GpuTensor<nn_type>& b, GpuTensor<nn_type>& c) {
+//	ErrorExcept(
+//		"[NN_Operator::op] Make this function."
+//	);
+//}
+//
+//NN_BwdOperator* NN_Operator::create_backward() {
+//	return NULL;
+//}
+//
+//void NN_Operator::set_output(const NN_Shape& output_shape, GpuTensor<nn_type>& output) {
+//	output.resize(output_shape);
+//}
 
 void NN_Operator::set_const_value(nn_type val, int status) {
 	ErrorExcept(
 		"[NN_Operator::set_const_value] Make this function."
 	);
-}
-
-nn_type NN_Operator::get_val() {
-	return 0.f;
 }
 
 int NN_Operator::get_status() {
@@ -109,22 +142,11 @@ NN_OpLinker* NN_OpLinker::operator()(NN_OpLinker* prev_a) {
 	return this;
 }
 
-NN_OpLinker* NN_OpLinker::operator()(NN_OpLinker* prev_a, NN_OpLinker* prev_b) {
-	set_prev_node(prev_a);
-	set_prev_node(prev_b);
-	prev_a->set_next_node(this);
-	prev_b->set_next_node(this);
-
-	_operator->set_const_value(0.f, 1);
-
-	return this;
-}
-
 NN_OpLinker* NN_OpLinker::operator()(NN_OpLinker* prev_a, nn_type val) {
 	set_prev_node(prev_a);
 	prev_a->set_next_node(this);
 
-	_operator->set_const_value(val, 2);
+	_operator->set_const_value(val, 1);
 
 	return this;
 }
@@ -133,7 +155,18 @@ NN_OpLinker* NN_OpLinker::operator()(nn_type val, NN_OpLinker* prev_b) {
 	set_prev_node(prev_b);
 	prev_b->set_next_node(this);
 
-	_operator->set_const_value(val, 3);
+	_operator->set_const_value(val, 2);
+
+	return this;
+}
+
+NN_OpLinker* NN_OpLinker::operator()(NN_OpLinker* prev_a, NN_OpLinker* prev_b) {
+	set_prev_node(prev_a);
+	set_prev_node(prev_b);
+	prev_a->set_next_node(this);
+	prev_b->set_next_node(this);
+
+	_operator->set_const_value(0.f, 3);
 
 	return this;
 }
@@ -249,25 +282,7 @@ void NN_Lambda::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_
 		NN_Operator* p_operator = p_node->get_operator();
 		NN_Stream& st = _manager.get_streams();
 
-		switch (p_operator->get_status())
-		{
-		case 0:
-			p_operator->op(st, m_input.val(), m_output.val());
-			break;
-		case 1:
-			p_operator->op(st, m_input.val(), m_output.val());
-			break;
-		case 2:
-			p_operator->op(st, m_input.val(), p_operator->get_val(), m_output.val());
-			break;
-		case 3:
-			p_operator->op(st, p_operator->get_val(), m_input.val(), m_output.val());
-			break;
-		default:
-			break;
-		}
-
-		p_node->get_layer().run(st, m_input, m_output);
+		p_operator->run(st, m_input, m_output);
 	}
 }
 
@@ -298,7 +313,13 @@ void NN_Lambda::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTen
 			}
 			m_input.append(input[i]);
 		}
-		node->get_operator()->set_output(nodes_shape[node_id], m_input, m_output);
+
+		if (node->get_operator())
+			node->get_operator()->set_output(nodes_shape[node_id], m_input, m_output);
 	}
 	for(NN_OpLinker* out_node : _out_nodes) output.append(nodes_output[out_node->get_index()]);
+}
+
+void NN_Lambda::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
+
 }

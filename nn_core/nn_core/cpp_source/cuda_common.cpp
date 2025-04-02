@@ -1,4 +1,5 @@
 #include "cuda_common.h"
+#include "Exception.h"
 #include <random>
 
 
@@ -87,7 +88,7 @@ NN_Stream::NN_Stream(int amounts) {
 		delete[] _ptr->_st;
 		delete _ptr;
 
-		NN_Check::set_flag(false);
+		NN_Check::set();
 
 		throw e;
 	}
@@ -110,7 +111,7 @@ NN_Stream::~NN_Stream() {
 		clear();
 	}
 	catch (const NN_Exception& e) {
-		NN_Check::set_flag(false);
+		NN_Check::set();
 
 		e.put();
 	}

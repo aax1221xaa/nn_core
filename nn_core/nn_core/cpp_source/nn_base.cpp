@@ -48,13 +48,13 @@ NN_Layer::~NN_Layer() {
 }
 
 void NN_Layer::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape) {
-	output_shape = input_shape;
+	ErrorExcept(
+		"[NN_Layer::get_output_shape] Make this function."
+	);
 }
 
 void NN_Layer::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights) {
-	ErrorExcept(
-		"[NN_Layer::build] Make this function."
-	);
+
 }
 
 void NN_Layer::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
@@ -64,7 +64,7 @@ void NN_Layer::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_L
 }
 
 NN_Backward* NN_Layer::create_backward(std::vector<bool>& mask) {
-	return new NN_Backward;
+	return NULL;
 }
 
 NN_List<GpuTensor<nn_type>> NN_Layer::get_weight() {
@@ -167,6 +167,7 @@ void NN_dInput::run(
 ) {
 	
 }
+
 
 
 /**********************************************/
@@ -352,12 +353,36 @@ std::vector<NN_Backward*>& NN_Manager::get_backward() {
 	return _backward;
 }
 
-void NN_Manager::set_optimizer(NN_Optimizer* optimizer) {
-	_optimizer.push_back(optimizer);
-}
-
 NN_List<GpuTensor<nn_type>>& NN_Manager::get_weights() {
 	return _weights;
+}
+
+const NN_Stream& NN_Manager::get_streams() const {
+	return _stream;
+}
+
+const std::vector<NN_Link*>& NN_Manager::get_nodes() const {
+	return _nodes;
+}
+
+const std::vector<NN_Layer*>& NN_Manager::get_layers() const {
+	return _layers;
+}
+
+const std::vector<NN_Input*>& NN_Manager::get_input_layers() const {
+	return _input_layers;
+}
+
+const std::vector<NN_Backward*>& NN_Manager::get_backward() const {
+	return _backward;
+}
+
+const NN_List<GpuTensor<nn_type>>& NN_Manager::get_weights() const {
+	return _weights;
+}
+
+void NN_Manager::set_optimizer(NN_Optimizer* optimizer) {
+	_optimizer.push_back(optimizer);
 }
 
 void NN_Manager::set_nodes(NN_Link* node) {
@@ -405,6 +430,18 @@ NN_List<GpuTensor<nn_type>>& NN_Manager::get_node_output() {
 }
 
 NN_List<GpuTensor<nn_type>>& NN_Manager::get_node_doutput() {
+	return _doutputs;
+}
+
+const NN_List<NN_Shape>& NN_Manager::get_node_shape() const {
+	return _out_shapes;
+}
+
+const NN_List<GpuTensor<nn_type>>& NN_Manager::get_node_output() const {
+	return _outputs;
+}
+
+const NN_List<GpuTensor<nn_type>>& NN_Manager::get_node_doutput() const {
 	return _doutputs;
 }
 

@@ -46,7 +46,7 @@ public:
 
 	NN_Shape();
 	NN_Shape(size_t len);
-	//NN_Shape(const std::vector<int>& list);
+	NN_Shape(size_t len, int val);
 	NN_Shape(const std::initializer_list<int>& list);
 	NN_Shape(const NN_Shape& p);
 	NN_Shape(NN_Shape&& p);

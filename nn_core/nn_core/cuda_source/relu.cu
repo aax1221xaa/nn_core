@@ -70,9 +70,10 @@ void NN_ReLU::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_Li
 		output[0].val().get_ptr(),
 		size
 	);
-
-	//check_cuda(cudaDeviceSynchronize());
-	//check_cuda(cudaGetLastError());
+#if _DEBUG
+	check_cuda(cudaDeviceSynchronize());
+	check_cuda(cudaGetLastError());
+#endif
 }
 
 NN_Backward* NN_ReLU::create_backward(std::vector<bool>& mask) {

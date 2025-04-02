@@ -1,13 +1,13 @@
 #pragma once
-#include "nn_list.h"
-#include "nn_shape.h"
 #include <tbb/tbb.h>
 #include <memory>
+#include "Exception.h"
+#include "nn_list.h"
+#include "nn_shape.h"
 
 
 template <typename _T>
 class GpuTensor;
-
 
 /**********************************************/
 /*                                            */
@@ -17,14 +17,13 @@ class GpuTensor;
 
 template <typename _T>
 class Tensor {
-	int _status;
-
 	std::shared_ptr<_T[]> _data;
 	std::vector<size_t> _steps;
 	std::vector<std::vector<size_t>> _indice;
 
 	int* _cnt_rank;
 
+	static std::vector<std::vector<size_t>> calc_indices(const NN_Shape& shape);
 	static std::vector<size_t> calc_step(const NN_Shape& shape);
 	static size_t calc_size(const std::vector<std::vector<size_t>>& indice);
 	static size_t count_to_elem_index(const std::vector<size_t>& steps, const std::vector<std::vector<size_t>>& indice, size_t count);
@@ -36,13 +35,13 @@ class Tensor {
 	Tensor(const Tensor& p, int cnt_rank);
 
 public:
-
 	Tensor();
 	Tensor(const NN_Shape& shape);
 	Tensor(const size_t* p_dims, int n_dims);
 	Tensor(const std::initializer_list<int>& shape);
 	Tensor(const Tensor& p);
 	Tensor(Tensor&& p);
+	Tensor(const GpuTensor<_T>& p);
 	~Tensor();
 
 	Tensor& operator=(const Tensor& p);
@@ -77,8 +76,11 @@ public:
 	void operator*=(const _T& val);
 	void operator/=(const _T& val);
 
+	Tensor inverse(_T val);
+
 	Tensor transpose(const std::initializer_list<int>& orders);
 	Tensor swap_pose();
+	Tensor reshape(const NN_Shape& new_shape);
 
 	_T& val();
 	const _T& val() const;
@@ -87,7 +89,13 @@ public:
 	NN_Shape get_shape();
 	NN_Shape get_shape() const;
 	_T* get_ptr();
-	const _T* get_ptr() const;
+	_T* get_ptr() const;
+
+	std::vector<size_t>& get_steps();
+	const std::vector<size_t>& get_steps() const;
+
+	std::vector<std::vector<size_t>>& get_indices();
+	const std::vector<std::vector<size_t>>& get_indices() const;
 
 	std::ostream& put(std::ostream& os);
 	std::ostream& put(std::ostream& os) const;
@@ -95,7 +103,10 @@ public:
 	void resize(const NN_Shape& shape);
 
 	template <typename _cT>
-	Tensor<_cT> cast() const;
+	void cast(const Tensor<_cT>& src);
+
+	template <typename _cT>
+	void cast(const Tensor<_cT>& src) const;
 
 	static Tensor expand_dims(const Tensor& tensor, int axis = 0);
 	static Tensor expand_dims(const Tensor& tensor, std::initializer_list<int>& axis);
@@ -104,9 +115,53 @@ public:
 	static Tensor squeeze(const Tensor& tensor, std::initializer_list<int>& axis);
 
 	static Tensor zeros(const NN_Shape& shape);
-
-	Tensor& all();
 };
+
+
+/**********************************************/
+/*                                            */
+/*                  GpuTensor                 */
+/*                                            */
+/**********************************************/
+
+template <typename _T>
+class GpuTensor {
+	std::shared_ptr<_T> _data;
+	NN_Shape _shape;
+
+	static void del_func(_T* ptr);
+
+public:
+	GpuTensor();
+	GpuTensor(const NN_Shape& shape);
+	GpuTensor(const GpuTensor& p);
+	GpuTensor(GpuTensor&& p);
+	GpuTensor(const Tensor<_T>& p);
+	GpuTensor(const GpuTensor& p, const NN_Shape& shape);
+	~GpuTensor();
+
+	GpuTensor& operator=(const GpuTensor& p);
+	GpuTensor& operator=(const Tensor<_T>& p);
+
+	NN_Shape get_shape();
+	NN_Shape get_shape() const;
+
+	_T* get_ptr();
+	_T* get_ptr() const;
+
+	void reshape(const NN_Shape& shape);
+	void resize(const NN_Shape& shape);
+	void resize(const std::shared_ptr<_T>& g_data, const NN_Shape& shape);
+
+	static GpuTensor<_T> zeros(const NN_Shape& shape);
+};
+
+
+/**********************************************/
+/*                                            */
+/*                    Tensor                  */
+/*                                            */
+/**********************************************/
 
 template <typename _T>
 using tensor_t = std::shared_ptr<_T[]>;
@@ -116,6 +171,29 @@ std::ostream& operator<<(std::ostream& os, const Tensor<_T>& tensor) {
 	tensor.put(os);
 
 	return os;
+}
+
+template <typename _T>
+std::vector<std::vector<size_t>> Tensor<_T>::calc_indices(const NN_Shape& shape) {
+	std::vector<std::vector<size_t>> indices;
+
+	for (const int& n : shape) {
+		if (n < 1) {
+			ErrorExcept(
+				"[Tensor<_T>::calc_indices] Shape must be greater than 0. but %s",
+				shape_to_str(shape)
+			);
+		}
+
+		size_t i = 0;
+		std::vector<size_t> indice(n, 0);
+
+		for (size_t& j : indice) j = i++;
+
+		indices.push_back(indice);
+	}
+
+	return indices;
 }
 
 template <typename _T>
@@ -144,18 +222,18 @@ size_t Tensor<_T>::calc_size(const std::vector<std::vector<size_t>>& indice) {
 
 template <typename _T>
 size_t Tensor<_T>::count_to_elem_index(const std::vector<size_t>& steps, const std::vector<std::vector<size_t>>& indice, size_t count) {
-	size_t i = steps.size();
 	size_t index = 0;
 
-	while (i > 0) {
-		--i;
-		const size_t& step = steps[i];
-		const std::vector<size_t>& m_indice = indice[i];
-		const size_t dim = m_indice.size();
+	std::vector<size_t>::const_reverse_iterator step_iter = steps.crbegin();
+	std::vector<std::vector<size_t>>::const_reverse_iterator indice_iter = indice.crbegin();
 
-		index += step * m_indice[count % dim];
+	for (; step_iter != steps.crend(); ++step_iter, ++indice_iter) {
+		const size_t& step = *step_iter;
+		const std::vector<size_t>& indices = *indice_iter;
+		const size_t dims = indices.size();
 
-		count /= dim;
+		index += step * indices[count % dims];
+		count /= dims;
 	}
 
 	return index;
@@ -225,7 +303,6 @@ void Tensor<_T>::put_tensor(std::ostream& os, const Tensor& tensor, size_t offse
 
 template <typename _T>
 Tensor<_T>::Tensor(const Tensor& p, int cnt_rank) :
-	_status(p._status),
 	_data(p._data),
 	_steps(p._steps),
 	_indice(p._indice),
@@ -235,41 +312,22 @@ Tensor<_T>::Tensor(const Tensor& p, int cnt_rank) :
 
 template <typename _T>
 Tensor<_T>::Tensor() :
-	_status(0),
 	_cnt_rank(new int(0))
 {
 }
 
 template <typename _T>
 Tensor<_T>::Tensor(const NN_Shape& shape) :
-	_status(0),
 	_indice(shape.ranks()),
 	_cnt_rank(new int(0))
 {
-	int i = 0;
-	for (const int& n : shape) {
-		if (n < 1) {
-			ErrorExcept(
-				"[Tensor<_T>::Tensor] Shape must be greater than 0. but %s",
-				shape_to_str(shape)
-			);
-		}
-
-		std::vector<size_t> m_indice(n, 0);
-
-		size_t j = 0;
-		for (size_t& m : m_indice) m = j++;
-
-		_indice[i++] = m_indice;
-	}
-
+	_indice = calc_indices(shape);
 	_steps = calc_step(shape);
 	_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
 }
 
 template <typename _T>
 Tensor<_T>::Tensor(const size_t* p_dims, int n_dims) :
-	_status(0),
 	_indice(n_dims),
 	_cnt_rank(new int(0))
 {
@@ -292,50 +350,50 @@ Tensor<_T>::Tensor(const size_t* p_dims, int n_dims) :
 
 template <typename _T>
 Tensor<_T>::Tensor(const std::initializer_list<int>& shape) :
-	_status(0),
 	_indice(shape.size()),
 	_cnt_rank(new int(0))
 {
-	int i = 0;
-	for (const int& n : shape) {
-		if (n < 1) {
-			ErrorExcept(
-				"[Tensor<_T>::Tensor] Shape must be greater than 0. but %s",
-				shape_to_str(shape)
-			);
-		}
+	const NN_Shape m_shape(shape);
 
-		std::vector<size_t> m_indice(n, 0);
-
-		size_t j = 0;
-		for (size_t& m : m_indice) m = j++;
-
-		_indice[i++] = m_indice;
-	}
-
-	_steps = calc_step(shape);
-	_data = std::shared_ptr<_T[]>(new _T[NN_Shape(shape).total_size()]);
+	_indice = calc_indices(m_shape);
+	_steps = calc_step(m_shape);
+	_data = std::shared_ptr<_T[]>(new _T[m_shape.total_size()]);
 }
 
 template <typename _T>
 Tensor<_T>::Tensor(const Tensor& p) :
-	_status(p._status),
 	_data(p._data),
 	_steps(p._steps),
 	_indice(p._indice),
 	_cnt_rank(new int(0))
 {
+
 }
 
 template <typename _T>
 Tensor<_T>::Tensor(Tensor&& p) :
-	_status(p._status),
-	_data(std::move(p._data)),
-	_steps(std::move(p._steps)),
-	_indice(std::move(p._indice)),
+	_data(p._data),
+	_steps(p._steps),
+	_indice(p._indice),
 	_cnt_rank(p._cnt_rank)
 {
 	p._cnt_rank = NULL;
+}
+
+template <typename _T>
+Tensor<_T>::Tensor(const GpuTensor<_T>& p) :
+	_cnt_rank(new int(0))
+{
+	const NN_Shape shape = p.get_shape();
+
+	_steps = calc_step(shape);
+	_indice = calc_indices(shape);
+	_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
+
+	const _T* src_ptr = p.get_ptr();
+	_T* dst_ptr = _data.get();
+
+	check_cuda(cudaMemcpy(dst_ptr, src_ptr, sizeof(_T) * shape.total_size(), cudaMemcpyDeviceToHost));
 }
 
 template <typename _T>
@@ -347,19 +405,20 @@ template <typename _T>
 Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 	if (this == &p) return *this;
 
-	if (_status == 0) {
+	if (_data == NULL) {
 		_data = p._data;
 		_steps = p._steps;
 		_indice = p._indice;
 	}
 	else {
-		const NN_Shape origin_shape = calc_shape(_indice);
-		const NN_Shape source_shape = calc_shape(p._indice);
+		const NN_Shape dst_shape = calc_shape(_indice);
+		const NN_Shape src_shape = calc_shape(p._indice);
 
-		if (!is_valid_src_shape(origin_shape, source_shape)) {
+		if (src_shape != dst_shape) {
 			ErrorExcept(
-				"[Tensor<_T>::operator=] Shape of Right operand are unsuitable. %s.",
-				shape_to_str(source_shape)
+				"[Tensor<_T>::operator=] different of src and dst tensors. %s != %s",
+				shape_to_str(src_shape),
+				shape_to_str(dst_shape)
 			);
 		}
 
@@ -369,6 +428,7 @@ Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
@@ -380,32 +440,32 @@ Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 	}
 
 	*_cnt_rank = 0;
-	_status = 0;
 
 	return *this;
 }
 
 template <typename _T>
 Tensor<_T>& Tensor<_T>::operator=(const GpuTensor<_T>& p) {
-	const NN_Shape h_shape = calc_shape(_indice);
-	const NN_Shape& g_shape = p.get_shape();
+	const NN_Shape src_shape = p.get_shape();
 
-	if (h_shape != g_shape) {
-		ErrorExcept(
-			"[Tensor<_T>::operator=] GPU tensor and Host tensor shape is different. GPU: %s, Host: %s",
-			shape_to_str(g_shape),
-			shape_to_str(h_shape)
-		);
+	if (_data == NULL) {
+		_steps = calc_step(src_shape);
+		_indice = calc_indices(src_shape);
+		_data = std::shared_ptr<_T[]>(new _T[src_shape.total_size()]);
+	}
+	else {
+		const NN_Shape dst_shape = calc_shape(_indice);
+
+		if (dst_shape != src_shape) {
+			ErrorExcept(
+				"[Tensor<_T>::operator=] Different src and dst tensors. %s != %s",
+				shape_to_str(src_shape),
+				shape_to_str(dst_shape)
+			);
+		}
 	}
 
-	Tensor tmp(g_shape);
-	const _T* g_ptr = p.get_ptr();
-	_T* h_ptr = tmp.get_ptr();
-
-	check_cuda(cudaMemcpy(h_ptr, g_ptr, sizeof(_T) * h_shape.total_size(), cudaMemcpyDeviceToHost));
-
-	*this = tmp;
-
+	check_cuda(cudaMemcpy(_data.get(), p.get_ptr(), sizeof(_T) * src_shape.total_size(), cudaMemcpyDeviceToHost));
 	*_cnt_rank = 0;
 
 	return *this;
@@ -413,7 +473,7 @@ Tensor<_T>& Tensor<_T>::operator=(const GpuTensor<_T>& p) {
 
 template <typename _T>
 Tensor<_T>& Tensor<_T>::operator=(_T scalar) {
-	if (_status == 0) {
+	if (_data == NULL) {
 		_data = std::shared_ptr<_T[]>(new _T[1]);
 		_steps.clear();
 		_steps.push_back(1);
@@ -428,6 +488,7 @@ Tensor<_T>& Tensor<_T>::operator=(_T scalar) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t index = count_to_elem_index(_steps, _indice, i);
 
@@ -438,7 +499,6 @@ Tensor<_T>& Tensor<_T>::operator=(_T scalar) {
 	}
 
 	*_cnt_rank = 0;
-	_status = 0;
 
 	return *this;
 }
@@ -466,9 +526,7 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
-	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], begin, end, step);
-	*_cnt_rank = 0;
 
 	return tensor;
 }
@@ -496,7 +554,6 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) const {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
-	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], begin, end, step);
 	*_cnt_rank = 0;
 
@@ -524,7 +581,6 @@ Tensor<_T> Tensor<_T>::operator()(int index) {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
-	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], index, index + 1, 1);
 	*_cnt_rank = 0;
 
@@ -552,7 +608,6 @@ Tensor<_T> Tensor<_T>::operator()(int index) const {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
-	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], index, index + 1, 1);
 	*_cnt_rank = 0;
 
@@ -587,7 +642,6 @@ Tensor<_T> Tensor<_T>::operator()(const std::vector<int>& indice) {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
-	tensor._status = 1;
 	tensor._indice[*_cnt_rank] = m_indice;
 	*_cnt_rank = 0;
 
@@ -622,7 +676,6 @@ Tensor<_T> Tensor<_T>::operator()(const std::vector<int>& indice) const {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
-	tensor._status = 1;
 	tensor._indice[*_cnt_rank] = m_indice;
 	*_cnt_rank = 0;
 
@@ -650,7 +703,6 @@ Tensor<_T> Tensor<_T>::operator[](int index) {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
-	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], index, index + 1, 1);
 	*_cnt_rank = 0;
 
@@ -678,7 +730,6 @@ Tensor<_T> Tensor<_T>::operator[](int index) const {
 
 	Tensor<_T> tensor(*this, *_cnt_rank + 1);
 
-	tensor._status = 1;
 	count_indice(tensor._indice[*_cnt_rank], index, index + 1, 1);
 	*_cnt_rank = 0;
 
@@ -706,6 +757,7 @@ Tensor<_T> Tensor<_T>::operator+(const Tensor& p) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
@@ -747,6 +799,7 @@ Tensor<_T> Tensor<_T>::operator-(const Tensor& p) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
@@ -788,6 +841,7 @@ Tensor<_T> Tensor<_T>::operator*(const Tensor& p) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
@@ -829,6 +883,7 @@ Tensor<_T> Tensor<_T>::operator/(const Tensor& p) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
@@ -859,6 +914,7 @@ Tensor<_T> Tensor<_T>::operator+(const _T& val) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
 
@@ -888,6 +944,7 @@ Tensor<_T> Tensor<_T>::operator-(const _T& val) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
 
@@ -917,6 +974,7 @@ Tensor<_T> Tensor<_T>::operator*(const _T& val) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
 
@@ -946,6 +1004,7 @@ Tensor<_T> Tensor<_T>::operator/(const _T& val) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
 
@@ -984,6 +1043,7 @@ void Tensor<_T>::operator+=(const Tensor& p) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
@@ -1021,6 +1081,7 @@ void Tensor<_T>::operator-=(const Tensor& p) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
@@ -1058,6 +1119,7 @@ void Tensor<_T>::operator*=(const Tensor& p) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
@@ -1095,6 +1157,7 @@ void Tensor<_T>::operator/=(const Tensor& p) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t src_idx = count_to_elem_index(p._steps, p._indice, i % src_size);
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
@@ -1121,6 +1184,7 @@ void Tensor<_T>::operator+=(const _T& val) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
 
@@ -1144,6 +1208,7 @@ void Tensor<_T>::operator-=(const _T& val) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
 
@@ -1169,6 +1234,7 @@ void Tensor<_T>::operator*=(const _T& val) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
 
@@ -1194,6 +1260,7 @@ void Tensor<_T>::operator/=(const _T& val) {
 		tbb::parallel_for<tbb::blocked_range<size_t>>(
 			tbb::blocked_range<size_t>(0, dst_size),
 			[&](const tbb::blocked_range<size_t>& q) {
+
 			for (size_t i = q.begin(); i < q.end(); ++i) {
 				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
 
@@ -1209,6 +1276,36 @@ void Tensor<_T>::operator/=(const _T& val) {
 	}
 
 	*_cnt_rank = 0;
+}
+
+template <typename _T>
+Tensor<_T> Tensor<_T>::inverse(_T val) {
+	Tensor<_T> tmp(calc_shape(_indice));
+
+	if (_data != NULL) {
+		const size_t dst_size = calc_size(_indice);
+
+		tbb::parallel_for<tbb::blocked_range<size_t>>(
+			tbb::blocked_range<size_t>(0, dst_size),
+			[&](const tbb::blocked_range<size_t>& q) {
+
+			for (size_t i = q.begin(); i < q.end(); ++i) {
+				const size_t dst_idx = count_to_elem_index(_steps, _indice, i);
+
+				tmp._data[dst_idx] = val / _data[dst_idx];
+			}
+		}
+		);
+	}
+	else {
+		ErrorExcept(
+			"[Tensor<_T>::inverse] None tensor can't inverse operator."
+		);
+	}
+
+	*_cnt_rank = 0;
+
+	return tmp;
 }
 
 template <typename _T>
@@ -1248,6 +1345,27 @@ Tensor<_T> Tensor<_T>::swap_pose() {
 }
 
 template <typename _T>
+Tensor<_T> Tensor<_T>::reshape(const NN_Shape& new_shape) {
+	Tensor<_T> tmp = *this;
+
+	std::vector<std::vector<size_t>> new_indices = calc_indices(new_shape);
+	size_t new_size = calc_size(new_indices);
+	size_t old_size = calc_size(_indice);
+
+	if (new_size != old_size) {
+		ErrorExcept(
+			"[Tensor<_T>::reshape] different size. %ld != %ld",
+			new_size, old_size
+		);
+	}
+
+	tmp._steps = calc_step(new_shape);
+	tmp._indice = new_indices;
+
+	return tmp;
+}
+
+template <typename _T>
 _T& Tensor<_T>::val() {
 	if (calc_size(_indice) > 1) {
 		ErrorExcept(
@@ -1282,7 +1400,7 @@ void Tensor<_T>::clear() {
 	_data.reset();
 	_steps.clear();
 	_indice.clear();
-	_cnt_rank = 0;
+	*_cnt_rank = 0;
 }
 
 template <typename _T>
@@ -1307,10 +1425,30 @@ _T* Tensor<_T>::get_ptr() {
 }
 
 template <typename _T>
-const _T* Tensor<_T>::get_ptr() const {
+_T* Tensor<_T>::get_ptr() const {
 	*_cnt_rank = 0;
 
 	return _data.get();
+}
+
+template <typename _T>
+std::vector<size_t>& Tensor<_T>::get_steps() {
+	return _steps;
+}
+
+template <typename _T>
+const std::vector<size_t>& Tensor<_T>::get_steps() const {
+	return _steps;
+}
+
+template <typename _T>
+std::vector<std::vector<size_t>>& Tensor<_T>::get_indices() {
+	return _indice;
+}
+
+template <typename _T>
+const std::vector<std::vector<size_t>>& Tensor<_T>::get_indices() const {
+	return _indice;
 }
 
 template <typename _T>
@@ -1372,28 +1510,46 @@ void Tensor<_T>::resize(const NN_Shape& shape) {
 
 template <typename _T>
 template <typename _cT>
-Tensor<_cT> Tensor<_T>::cast() const {
-	Tensor<_cT> dst(calc_shape(_indice));
-	Tensor<_T> src(calc_shape(_indice));
-
-	src = *this;
+void Tensor<_T>::cast(const Tensor<_cT>& src) {
+	if (get_shape() != src.get_shape()) resize(src.get_shape());
 
 	tbb::parallel_for(
 		tbb::blocked_range<size_t>(0, calc_size(_indice)),
 		[&](const tbb::blocked_range<size_t>& q) {
 
-		const _T* p_src = src.get_ptr();
-		_cT* p_dst = dst.get_ptr();
+		const _cT* p_src = src.get_ptr();
+		_T* p_dst = get_ptr();
 
 		for (size_t i = q.begin(); i < q.end(); ++i) {
-			p_dst[i] = (_cT)(p_src[i]);
+			size_t src_idx = count_to_elem_index(src.get_steps(), src.get_indices(), i);
+			p_dst[i] = (_T)p_src[src_idx];
 		}
 	}
 	);
 
 	*_cnt_rank = 0;
+}
 
-	return dst;
+template <typename _T>
+template <typename _cT>
+void Tensor<_T>::cast(const Tensor<_cT>& src) const {
+	if (get_shape() != src.get_shape()) resize(src.get_shape());
+
+	tbb::parallel_for(
+		tbb::blocked_range<size_t>(0, calc_size(_indice)),
+		[&](const tbb::blocked_range<size_t>& q) {
+
+		const _cT* p_src = src.get_ptr();
+		_T* p_dst = get_ptr();
+
+		for (size_t i = q.begin(); i < q.end(); ++i) {
+			size_t src_idx = count_to_elem_index(src.get_steps(), src.get_indices(), i);
+			p_dst[i] = (_T)p_src[src_idx];
+		}
+	}
+	);
+
+	*_cnt_rank = 0;
 }
 
 template <typename _T>
@@ -1510,16 +1666,214 @@ template <typename _T>
 Tensor<_T> Tensor<_T>::zeros(const NN_Shape& shape) {
 	Tensor<_T> tensor(shape);
 
-	tensor._status = 1;
 	tensor = _T(0);
-	tensor._status = 0;
 
 	return tensor;
 }
 
+
+/**********************************************/
+/*                                            */
+/*                  GpuTensor                 */
+/*                                            */
+/**********************************************/
+
 template <typename _T>
-Tensor<_T>& Tensor<_T>::all() {
-	_status = 1;
+void GpuTensor<_T>::del_func(_T* ptr) {
+	try {
+		check_cuda(cudaFree(ptr));
+	}
+	catch (const NN_Exception& e) {
+		e.put();
+	}
+}
+
+template <typename _T>
+GpuTensor<_T>::GpuTensor() {
+}
+
+template <typename _T>
+GpuTensor<_T>::GpuTensor(const NN_Shape& shape) :
+	_shape(shape)
+{
+	_T* ptr = NULL;
+
+	try {
+		check_cuda(cudaMalloc(&ptr, sizeof(_T) * _shape.total_size()));
+
+		_data = std::shared_ptr<_T>(ptr, del_func);
+	}
+	catch (const NN_Exception& e) {
+		cudaFree(ptr);
+
+		throw e;
+	}
+}
+
+template <typename _T>
+GpuTensor<_T>::GpuTensor(const GpuTensor& p) :
+	_shape(p._shape),
+	_data(p._data)
+{
+
+}
+
+template <typename _T>
+GpuTensor<_T>::GpuTensor(GpuTensor&& p) :
+	_shape(p._shape),
+	_data(p._data)
+{
+
+}
+
+template <typename _T>
+GpuTensor<_T>::GpuTensor(const Tensor<_T>& p) :
+	_shape(p.get_shape())
+{
+	_T* dst_ptr = NULL;
+
+	try {
+		check_cuda(cudaMalloc(&dst_ptr, sizeof(_T) * _shape.total_size()));
+		check_cuda(cudaMemcpy(dst_ptr, p.get_ptr(), sizeof(_T) * _shape.total_size(), cudaMemcpyHostToDevice));
+	}
+	catch (const NN_Exception& e) {
+		cudaFree(dst_ptr);
+		e.put();
+	}
+
+	_data = std::shared_ptr<_T>(dst_ptr, del_func);
+}
+
+template <typename _T>
+GpuTensor<_T>::GpuTensor(const GpuTensor& p, const NN_Shape& shape) :
+	_data(p._data),
+	_shape(shape)
+{
+
+}
+
+template <typename _T>
+GpuTensor<_T>::~GpuTensor() {
+
+}
+
+template <typename _T>
+GpuTensor<_T>& GpuTensor<_T>::operator=(const GpuTensor& p) {
+	if (this == &p) return *this;
+
+	if (_data == NULL) {
+		_data = p._data;
+		_shape = p._shape;
+	}
+	else {
+		if (_shape != p._shape) {
+			ErrorExcept(
+				"[GpuTensor<_T>::operator=] differnet of src and dst tensors. %s != %s",
+				shape_to_str(p._shape),
+				shape_to_str(_shape)
+			);
+		}
+
+		const _T* src_ptr = p.get_ptr();
+		_T* dst_ptr = _data.get();
+
+		check_cuda(cudaMemcpy(dst_ptr, src_ptr, sizeof(_T) * _shape.total_size(), cudaMemcpyDeviceToDevice));
+	}
 
 	return *this;
+}
+
+template <typename _T>
+GpuTensor<_T>& GpuTensor<_T>::operator=(const Tensor<_T>& p) {
+	if (_data == NULL) {
+		_T* dst_ptr = NULL;
+
+		_shape = p.get_shape();
+		check_cuda(cudaMalloc(&dst_ptr, sizeof(_T) * _shape.total_size()));
+		_data = std::shared_ptr<_T>(dst_ptr, del_func);
+	}
+	else {
+		const NN_Shape src_shape = p.get_shape();
+
+		if (_shape != src_shape) {
+			ErrorExcept(
+				"[GpuTensor<_T>::operator=] different of src and dst tensors. %s != %s",
+				shape_to_str(src_shape),
+				shape_to_str(_shape)
+			);
+		}
+	}
+
+	check_cuda(cudaMemcpy(_data.get(), p.get_ptr(), sizeof(_T) * _shape.total_size(), cudaMemcpyHostToDevice));
+
+	return *this;
+}
+
+template <typename _T>
+NN_Shape GpuTensor<_T>::get_shape() {
+	return _shape;
+}
+
+template <typename _T>
+NN_Shape GpuTensor<_T>::get_shape() const {
+	return _shape;
+}
+
+template <typename _T>
+_T* GpuTensor<_T>::get_ptr() {
+	return _data.get();
+}
+
+template <typename _T>
+_T* GpuTensor<_T>::get_ptr() const {
+	return _data.get();
+}
+
+template <typename _T>
+void GpuTensor<_T>::reshape(const NN_Shape& shape) {
+	if (_shape.total_size() != shape.total_size()) {
+		ErrorExcept(
+			"[GpuTensor<_T>::reshape] Can't reshape tensor. %s != %s",
+			shape_to_str(_shape),
+			shape_to_str(shape)
+		);
+	}
+
+	_shape = shape;
+}
+
+template <typename _T>
+void GpuTensor<_T>::resize(const NN_Shape& shape) {
+	const size_t size = shape.total_size();
+
+	if (size == 0) {
+		ErrorExcept(
+			"[GpuTensor<_T>::resize] Can't resize this shape. %s",
+			shape_to_str(shape)
+		);
+	}
+
+	if (size != _shape.total_size()) {
+		_T* ptr = NULL;
+
+		check_cuda(cudaMalloc(&ptr, sizeof(_T) * size));
+		_data = std::shared_ptr<_T>(ptr, del_func);
+	}
+
+	_shape = shape;
+}
+
+template <typename _T>
+void GpuTensor<_T>::resize(const std::shared_ptr<_T>& g_data, const NN_Shape& shape) {
+	_data = g_data;
+	_shape = shape;
+}
+
+template <typename _T>
+GpuTensor<_T> GpuTensor<_T>::zeros(const NN_Shape& shape) {
+	GpuTensor<_T> tmp(shape);
+
+	check_cuda(cudaMemset(tmp.get_ptr(), 0, sizeof(_T) * shape.total_size()));
+
+	return tmp;
 }

@@ -35,6 +35,9 @@
     <ClCompile Include="..\nn_core\cpp_source\nn_sample.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="..\nn_core\cpp_source\nn_base.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\nn_core\cpp_source\Exception.h">
@@ -52,21 +55,24 @@
     <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\nn_sample.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="..\nn_core\cpp_source\nn_list.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\gpu_tensor.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="..\nn_core\cuda_source\nn_operators.cuh">
+    <ClInclude Include="..\nn_core\cuda_source\convolution.cuh">
       <Filter>cuda헤더</Filter>
+    </ClInclude>
+    <ClInclude Include="..\nn_core\cuda_source\cuda_misc.cuh">
+      <Filter>cuda헤더</Filter>
+    </ClInclude>
+    <ClInclude Include="..\nn_core\cpp_source\nn_base.h">
+      <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="..\nn_core\cuda_source\nn_operators.cu">
+    <CudaCompile Include="..\nn_core\cuda_source\convolution.cu">
+      <Filter>cuda소스</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\nn_core\cuda_source\cuda_misc.cu">
       <Filter>cuda소스</Filter>
     </CudaCompile>
   </ItemGroup>

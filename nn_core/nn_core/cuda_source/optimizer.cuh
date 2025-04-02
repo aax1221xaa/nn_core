@@ -1,7 +1,6 @@
 #pragma once
 #include "../cpp_source/nn_list.h"
 #include "../cpp_source/nn_tensor.h"
-#include "../cpp_source/gpu_tensor.h"
 
 
 

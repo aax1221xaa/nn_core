@@ -2,7 +2,6 @@
 #define _CUDA_MISC_CUH_
 
 #include "../cpp_source/nn_tensor.h"
-#include "../cpp_source/gpu_tensor.h"
 
 
 void set_const_mem(cuint* h_mem, size_t len, size_t offset);
@@ -49,4 +48,63 @@ void sum_gradient_2d(
 	GpuTensor<nn_type>& output
 );
 
-#endif // !_CUDA_MISC_CUH_
+void add_tensor(
+	const GpuTensor<nn_type>& a_input,
+	const GpuTensor<nn_type>& b_input,
+	GpuTensor<nn_type>& output
+);
+
+void add_tensor(
+	const GpuTensor<nn_type>& input,
+	const nn_type scalar,
+	GpuTensor<nn_type>& output
+);
+
+void sub_tensor(
+	const GpuTensor<nn_type>& a_input,
+	const GpuTensor<nn_type>& b_input,
+	GpuTensor<nn_type>& output
+);
+
+void sub_tensor(
+	const GpuTensor<nn_type>& input,
+	const nn_type scalar,
+	GpuTensor<nn_type>& output
+);
+
+void sub_tensor(
+	const nn_type scalar,
+	const GpuTensor<nn_type>& input,
+	GpuTensor<nn_type>& output
+);
+
+void mul_tensor(
+	const GpuTensor<nn_type>& a_input,
+	const GpuTensor<nn_type>& b_input,
+	GpuTensor<nn_type>& output
+);
+
+void mul_tensor(
+	const GpuTensor<nn_type>& input,
+	const nn_type scalar,
+	GpuTensor<nn_type>& output
+);
+
+void div_tensor(
+	const GpuTensor<nn_type>& a_input,
+	const GpuTensor<nn_type>& b_input,
+	GpuTensor<nn_type>& output
+);
+
+void div_tensor(
+	const GpuTensor<nn_type>& input,
+	const nn_type scalar,
+	GpuTensor<nn_type>& output
+);
+
+void inv_tensor(
+	const GpuTensor<nn_type>& input,
+	GpuTensor<nn_type>& output
+);
+
+#endif // !_CUDA_MISC_CUH

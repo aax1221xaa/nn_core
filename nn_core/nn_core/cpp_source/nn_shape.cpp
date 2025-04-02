@@ -1,4 +1,5 @@
 #include "nn_shape.h"
+#include "Exception.h"
 
 
 #define BUFF_LEN			100
@@ -28,14 +29,13 @@ NN_Shape::NN_Shape(size_t len) {
 
 	_dims.resize(len, 0);
 }
-/*
-NN_Shape::NN_Shape(const std::vector<int>& list) :
-	_dims(list.size())
+
+NN_Shape::NN_Shape(size_t len, int val) :
+	_dims(len, val)
 {
-	int i = 0;
-	for (const int& n : list) _dims[i++] = n;
+
 }
-*/
+
 NN_Shape::NN_Shape(const std::initializer_list<int>& list) :
 	_dims(list.size())
 {	
@@ -308,19 +308,7 @@ const char* shape_to_str(const NN_Shape& shape) {
 
 	return str_out;
 }
-/*
-std::string shape_to_str(const std::vector<int>& shape) {
-	std::string buff = "[";
 
-	for (const int& n : shape) {
-		buff += std::to_string(n) + ", ";
-	}
-
-	buff += "]";
-
-	return buff;
-}
-*/
 std::ostream& operator<<(std::ostream& os, const NN_Shape& shape) {
 	return shape.put_shape(os);
 }

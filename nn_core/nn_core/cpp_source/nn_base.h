@@ -1,6 +1,5 @@
 #pragma once
 #include "nn_tensor.h"
-#include "gpu_tensor.h"
 #include "../cuda_source/optimizer.cuh"
 
 
@@ -14,7 +13,6 @@ class NN_Backward {
 public:
 	NN_Backward();
 	virtual ~NN_Backward();
-
 	virtual void run(
 		NN_Stream& st, 
 		const NN_List<GpuTensor<nn_type>>& input,
@@ -79,16 +77,15 @@ public:
 	NN_Backward* create_backward(std::vector<bool>& mask);
 	void set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output);
 
-	template <typename _sT, typename _dT>
-	void trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) const;
+	template <class _T>
+	void trans_data(const Tensor<_T>& sample, GpuTensor<nn_type>& output) const;
 };
 
-template <typename _sT, typename _dT>
-void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) const {
-	Tensor<_sT> src(sample.get_shape());
-	Tensor<_dT> dst(output.get_shape());
+template <class _T>
+void NN_Input::trans_data(const Tensor<_T>& sample, GpuTensor<nn_type>& output) const {
+	Tensor<nn_type> dst(sample.get_shape());
 
-	src = sample;
+	dst.cast(sample);
 	output = dst;
 }
 
@@ -102,7 +99,6 @@ void NN_Input::trans_data(const Tensor<_sT>& sample, GpuTensor<_dT>& output) con
 class NN_dInput : public NN_Backward_t<NN_Input> {
 public:
 	NN_dInput(NN_Input& input);
-	
 	void run(
 		NN_Stream& st,
 		const NN_List<GpuTensor<nn_type>>& input,
@@ -207,10 +203,17 @@ public:
 	std::vector<NN_Layer*>& get_layers();
 	const std::vector<NN_Input*>& get_input_layers();
 	std::vector<NN_Backward*>& get_backward();
-	void set_optimizer(NN_Optimizer* optimizer);
-
 	NN_List<GpuTensor<nn_type>>& get_weights();
 
+	const NN_Stream& get_streams() const;
+
+	const std::vector<NN_Link*>& get_nodes() const;
+	const std::vector<NN_Layer*>& get_layers() const;
+	const std::vector<NN_Input*>& get_input_layers() const;
+	const std::vector<NN_Backward*>& get_backward() const;
+	const NN_List<GpuTensor<nn_type>>& get_weights() const;
+
+	void set_optimizer(NN_Optimizer* optimizer);
 	void set_nodes(NN_Link* node);
 	void set_layers(NN_Layer* layer);
 	void set_static_node(NN_Link* const node);
@@ -224,6 +227,10 @@ public:
 	NN_List<NN_Shape>& get_node_shape();
 	NN_List<GpuTensor<nn_type>>& get_node_output();
 	NN_List<GpuTensor<nn_type>>& get_node_doutput();
+
+	const NN_List<NN_Shape>& get_node_shape() const;
+	const NN_List<GpuTensor<nn_type>>& get_node_output() const;
+	const NN_List<GpuTensor<nn_type>>& get_node_doutput() const;
 
 	void clear_weights();
 	void clear_shapes();

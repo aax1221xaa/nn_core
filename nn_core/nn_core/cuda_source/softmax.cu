@@ -81,6 +81,10 @@ void NN_Softmax::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN
 			in[1]
 		);
 	}
+#if _DEBUG
+	check_cuda(cudaDeviceSynchronize());
+	check_cuda(cudaGetLastError());
+#endif
 }
 
 NN_Backward* NN_Softmax::create_backward(std::vector<bool>& mask) {

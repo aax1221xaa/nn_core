@@ -113,7 +113,7 @@ NN_List<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x, int ba
 
 				if (node->get_prev_nodes().size() > 0) {
 					for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-						int n_out = get_n_node_prev_for_next(p_prev_node, node);
+						int n_out = p_prev_node->get_out_port(node);
 						int n_prev = p_prev_node->get_index();
 
 						m_input_shape.append(nodes_shapes[n_prev][n_out]);
@@ -139,7 +139,7 @@ NN_List<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x, int ba
 		for (int j = 0; j < x.size(); ++j) {
 			NN_Shape x_shape = x[j].get_shape();
 			int amounts = x_shape[0];
-			std::vector<int> indice(batch_size);
+			std::vector<int> indice(batch_size, 0);
 
 			for (int n = 0; n < batch_size; ++n) indice[n] = (batch_start + n) % amounts;
 
@@ -155,7 +155,7 @@ NN_List<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x, int ba
 
 			if (node->get_prev_nodes().size() > 0) {
 				for (NN_Link* p_prev_node : node->get_prev_nodes()) {
-					int n_out = get_n_node_prev_for_next(p_prev_node, node);
+					int n_out = p_prev_node->get_out_port(node);
 					int n_prev = p_prev_node->get_index();
 
 					m_input.append(nodes_outputs[n_prev][n_out]);
@@ -183,10 +183,10 @@ NN_List<Tensor<nn_type>> Model::predict(const std::vector<Tensor<_T>>& x, int ba
 			outputs[i][n++].val() = out_tensor;
 		}
 	}
-
+#if _DEBUG
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());
-
+#endif
 	_manager.clear_outputs();
 	_manager.clear_shapes();
 

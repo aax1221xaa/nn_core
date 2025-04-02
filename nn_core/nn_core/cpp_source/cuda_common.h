@@ -51,9 +51,9 @@ public:
 		int _n_id;
 
 		Iterator(cudaStream_t* st, int index) : m_st(st), _n_id(index) {}
-		Iterator(const typename Iterator& p) : m_st(p.m_st), _n_id(p._n_id) {}
+		Iterator(const typename NN_Stream::Iterator& p) : m_st(p.m_st), _n_id(p._n_id) {}
 
-		bool operator!=(const typename Iterator& p) const { return _n_id != p._n_id; }
+		bool operator!=(const typename NN_Stream::Iterator& p) const { return _n_id != p._n_id; }
 		void operator++() { ++_n_id; }
 		cudaStream_t& operator*() const { return m_st[_n_id]; }
 	};
@@ -68,8 +68,8 @@ public:
 
 	cudaStream_t& operator[](int index);
 
-	typename Iterator begin() const { return Iterator(_ptr->_st, 0); }
-	typename Iterator end() const { return Iterator(_ptr->_st, _ptr->_amounts); }
+	typename NN_Stream::Iterator begin() const { return NN_Stream::Iterator(_ptr->_st, 0); }
+	typename NN_Stream::Iterator end() const { return NN_Stream::Iterator(_ptr->_st, _ptr->_amounts); }
 	void clear();
 
 	cudaStream_t* get_stream() const;

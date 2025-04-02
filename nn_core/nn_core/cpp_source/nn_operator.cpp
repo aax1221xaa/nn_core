@@ -1,4 +1,5 @@
 #include "nn_operator.h"
+#include "../cuda_source/cuda_misc.cuh"
 
 
 /**********************************************/
@@ -7,55 +8,51 @@
 /*                                            */
 /**********************************************/
 
-NN_Div::NN_Div() :
+OpDiv::OpDiv() :
 	NN_Operator("div"),
 	_val(0.f)
 {
 
 }
 
-void NN_Div::op(NN_Stream& st, const GpuTensor<nn_type>& a, const GpuTensor<nn_type>& b, GpuTensor<nn_type>& c) {
-	Tensor<nn_type> _a(a.get_shape());
-	Tensor<nn_type> _b(b.get_shape());
-	Tensor<nn_type> _c(c.get_shape());
+void OpDiv::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
+	GpuTensor<nn_type>& m_output = output[0].val();
 
-	_a = a;
-	_b = b;
+	switch (_status)
+	{
+	case 1:
+	{
+		const GpuTensor<nn_type>& a_input = input[0].val();
 
-	_c = _a / _b;
+		div_tensor(a_input, _val, m_output);
+	}
+	break;
+	case 2:
+	{
+		const GpuTensor<nn_type>& a_input = input[0].val();
 
-	c = _c;
+		inv_tensor(a_input, m_output);
+		mul_tensor(m_output, _val, m_output);
+	}
+	break;
+	case 3:
+	{
+		const GpuTensor<nn_type>& a_input = input[0].val();
+		const GpuTensor<nn_type>& b_input = input[1].val();
+		
+		div_tensor(a_input, b_input, m_output);
+	}
+	break;
+	default:
+		break;
+	}
 }
 
-void NN_Div::op(NN_Stream& st, const GpuTensor<nn_type>& a, nn_type b, GpuTensor<nn_type>& c) {
-	Tensor<nn_type> _a(a.get_shape());
-	Tensor<nn_type> _c(c.get_shape());
-
-	_a = a;
-
-	_c = _a / b;
-
-	c = _c;
-}
-
-void NN_Div::op(NN_Stream& st, nn_type a, const GpuTensor<nn_type>& b, GpuTensor<nn_type>& c) {
-	Tensor<nn_type> _a(b.get_shape());
-	Tensor<nn_type> _b(b.get_shape());
-	Tensor<nn_type> _c(c.get_shape());
-
-	_a = a;
-	_b = b;
-
-	_c = _a / _b;
-
-	c = _c;
-}
-
-void NN_Div::set_const_value(nn_type val, int status) {
+void OpDiv::set_const_value(nn_type val, int status) {
 	_val = val;
 	_status = status;
 }
 
-nn_type NN_Div::get_val() {
+nn_type OpDiv::get_val() {
 	return _val;
 }

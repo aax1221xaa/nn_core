@@ -76,7 +76,7 @@ void NN_Dense::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_
 	const NN_Shape& shape = input_shape[0].val();
 
 
-	_weight = GpuTensor<nn_type>({ shape[1], _amounts });
+	_weight = GpuTensor<nn_type>(NN_Shape({ shape[1], _amounts }));
 	_bias = GpuTensor<nn_type>::zeros(NN_Shape({ _amounts }));
 	set_random_uniform(_weight, -0.1f, 0.1f);
 
@@ -94,9 +94,6 @@ void NN_Dense::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_L
 	dim3 threads(BLOCK_32, BLOCK_32);
 	dim3 blocks = get_grid_size(threads, out[1], out[0]);
 
-	check_cuda(cudaDeviceSynchronize());
-	check_cuda(cudaGetLastError());
-
 	__matmul<<<blocks, threads>>>(
 		m_input.get_ptr(),
 		_weight.get_ptr(),
@@ -105,10 +102,10 @@ void NN_Dense::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_L
 		(uint)in[1],
 		(uint)out[1]
 	);
-
+#if _DEBUG
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());
-
+#endif
 	add_bias_1d(m_output, _bias, m_output);
 }
 

@@ -1,5 +1,7 @@
 #pragma once
+#include <memory>
 #include "cuda_common.h"
+#include "Exception.h"
 
 #define PUT_LIST
 
@@ -23,10 +25,10 @@ public:
 		typename std::vector<NN_List*>::iterator _iter;
 
 		Iterator(const typename std::vector<NN_List*>::iterator& iter);
-		Iterator(const typename Iterator& p);
+		Iterator(const typename NN_List::Iterator& p);
 
 		void operator++();
-		bool operator!=(const typename Iterator& p);
+		bool operator!=(const typename NN_List::Iterator& p);
 		NN_List& operator*();
 	};
 
@@ -35,10 +37,10 @@ public:
 		typename std::vector<NN_List*>::const_iterator _iter;
 
 		ConstIterator(const typename std::vector<NN_List*>::const_iterator& iter);
-		ConstIterator(const typename ConstIterator& p);
+		ConstIterator(const typename NN_List::ConstIterator& p);
 
 		void operator++();
-		bool operator!=(const typename ConstIterator& p) const;
+		bool operator!=(const typename NN_List::ConstIterator& p) const;
 		const NN_List& operator*() const;
 	};
 
@@ -81,11 +83,11 @@ public:
 
 	const NN_List& operator[](int index) const;
 
-	typename Iterator begin();
-	typename Iterator end();
+	typename NN_List::Iterator begin();
+	typename NN_List::Iterator end();
 
-	typename ConstIterator begin() const;
-	typename ConstIterator end() const;
+	typename NN_List::ConstIterator begin() const;
+	typename NN_List::ConstIterator end() const;
 
 #ifdef PUT_LIST
 	std::ostream& put_list(std::ostream& os) const;
@@ -99,7 +101,7 @@ NN_List<_T>::Iterator::Iterator(const typename std::vector<NN_List<_T>*>::iterat
 }
 
 template <class _T>
-NN_List<_T>::Iterator::Iterator(const typename Iterator& p) :
+NN_List<_T>::Iterator::Iterator(const typename NN_List::Iterator& p) :
 	_iter(p._iter)
 {
 }
@@ -110,7 +112,7 @@ void NN_List<_T>::Iterator::operator++() {
 }
 
 template <class _T>
-bool NN_List<_T>::Iterator::operator!=(const typename Iterator& p) {
+bool NN_List<_T>::Iterator::operator!=(const typename NN_List::Iterator& p) {
 	return _iter != p._iter;
 }
 
@@ -126,7 +128,7 @@ NN_List<_T>::ConstIterator::ConstIterator(const typename std::vector<NN_List<_T>
 }
 
 template <class _T>
-NN_List<_T>::ConstIterator::ConstIterator(const typename ConstIterator& p) :
+NN_List<_T>::ConstIterator::ConstIterator(const typename NN_List::ConstIterator& p) :
 	_iter(p._iter)
 {
 }
@@ -137,7 +139,7 @@ void NN_List<_T>::ConstIterator:: operator++() {
 }
 
 template <class _T>
-bool NN_List<_T>::ConstIterator::operator!=(const typename ConstIterator& p) const {
+bool NN_List<_T>::ConstIterator::operator!=(const typename NN_List::ConstIterator& p) const {
 	return _iter != p._iter;
 }
 

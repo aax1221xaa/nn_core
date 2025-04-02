@@ -52,6 +52,10 @@ void NN_Sigmoid::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN
 		output[0].val().get_ptr(),
 		size
 		);
+#if _DEBUG
+	check_cuda(cudaDeviceSynchronize());
+	check_cuda(cudaGetLastError());
+#endif
 }
 
 NN_Backward* NN_Sigmoid::create_backward(std::vector<bool>& mask) {

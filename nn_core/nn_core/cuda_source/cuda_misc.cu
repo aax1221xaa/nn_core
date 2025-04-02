@@ -225,6 +225,115 @@ __global__ void __sum_gradient_2d(
 	b[blockIdx.x] = sm[0];
 }
 
+__global__ void __add_tensor(
+	const nn_type* a_input,
+	const nn_type* b_input,
+	nn_type* output,
+	cuint size
+) {
+	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < size) output[idx] = a_input[idx] + b_input[idx];
+}
+
+__global__ void __add_tensor2(
+	const nn_type* a_input,
+	const nn_type b_input,
+	nn_type* output,
+	cuint size
+) {
+	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < size) output[idx] = a_input[idx] + b_input;
+}
+
+__global__ void __sub_tensor(
+	const nn_type* a_input,
+	const nn_type* b_input,
+	nn_type* output,
+	cuint size
+) {
+	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < size) output[idx] = a_input[idx] - b_input[idx];
+}
+
+__global__ void __sub_tensor2(
+	const nn_type* a_input,
+	const nn_type b_input,
+	nn_type* output,
+	cuint size
+) {
+	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < size) output[idx] = a_input[idx] - b_input;
+}
+
+__global__ void __sub_tensor3(
+	const nn_type a_input,
+	const nn_type* b_input,
+	nn_type* output,
+	cuint size
+) {
+	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < size) output[idx] = a_input - b_input[idx];
+}
+
+__global__ void __mul_tensor(
+	const nn_type* a_input,
+	const nn_type* b_input,
+	nn_type* output,
+	cuint size
+) {
+	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < size) output[idx] = a_input[idx] * b_input[idx];
+}
+
+__global__ void __mul_tensor2(
+	const nn_type* a_input,
+	const nn_type b_input,
+	nn_type* output,
+	cuint size
+) {
+	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < size) output[idx] = a_input[idx] * b_input;
+}
+
+__global__ void __div_tensor(
+	const nn_type* a_input,
+	const nn_type* b_input,
+	nn_type* output,
+	cuint size
+) {
+	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < size) output[idx] = a_input[idx] / b_input[idx];
+}
+
+__global__ void __div_tensor2(
+	const nn_type* a_input,
+	const nn_type b_input,
+	nn_type* output,
+	cuint size
+) {
+	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < size) output[idx] = a_input[idx] / b_input;
+}
+
+__global__ void __inv_tensor(
+	const nn_type* a_input,
+	nn_type* output,
+	cuint size
+) {
+	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < size) output[idx] = 1. / a_input[idx];
+}
+
 /*******************************************
 
 			    host functions
@@ -235,7 +344,7 @@ void set_const_mem(cuint* h_mem, size_t len, size_t offset) {
 #if _DEBUG
 	check_cuda(cudaMemcpyToSymbol(__cmem, h_mem, sizeof(uint) * len, sizeof(uint) * offset));
 #else
-	cudaMemcpyToSymbol(__cmem, h_mem, sizeof(uint) * len, sizeof(uint) * offset)
+	cudaMemcpyToSymbol(__cmem, h_mem, sizeof(uint) * len, sizeof(uint) * offset);
 #endif
 }
 
@@ -245,7 +354,7 @@ cuint* get_const_mem(size_t len, size_t offset) {
 #if _DEBUG
 	check_cuda(cudaGetSymbolAddress((void**)&ptr, __cmem));
 #else
-	cudaGetSymbolAddress(&ptr, __cmem);
+	cudaGetSymbolAddress((void**)&ptr, __cmem);
 #endif
 
 	return ptr + offset;
@@ -310,8 +419,8 @@ void transpose(
 	transpose_param_init(input, ranks, &c_dims, &c_steps, &c_trans_ranks);
 
 	__transpose<<<blocks, threads>>>(
-		input.get_ptr(),
-		output.get_ptr(),
+		(nn_type*)input.get_ptr(),
+		(nn_type*)output.get_ptr(),
 		c_trans_ranks,
 		c_dims,
 		c_steps,
@@ -363,9 +472,6 @@ void add_bias_1d(
 	dim3 threads(BLOCK_32, BLOCK_32);
 	dim3 blocks = get_grid_size(threads, in[1], in[0]);
 
-	check_cuda(cudaDeviceSynchronize());
-	check_cuda(cudaGetLastError());
-
 	__add_bias_32x32<<<blocks, threads>>>(
 		input.get_ptr(),
 		bias.get_ptr(),
@@ -373,9 +479,10 @@ void add_bias_1d(
 		(uint)in[0],
 		(uint)in[1]
 	);
-
+#if _DEBUG
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());
+#endif
 }
 
 void add_bias_2d(
@@ -465,4 +572,210 @@ void sum_gradient_2d(
 		(uint)in._w,
 		(uint)in._c
 	);
+}
+
+void add_tensor(
+	const GpuTensor<nn_type>& a_input,
+	const GpuTensor<nn_type>& b_input,
+	GpuTensor<nn_type>& output
+) {
+	const NN_Shape& a_shape = a_input.get_shape();
+	const NN_Shape& b_shape = b_input.get_shape();
+	const NN_Shape& out_shape = output.get_shape();
+
+	if (a_shape != b_shape || b_shape != out_shape) {
+		ErrorExcept(
+			"[add_tensor] shapes of input and output are different. %s != %s != %s",
+			shape_to_str(a_shape),
+			shape_to_str(b_shape),
+			shape_to_str(out_shape)
+		);
+	}
+
+	cuint len = (uint)a_shape.total_size();
+	const dim3 threads(BLOCK_1024);
+	const dim3 blocks = get_grid_size(threads, len);
+
+	__add_tensor<<<blocks, threads>>>(
+		a_input.get_ptr(),
+		b_input.get_ptr(),
+		output.get_ptr(),
+		len
+	);
+}
+
+void add_tensor(
+	const GpuTensor<nn_type>& input,
+	const nn_type scalar,
+	GpuTensor<nn_type>& output
+) {
+	const NN_Shape& in_shape = input.get_shape();
+	const NN_Shape& out_shape = output.get_shape();
+
+	if (in_shape != out_shape) {
+		ErrorExcept(
+			"[add_tensor] shapes of input and output are different. %s != %s",
+			shape_to_str(in_shape),
+			shape_to_str(out_shape)
+		);
+	}
+
+	cuint len = (uint)input.get_shape().total_size();
+	const dim3 threads(BLOCK_1024);
+	const dim3 blocks = get_grid_size(threads, len);
+
+	__add_tensor2<<<blocks, threads>>>(
+		input.get_ptr(),
+		scalar,
+		output.get_ptr(),
+		len
+	);
+}
+
+void sub_tensor(
+	const GpuTensor<nn_type>& a_input,
+	const GpuTensor<nn_type>& b_input,
+	GpuTensor<nn_type>& output
+) {
+	const NN_Shape& a_shape = a_input.get_shape();
+	const NN_Shape& b_shape = b_input.get_shape();
+	const NN_Shape& out_shape = output.get_shape();
+
+	if (a_shape != b_shape || a_shape != out_shape) {
+		ErrorExcept(
+			"[sub_tensor] shapes of input and output are different. %s != %s != %s",
+			shape_to_str(a_shape),
+			shape_to_str(b_shape),
+			shape_to_str(out_shape)
+		);
+	}
+
+	cuint len = (uint)a_shape.total_size();
+	const dim3 threads(BLOCK_1024);
+	const dim3 blocks = get_grid_size(threads, len);
+
+	__sub_tensor<<<blocks, threads>>>(
+		a_input.get_ptr(),
+		b_input.get_ptr(),
+		output.get_ptr(),
+		len
+	);
+}
+
+void sub_tensor(
+	const GpuTensor<nn_type>& input,
+	const nn_type scalar,
+	GpuTensor<nn_type>& output
+) {
+	const NN_Shape& in_shape = input.get_shape();
+	const NN_Shape& out_shape = output.get_shape();
+
+	if (in_shape != out_shape) {
+		ErrorExcept(
+			"[sub_tensor] shapes of input and output are different. %s != %s",
+			shape_to_str(in_shape),
+			shape_to_str(out_shape)
+		);
+	}
+
+	cuint len = (uint)in_shape.total_size();
+	const dim3 threads(BLOCK_1024);
+	const dim3 blocks = get_grid_size(threads, len);
+
+	__sub_tensor2<<<blocks, threads>>>(
+		input.get_ptr(),
+		scalar,
+		output.get_ptr(),
+		len
+	);
+}
+
+void sub_tensor(
+	const nn_type scalar,
+	const GpuTensor<nn_type>& input,
+	GpuTensor<nn_type>& output
+) {
+
+}
+
+void mul_tensor(
+	const GpuTensor<nn_type>& a_input,
+	const GpuTensor<nn_type>& b_input,
+	GpuTensor<nn_type>& output
+) {
+
+}
+
+void mul_tensor(
+	const GpuTensor<nn_type>& input,
+	const nn_type scalar,
+	GpuTensor<nn_type>& output
+) {
+	const NN_Shape shape = output.get_shape();
+	cuint len = (uint)shape.total_size();
+
+	dim3 threads(BLOCK_1024);
+	dim3 blocks = get_grid_size(threads, len);
+
+	__mul_tensor2<<<blocks, threads>>>(
+		input.get_ptr(),
+		scalar,
+		output.get_ptr(),
+		len
+	);
+}
+
+void div_tensor(
+	const GpuTensor<nn_type>& a_input,
+	const GpuTensor<nn_type>& b_input,
+	GpuTensor<nn_type>& output
+) {
+	const NN_Shape shape = output.get_shape();
+	cuint len = (uint)shape.total_size();
+
+	dim3 threads(BLOCK_1024);
+	dim3 blocks = get_grid_size(threads, len);
+
+	__div_tensor<<<blocks, threads>>>(
+		a_input.get_ptr(),
+		b_input.get_ptr(),
+		output.get_ptr(),
+		len
+	);
+}
+
+void div_tensor(
+	const GpuTensor<nn_type>& input,
+	const nn_type scalar,
+	GpuTensor<nn_type>& output
+) {
+	cuint len = (uint)output.get_shape().total_size();
+	dim3 threads(BLOCK_1024);
+	dim3 blocks = get_grid_size(threads, len);
+
+	__div_tensor2<<<blocks, threads>>>(
+		input.get_ptr(),
+		scalar,
+		output.get_ptr(),
+		len
+	);
+#if _DEBUG
+	check_cuda(cudaDeviceSynchronize());
+	check_cuda(cudaGetLastError());
+#endif
+}
+
+void inv_tensor(
+	const GpuTensor<nn_type>& input,
+	GpuTensor<nn_type>& output
+) {
+	cuint len = (uint)output.get_shape().total_size();
+	dim3 threads(BLOCK_1024);
+	dim3 blocks = get_grid_size(threads, len);
+
+	__inv_tensor << <blocks, threads >> > (
+		input.get_ptr(),
+		output.get_ptr(),
+		len
+		);
 }
