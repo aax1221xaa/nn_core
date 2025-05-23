@@ -340,24 +340,18 @@ __global__ void __inv_tensor(
 
 *******************************************/
 
-void set_const_mem(cuint* h_mem, size_t len, size_t offset) {
+cuint* set_const_mem(cuint* h_mem, size_t len, size_t offset) {
+	void* ptr = NULL;
+
 #if _DEBUG
 	check_cuda(cudaMemcpyToSymbol(__cmem, h_mem, sizeof(uint) * len, sizeof(uint) * offset));
+	check_cuda(cudaGetSymbolAddress(&ptr, __cmem));
 #else
 	cudaMemcpyToSymbol(__cmem, h_mem, sizeof(uint) * len, sizeof(uint) * offset);
-#endif
-}
-
-cuint* get_const_mem(size_t len, size_t offset) {
-	uint* ptr = NULL;
-
-#if _DEBUG
-	check_cuda(cudaGetSymbolAddress((void**)&ptr, __cmem));
-#else
-	cudaGetSymbolAddress((void**)&ptr, __cmem);
+	cudaGetSymbolAddress(&ptr, __cmem)
 #endif
 
-	return ptr + offset;
+	return (cuint*)ptr + offset;
 }
 
 void transpose_param_init(
@@ -376,8 +370,7 @@ void transpose_param_init(
 
 	for (const int& n : shape) ptr[i++] = (uint)n;
 
-	set_const_mem(ptr, len, offset);
-	*c_dims = get_const_mem(len, offset);
+	*c_dims = set_const_mem(ptr, len, offset);
 
 	offset += len;
 
@@ -391,15 +384,13 @@ void transpose_param_init(
 		step *= dim;
 	}
 
-	set_const_mem(ptr, len, offset);
-	*c_steps = get_const_mem(len, offset);
+	*c_steps = set_const_mem(ptr, len, offset);
 
 	offset += len;
 
 	for (const int& n : ranks) ptr[i++] = n;
 
-	set_const_mem(ptr, len, offset);
-	*c_ranks = get_const_mem(len, offset);
+	*c_ranks = set_const_mem(ptr, len, offset);
 
 	delete[] ptr;
 }

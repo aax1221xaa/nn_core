@@ -4,6 +4,7 @@
 #include "Exception.h"
 #include "nn_list.h"
 #include "nn_shape.h"
+#include "mat_dtype.h"
 
 
 template <typename _T>
@@ -42,6 +43,7 @@ public:
 	Tensor(const Tensor& p);
 	Tensor(Tensor&& p);
 	Tensor(const GpuTensor<_T>& p);
+	Tensor(const cv::Mat& mat);
 	~Tensor();
 
 	Tensor& operator=(const Tensor& p);
@@ -81,6 +83,7 @@ public:
 	Tensor transpose(const std::initializer_list<int>& orders);
 	Tensor swap_pose();
 	Tensor reshape(const NN_Shape& new_shape);
+	cv::Mat&& get_mat();
 
 	_T& val();
 	const _T& val() const;
@@ -394,6 +397,21 @@ Tensor<_T>::Tensor(const GpuTensor<_T>& p) :
 	_T* dst_ptr = _data.get();
 
 	check_cuda(cudaMemcpy(dst_ptr, src_ptr, sizeof(_T) * shape.total_size(), cudaMemcpyDeviceToHost));
+}
+
+template <typename _T>
+Tensor<_T>::Tensor(const cv::Mat& mat) {
+	const NN_Shape shape({ mat.rows, mat.cols, mat.channels() });
+	const size_t t_size = shape.total_size();
+
+	_steps = calc_step(shape);
+	_indice = calc_indices(shape);
+	_data = std::shared_ptr<_T[]>(new _T[t_size]);
+
+	const _T* src = mat.data;
+	_T* dst = _data.get();
+
+	memcpy_s(dst, sizeof(_T) * t_size, src, sizeof(_T) * t_size);
 }
 
 template <typename _T>
@@ -1363,6 +1381,14 @@ Tensor<_T> Tensor<_T>::reshape(const NN_Shape& new_shape) {
 	tmp._indice = new_indices;
 
 	return tmp;
+}
+
+template <typename _T>
+cv::Mat&& Tensor<_T>::get_mat() {
+	const NN_Shape shape = calc_shape(_indice);
+	const int dtype = get_type(_T(), shape[-1]);
+	
+	return cv::Mat(shape.ranks(), shape.get_dims().data(), dtype, _data.get());
 }
 
 template <typename _T>

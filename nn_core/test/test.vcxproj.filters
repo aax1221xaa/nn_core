@@ -17,62 +17,71 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CppSource\cuda_common.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CppSource\CudaCheck.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CppSource\Exception.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CppSource\mat_dtype.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CppSource\nn_list.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CppSource\nn_shape.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CppSource\nn_tensor.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CppSource\nn_tensor_plus.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CppSource\nn_sample.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CppSource\voc2012.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CudaSource\convolution.cuh">
+      <Filter>cuda헤더</Filter>
+    </ClInclude>
+    <ClInclude Include="CudaSource\cuda_misc.cuh">
+      <Filter>cuda헤더</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CppSource\cuda_common.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CppSource\CudaCheck.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CppSource\Exception.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CppSource\mat_type.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CppSource\nn_shape.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="..\nn_core\cpp_source\Exception.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="..\nn_core\cpp_source\CudaCheck.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="..\nn_core\cpp_source\cuda_common.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="..\nn_core\cpp_source\nn_shape.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="..\nn_core\cpp_source\nn_sample.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="..\nn_core\cpp_source\nn_base.cpp">
+    <ClCompile Include="CppSource\voc2012.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\nn_core\cpp_source\Exception.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\CudaCheck.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\nn_shape.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\cuda_common.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\nn_list.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="..\nn_core\cuda_source\convolution.cuh">
-      <Filter>cuda헤더</Filter>
-    </ClInclude>
-    <ClInclude Include="..\nn_core\cuda_source\cuda_misc.cuh">
-      <Filter>cuda헤더</Filter>
-    </ClInclude>
-    <ClInclude Include="..\nn_core\cpp_source\nn_base.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="..\nn_core\cuda_source\convolution.cu">
+    <CudaCompile Include="CudaSource\convolution.cu">
       <Filter>cuda소스</Filter>
     </CudaCompile>
-    <CudaCompile Include="..\nn_core\cuda_source\cuda_misc.cu">
+    <CudaCompile Include="CudaSource\cuda_misc.cu">
       <Filter>cuda소스</Filter>
     </CudaCompile>
   </ItemGroup>

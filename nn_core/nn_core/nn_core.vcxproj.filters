@@ -134,6 +134,15 @@
     <ClInclude Include="cuda_source\nn_batch_normalize.cuh">
       <Filter>헤더 파일\cuh</Filter>
     </ClInclude>
+    <ClInclude Include="cuda_source\nn_dw_conv.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\nn_upsample.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_source\nn_concat.cuh">
+      <Filter>헤더 파일\cuh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_source\relu.cu">
@@ -164,6 +173,15 @@
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_source\nn_batch_normalize.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\nn_dw_conv.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\nn_upsample.cu">
+      <Filter>소스 파일\cu</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_source\nn_concat.cu">
       <Filter>소스 파일\cu</Filter>
     </CudaCompile>
   </ItemGroup>

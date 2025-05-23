@@ -4,256 +4,162 @@
 
 
 template <typename _xT, typename _yT>
-struct DataSet {
-	std::vector<Tensor<_xT>> _x;
-	std::vector<Tensor<_yT>> _y;
+struct Sample {
+	NN_List<Tensor<_xT>> _x;
+	NN_List<Tensor<_yT>> _y;
 };
 
-
 template <typename _xT, typename _yT>
-class Sample {
-public:
-	const DataSet<_xT, _yT>& _origin;
-	const int _n_batch;
-	const int _n_iter;
-	const bool _shuffle;
-
-	static void set_batch_samples(const DataSet<_xT, _yT>& origin, DataSet<_xT, _yT>& buff, int index, int n_batch, bool shuffle);
+class DataSet {
+	virtual Sample<_xT, _yT> get_samples(int index) const;
+	virtual int get_end_index() const;
 
 public:
 	class Iterator {
 	public:
-		const Sample& _p_samples;
-		DataSet<_xT, _yT> _buff;
-		int _n_iter;
+		const DataSet& _dataset;
+		int _index;
 
-		Iterator(const Sample& p_samples, int n_iter);
-		Iterator(const typename Sample::Iterator& p);
+		Iterator(const DataSet& dataset, int index);
+		Iterator(const typename Iterator& p);
 
-		bool operator!=(const typename Sample::Iterator& p);
+		bool operator!=(const typename Iterator& p);
 		void operator++();
-		DataSet<_xT, _yT>& operator*();
+		Sample<_xT, _yT> operator*();
 	};
 
 	class ConstIterator {
 	public:
-		const Sample& _p_samples;
-		DataSet<_xT, _yT> _buff;
-		int _n_iter;
+		const DataSet& _dataset;
+		int _index;
 
-		ConstIterator(const Sample& p_samples, int n_iter);
-		ConstIterator(const typename Sample::ConstIterator& p);
+		ConstIterator(const DataSet& dataset, int index);
+		ConstIterator(const typename ConstIterator& p);
 
-		bool operator!=(const typename Sample::ConstIterator& p) const;
+		bool operator!=(const typename ConstIterator& p) const;
 		void operator++();
-		const DataSet<_xT, _yT>& operator*() const;
+		Sample<_xT, _yT> operator*() const;
 	};
 
-	Sample(const DataSet<_xT, _yT>& current_object, int n_batch, int n_iter, bool shuffle);
+	DataSet();
+	virtual ~DataSet();
 
-	typename Sample::Iterator begin();
-	typename Sample::Iterator end();
+	typename Iterator begin();
+	typename Iterator end();
 
-	typename Sample::ConstIterator begin() const;
-	typename Sample::ConstIterator end() const;
+	typename ConstIterator begin() const;
+	typename ConstIterator end() const;
 
-	DataSet<_xT, _yT> operator[](int index);
-	int get_batch();
-	int get_iteration();
-
-	const DataSet<_xT, _yT> operator[](int index) const;
-
-	int get_batch() const;
-	int get_iteration() const;
+	Sample<_xT, _yT> operator[](int index);
+	Sample<_xT, _yT> operator[](int index) const;
 };
 
 template <typename _xT, typename _yT>
-void Sample<_xT, _yT>::set_batch_samples(const DataSet<_xT, _yT>& origin, DataSet<_xT, _yT>& buff, int index, int n_batch, bool shuffle) {
-	std::vector<int> batch_indice;
-	typename std::vector<Tensor<_xT>>::iterator x_iter = buff._x.begin();
-	typename std::vector<Tensor<_yT>>::iterator y_iter = buff._y.begin();
-
-	for (const Tensor<_xT>& x : origin._x) {
-		if (batch_indice.empty()) {
-			const int amounts = x.get_shape()[0];
-
-			if (shuffle) {
-				batch_indice = random_choice(0, amounts, n_batch, shuffle);
-			}
-			else {
-				batch_indice.resize(n_batch);
-
-				for (int i = 0; i < n_batch; ++i) {
-					batch_indice[i] = (n_batch * index + i) % amounts;
-				}
-			}
-		}
-
-		*x_iter = x(batch_indice);
-		++x_iter;
-	}
-
-	for (const Tensor<_yT>& y : origin._y) {
-		*y_iter = y(batch_indice);
-		++y_iter;
-	}
+Sample<_xT, _yT> DataSet<_xT, _yT>::get_samples(int index) const {
+	return Sample<_xT, _yT>();
 }
 
 template <typename _xT, typename _yT>
-Sample<_xT, _yT>::Iterator::Iterator(const Sample& p_samples, int n_iter) :
-	_p_samples(p_samples),
-	_n_iter(n_iter)
+int DataSet<_xT, _yT>::get_end_index() const {
+	return 0;
+}
+
+template <typename _xT, typename _yT>
+DataSet<_xT, _yT>::Iterator::Iterator(const DataSet& dataset, int index) :
+	_dataset(dataset),
+	_index(index)
 {
-	_buff._x.resize(p_samples._origin._x.size());
-	_buff._y.resize(p_samples._origin._y.size());
 
-	set_batch_samples(_p_samples._origin, _buff, _n_iter, _p_samples._n_batch, _p_samples._shuffle);
 }
 
 template <typename _xT, typename _yT>
-Sample<_xT, _yT>::Iterator::Iterator(const typename Sample::Iterator& p) :
-	_p_samples(p._p_samples),
-	_n_iter(p._n_iter),
-	_buff(p._buff)
+DataSet<_xT, _yT>::Iterator::Iterator(const typename DataSet::Iterator& p) :
+	_dataset(p._dataset),
+	_index(p._index)
 {
 }
 
 template <typename _xT, typename _yT>
-bool Sample<_xT, _yT>::Iterator::operator!=(const typename Sample::Iterator& p) {
-	return _n_iter != p._n_iter;
+bool DataSet<_xT, _yT>::Iterator::operator!=(const typename DataSet::Iterator& p) {
+	return _index != p._index;
 }
 
 template <typename _xT, typename _yT>
-void Sample<_xT, _yT>::Iterator::operator++() {
-	set_batch_samples(_p_samples._origin, _buff, _n_iter, _p_samples._n_batch, _p_samples._shuffle);
-	++_n_iter;
+void DataSet<_xT, _yT>::Iterator::operator++() {
+	++_index;
 }
 
 template <typename _xT, typename _yT>
-DataSet<_xT, _yT>& Sample<_xT, _yT>::Iterator::operator*() {
-	return _buff;
+Sample<_xT, _yT> DataSet<_xT, _yT>::Iterator::operator*() {
+	return _dataset.get_samples(_index);
 }
 
 template <typename _xT, typename _yT>
-typename Sample<_xT, _yT>::Iterator Sample<_xT, _yT>::begin() {
+typename DataSet<_xT, _yT>::Iterator DataSet<_xT, _yT>::begin() {
 	return Iterator(*this, 0);
 }
 
 template <typename _xT, typename _yT>
-typename Sample<_xT, _yT>::Iterator Sample<_xT, _yT>::end() {
-	return Iterator(*this, _n_iter);
+typename DataSet<_xT, _yT>::Iterator DataSet<_xT, _yT>::end() {
+	return Iterator(*this, get_end_index());
 }
 
 template <typename _xT, typename _yT>
-typename Sample<_xT, _yT>::ConstIterator Sample<_xT, _yT>::begin() const {
+typename DataSet<_xT, _yT>::ConstIterator DataSet<_xT, _yT>::begin() const {
 	return ConstIterator(*this, 0);
 }
 
 template <typename _xT, typename _yT>
-typename Sample<_xT, _yT>::ConstIterator Sample<_xT, _yT>::end() const {
-	return ConstIterator(*this, _n_iter);
+typename DataSet<_xT, _yT>::ConstIterator DataSet<_xT, _yT>::end() const {
+	return ConstIterator(*this, get_end_index());
 }
 
 template <typename _xT, typename _yT>
-Sample<_xT, _yT>::ConstIterator::ConstIterator(const Sample& p_samples, int n_iter) :
-	_p_samples(p_samples),
-	_n_iter(n_iter)
+DataSet<_xT, _yT>::ConstIterator::ConstIterator(const DataSet& dataset, int index) :
+	_dataset(dataset),
+	_index(index)
 {
-	_buff._x.resize(p_samples._origin._x.size());
-	_buff._y.resize(p_samples._origin._y.size());
 
-	set_batch_samples(_p_samples._origin, _buff, _n_iter, _p_samples._n_batch, _p_samples._shuffle);
 }
 
 template <typename _xT, typename _yT>
-Sample<_xT, _yT>::ConstIterator::ConstIterator(const typename Sample::ConstIterator& p) :
-	_p_samples(p._p_samples),
-	_n_iter(p._n_iter),
-	_buff(p._buff)
+DataSet<_xT, _yT>::ConstIterator::ConstIterator(const typename DataSet::ConstIterator& p) :
+	_dataset(p._dataset),
+	_index(p._index)
 {
 }
 
 template <typename _xT, typename _yT>
-bool Sample<_xT, _yT>::ConstIterator::operator!=(const typename Sample::ConstIterator& p) const {
-	return _n_iter != p._n_iter;
+bool DataSet<_xT, _yT>::ConstIterator::operator!=(const typename DataSet::ConstIterator& p) const {
+	return _index != p._index;
 }
 
 template <typename _xT, typename _yT>
-void Sample<_xT, _yT>::ConstIterator::operator++() {
-	set_batch_samples(_p_samples._origin, _buff, _n_iter, _p_samples._n_batch, _p_samples._shuffle);
-	++_n_iter;
+void DataSet<_xT, _yT>::ConstIterator::operator++() {
+	++_index;
 }
 
 template <typename _xT, typename _yT>
-const DataSet<_xT, _yT>& Sample<_xT, _yT>::ConstIterator::operator*() const {
-	return _buff;
+Sample<_xT, _yT> DataSet<_xT, _yT>::ConstIterator::operator*() const {
+	return _dataset.get_samples(_index);
 }
 
 template <typename _xT, typename _yT>
-Sample<_xT, _yT>::Sample(const DataSet<_xT, _yT>& current_object, int n_batch, int n_iter, bool shuffle) :
-	_origin(current_object),
-	_n_batch(n_batch),
-	_n_iter(n_iter),
-	_shuffle(shuffle)
-{
+DataSet<_xT, _yT>::DataSet() {
+
 }
 
 template <typename _xT, typename _yT>
-DataSet<_xT, _yT> Sample<_xT, _yT>::operator[](int index) {
-	if (index >= _n_iter) {
-		ErrorExcept(
-			"[MNIST::Sample::operator[]] Index[%d] is out of range. (%d ~ %d)",
-			index,
-			0, _n_iter
-		);
-	}
+DataSet<_xT, _yT>::~DataSet() {
 
-	DataSet<_xT, _yT> buff;
-
-	buff._x.resize(_origin._x.size());
-	buff._y.resize(_origin._y.size());
-
-	set_batch_samples(_origin, buff, index, _n_batch, _shuffle);
-
-	return buff;
 }
 
 template <typename _xT, typename _yT>
-int Sample<_xT, _yT>::get_batch() {
-	return _n_batch;
+Sample<_xT, _yT> DataSet<_xT, _yT>::operator[](int index) {
+	return get_samples(index);
 }
 
 template <typename _xT, typename _yT>
-int Sample<_xT, _yT>::get_iteration() {
-	return _n_iter;
-}
-
-template <typename _xT, typename _yT>
-const DataSet<_xT, _yT> Sample<_xT, _yT>::operator[](int index) const {
-	if (index >= _n_iter) {
-		ErrorExcept(
-			"[MNIST::Sample::operator[]] Index[%d] is out of range. (%d ~ %d)",
-			index,
-			0, _n_iter
-		);
-	}
-
-	DataSet<_xT, _yT> buff;
-
-	buff._x.resize(_n_batch);
-	buff._y.resize(_n_batch);
-
-	set_batch_samples(_origin, buff, index, _n_batch, _shuffle);
-
-	return buff;
-}
-
-template <typename _xT, typename _yT>
-int Sample<_xT, _yT>::get_batch() const {
-	return _n_batch;
-}
-
-template <typename _xT, typename _yT>
-int Sample<_xT, _yT>::get_iteration() const {
-	return _n_iter;
+Sample<_xT, _yT> DataSet<_xT, _yT>::operator[](int index) const {
+	return get_samples(index);
 }

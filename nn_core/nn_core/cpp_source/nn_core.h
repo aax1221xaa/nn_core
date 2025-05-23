@@ -3,6 +3,9 @@
 
 #include "cuda_common.h"
 #include "../cuda_source/convolution.cuh"
+#include "../cuda_source/nn_dw_conv.cuh"
+#include "../cuda_source/nn_upsample.cuh"
+#include "../cuda_source/nn_batch_normalize.cuh"
 #include "../cuda_source/matmul.cuh"
 #include "../cuda_source/maxpool.cuh"
 #include "../cuda_source/relu.cuh"

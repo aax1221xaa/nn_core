@@ -16,13 +16,14 @@ public:
 	const NN_Shape _filter_size;
 	const NN_Shape _stride;
 	const std::string _pad;
+	const bool _use_bias;
 
 	GpuTensor<nn_type> _filter;
 	GpuTensor<nn_type> _bias;
 
-	static void set_indice(const NN_Tensor4dShape& in, const NN_Filter4dShape& k);
+	static cuint* set_indice(const NN_Tensor4dShape& in, const NN_Filter4dShape& k);
 
-	NN_Conv2D(cuint amounts, const NN_Shape& filter_size, const NN_Shape& stride, const std::string& pad, const std::string& name);
+	NN_Conv2D(cuint amounts, const NN_Shape& filter_size, const NN_Shape& stride, const std::string& pad, bool use_bias, const std::string& name);
 
 	void get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<NN_Shape>& output_shape);
 	void build(const NN_List<NN_Shape>& input_shape, NN_List<GpuTensor<nn_type>>& weights);
@@ -31,15 +32,6 @@ public:
 
 	NN_List<GpuTensor<nn_type>> get_weight();
 };
-
-void conv_test(
-	NN_Stream& stream,
-	const GpuTensor<nn_type>& input, 
-	const GpuTensor<nn_type>& kernel,
-	const NN_Shape& stride,
-	const std::string& pad,
-	GpuTensor<nn_type>& output
-);
 
 /**********************************************/
 /*                                            */

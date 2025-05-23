@@ -201,6 +201,28 @@ void NN_Shape::push_back(const std::initializer_list<int>& list) {
 	_dims.insert(_dims.end(), list);
 }
 
+int NN_Shape::pop(int index) {
+	int n = _dims[index];
+	_dims.erase(_dims.cbegin() + index);
+
+	return n;
+}
+
+int NN_Shape::pop(c_iterator iter) {
+	int n = *iter;
+	_dims.erase(iter);
+
+	return n;
+}
+
+void NN_Shape::insert(int index, int n) {
+	_dims.insert(_dims.cbegin() + index, n);
+}
+
+void NN_Shape::insert(c_iterator iter, int n) {
+	_dims.insert(iter, n);
+}
+
 std::vector<int>& NN_Shape::get_dims() {
 	return _dims;
 }

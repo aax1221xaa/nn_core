@@ -13,7 +13,7 @@ public:
 };
 
 
-class MNIST : public DataSetType<uchar, uchar> {
+class MNIST : public DataSet<uchar, uchar> {
 public:
 	DataSet<uchar, uchar> _train, _test;
 

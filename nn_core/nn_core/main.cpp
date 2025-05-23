@@ -19,10 +19,10 @@ int main() {
 		Layer_t x_input = nn.input({ 28, 28, 1 }, -1, "input");
 		Layer_t x = nn(NN_Div(255.f, "div"))(x_input);
 		x = nn(NN_Sub(0.5f, "sub"))(x);
-		x = nn(NN_Conv2D(32, { 5, 5 }, { 1, 1 }, "valid", "conv_1"))(x);		// {24, 24, 32}
+		x = nn(NN_Conv2D(32, { 5, 5 }, { 1, 1 }, "valid", true, "conv_1"))(x);		// {24, 24, 32}
 		x = nn(NN_ReLU("relu_1"))(x);
 		x = nn(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, "valid", "maxpool_1"))(x);		// {12, 12, 32}
-		x = nn(NN_Conv2D(64, { 5, 5 }, { 1, 1 }, "valid", "conv_2"))(x);		// {8, 8, 64}
+		x = nn(NN_Conv2D(64, { 5, 5 }, { 1, 1 }, "valid", true, "conv_2"))(x);		// {8, 8, 64}
 		x = nn(NN_ReLU("relu_2"))(x);
 		x = nn(NN_Maxpool2D({ 2, 2 }, { 2, 2 }, "valid", "maxpool_2"))(x);		// {4, 4, 64}
 		x = nn(NN_Flatten("flatten"))(x);

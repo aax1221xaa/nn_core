@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{100A54C7-6359-4988-A832-0B51B028E7A7}</ProjectGuid>
+    <RootNamespace>yolov3</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.8.props" />
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="cfg\HDF5D.props" />
+    <Import Project="cfg\CUDA_11_DEBUG.props" />
+    <Import Project="cfg\OpenCV_453D.props" />
+    <Import Project="cfg\TBB_DEBUG.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="cfg\HDF5.props" />
+    <Import Project="cfg\CUDA_11_RELEASE.props" />
+    <Import Project="cfg\OpenCV_453.props" />
+    <Import Project="cfg\TBB.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="cpp_source\CudaCheck.cpp" />
+    <ClCompile Include="cpp_source\cuda_common.cpp" />
+    <ClCompile Include="cpp_source\Exception.cpp" />
+    <ClCompile Include="cpp_source\flatten.cpp" />
+    <ClCompile Include="cpp_source\mat_type.cpp" />
+    <ClCompile Include="cpp_source\nn_base.cpp" />
+    <ClCompile Include="cpp_source\nn_lambda.cpp" />
+    <ClCompile Include="cpp_source\nn_model.cpp" />
+    <ClCompile Include="cpp_source\nn_operator.cpp" />
+    <ClCompile Include="cpp_source\nn_ops.cpp" />
+    <ClCompile Include="cpp_source\nn_shape.cpp" />
+    <ClCompile Include="cpp_source\voc2012.cpp" />
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cpp_source\CudaCheck.h" />
+    <ClInclude Include="cpp_source\cuda_common.h" />
+    <ClInclude Include="cpp_source\Exception.h" />
+    <ClInclude Include="cpp_source\flatten.h" />
+    <ClInclude Include="cpp_source\mat_dtype.h" />
+    <ClInclude Include="cpp_source\nn_base.h" />
+    <ClInclude Include="cpp_source\nn_core.h" />
+    <ClInclude Include="cpp_source\nn_lambda.h" />
+    <ClInclude Include="cpp_source\nn_list.h" />
+    <ClInclude Include="cpp_source\nn_model.h" />
+    <ClInclude Include="cpp_source\nn_operator.h" />
+    <ClInclude Include="cpp_source\nn_ops.h" />
+    <ClInclude Include="cpp_source\nn_sample.h" />
+    <ClInclude Include="cpp_source\nn_shape.h" />
+    <ClInclude Include="cpp_source\nn_tensor_plus.h" />
+    <ClInclude Include="cpp_source\voc2012.h" />
+    <ClInclude Include="cuda_source\convolution.cuh" />
+    <ClInclude Include="cuda_source\cuda_misc.cuh" />
+    <ClInclude Include="cuda_source\matmul.cuh" />
+    <ClInclude Include="cuda_source\maxpool.cuh" />
+    <ClInclude Include="cuda_source\nn_batch_normalize.cuh" />
+    <ClInclude Include="cuda_source\nn_concat.cuh" />
+    <ClInclude Include="cuda_source\nn_dw_conv.cuh" />
+    <ClInclude Include="cuda_source\nn_loss.cuh" />
+    <ClInclude Include="cuda_source\nn_upsample.cuh" />
+    <ClInclude Include="cuda_source\optimizer.cuh" />
+    <ClInclude Include="cuda_source\relu.cuh" />
+    <ClInclude Include="cuda_source\sigmoid.cuh" />
+    <ClInclude Include="cuda_source\softmax.cuh" />
+    <ClInclude Include="cuda_source\special_act.cuh" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="cuda_source\convolution.cu" />
+    <CudaCompile Include="cuda_source\cuda_misc.cu" />
+    <CudaCompile Include="cuda_source\matmul.cu" />
+    <CudaCompile Include="cuda_source\maxpool.cu" />
+    <CudaCompile Include="cuda_source\nn_batch_normalize.cu" />
+    <CudaCompile Include="cuda_source\nn_concat.cu" />
+    <CudaCompile Include="cuda_source\nn_dw_conv.cu" />
+    <CudaCompile Include="cuda_source\nn_loss.cu" />
+    <CudaCompile Include="cuda_source\nn_upsample.cu" />
+    <CudaCompile Include="cuda_source\optimizer.cu" />
+    <CudaCompile Include="cuda_source\relu.cu" />
+    <CudaCompile Include="cuda_source\sigmoid.cu" />
+    <CudaCompile Include="cuda_source\softmax.cu" />
+    <CudaCompile Include="cuda_source\special_act.cu" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.8.targets" />
+  </ImportGroup>
+</Project>

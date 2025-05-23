@@ -10,6 +10,33 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CppSource\CudaCheck.h" />
+    <ClInclude Include="CppSource\cuda_common.h" />
+    <ClInclude Include="CppSource\Exception.h" />
+    <ClInclude Include="CppSource\mat_dtype.h" />
+    <ClInclude Include="CppSource\nn_list.h" />
+    <ClInclude Include="CppSource\nn_sample.h" />
+    <ClInclude Include="CppSource\nn_shape.h" />
+    <ClInclude Include="CppSource\nn_tensor.h" />
+    <ClInclude Include="CppSource\nn_tensor_plus.h" />
+    <ClInclude Include="CppSource\voc2012.h" />
+    <ClInclude Include="CudaSource\convolution.cuh" />
+    <ClInclude Include="CudaSource\cuda_misc.cuh" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CppSource\CudaCheck.cpp" />
+    <ClCompile Include="CppSource\cuda_common.cpp" />
+    <ClCompile Include="CppSource\Exception.cpp" />
+    <ClCompile Include="CppSource\mat_type.cpp" />
+    <ClCompile Include="CppSource\nn_shape.cpp" />
+    <ClCompile Include="CppSource\voc2012.cpp" />
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="CudaSource\convolution.cu" />
+    <CudaCompile Include="CudaSource\cuda_misc.cu" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{D6F5043C-5DEB-4EAD-B134-615C31B7D7DC}</ProjectGuid>
@@ -59,6 +86,8 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <PreprocessorDefinitions>CUDNN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link />
     <Link>
@@ -73,6 +102,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -80,30 +111,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\nn_core\cpp_source\CudaCheck.cpp" />
-    <ClCompile Include="..\nn_core\cpp_source\cuda_common.cpp" />
-    <ClCompile Include="..\nn_core\cpp_source\Exception.cpp" />
-    <ClCompile Include="..\nn_core\cpp_source\nn_base.cpp" />
-    <ClCompile Include="..\nn_core\cpp_source\nn_sample.cpp" />
-    <ClCompile Include="..\nn_core\cpp_source\nn_shape.cpp" />
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\nn_core\cpp_source\CudaCheck.h" />
-    <ClInclude Include="..\nn_core\cpp_source\cuda_common.h" />
-    <ClInclude Include="..\nn_core\cpp_source\Exception.h" />
-    <ClInclude Include="..\nn_core\cpp_source\nn_base.h" />
-    <ClInclude Include="..\nn_core\cpp_source\nn_list.h" />
-    <ClInclude Include="..\nn_core\cpp_source\nn_shape.h" />
-    <ClInclude Include="..\nn_core\cpp_source\nn_tensor.h" />
-    <ClInclude Include="..\nn_core\cuda_source\convolution.cuh" />
-    <ClInclude Include="..\nn_core\cuda_source\cuda_misc.cuh" />
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="..\nn_core\cuda_source\convolution.cu" />
-    <CudaCompile Include="..\nn_core\cuda_source\cuda_misc.cu" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.8.targets" />
