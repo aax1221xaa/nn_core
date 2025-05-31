@@ -1,6 +1,7 @@
 #pragma once
 #include "nn_tensor_plus.h"
 #include "../cuda_source/optimizer.cuh"
+#include <map>
 
 
 /**********************************************/

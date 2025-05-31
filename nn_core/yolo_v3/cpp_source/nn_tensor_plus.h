@@ -1,5 +1,6 @@
 #pragma once
 #include <tbb/tbb.h>
+#include <opencv2/opencv.hpp>
 #include <memory>
 #include "Exception.h"
 #include "nn_list.h"
@@ -20,13 +21,14 @@ class GpuTensor;
 
 typedef std::vector<uint> Vect1D;
 typedef std::vector<std::vector<uint>> Vect2D;
+typedef std::shared_ptr<uint[]> uint_sptr;
 
 template <typename _T>
 class Tensor {
 	std::shared_ptr<_T[]> _data;
-	std::shared_ptr<uint[]> _indice;
+	uint_sptr _indice;
 	Vect1D _steps;
-	Vect2D _dims_indice;
+	NN_Shape _shape;
 
 	int* _cnt_rank;
 
@@ -35,11 +37,11 @@ class Tensor {
 	static void copy_unsorted_both_data(const _T* src, _T* dst, size_t size, cuint* src_indice, cuint* dst_indice);
 	static Vect1D generate_steps(const NN_Shape& shape);
 	static Vect2D generate_dims_indice(const NN_Shape& shape);
+	static NN_Shape calculate_shape(const Vect2D& dims_indice);
 	static void check_shape(const NN_Shape& shape);
-	static NN_Shape get_shape(const Vect2D& dims_indice);
 	static void change_dim_indice(Vect1D& dim_indice, int begin, int end, int step);
 	static void put_tensor(std::ostream& os, const Tensor& tensor, size_t offset, int rank);
-	static std::shared_ptr<uint[]> generate_indice(const Vect1D& steps, const Vect2D& dims_indice);
+	static uint_sptr generate_indice(const uint_sptr& prev_indice, const Vect1D& steps, const Vect2D& dims_indice);
 	
 	Tensor(const Tensor& p, int cnt_rank);
 
@@ -65,8 +67,8 @@ public:
 
 	Tensor transpose(const Vect1D& orders) const;
 
-	static Tensor expand_dims(const Tensor& tensor, int axis = 0);
-	static Tensor squeeze(const Tensor& tensor, int axis = 0);
+	Tensor expand_dims(int axis = 0);
+	Tensor squeeze(int axis = 0);
 
 	static Tensor zeros(const NN_Shape& shape);
 	static Tensor zeros(NN_Shape&& shape);
@@ -166,11 +168,11 @@ template <typename _T>
 Vect1D Tensor<_T>::generate_steps(const NN_Shape& shape) {
 	Vect1D steps(shape.ranks(), 1);
 
-	NN_Shape::c_iterator shape_iter = shape.begin();
+	NN_Shape::ConstIterator shape_iter = shape.begin();
 	Vect1D::iterator step_iter = steps.begin();
 
 	for (; shape_iter != shape.end(); ++shape_iter, ++step_iter) {
-		NN_Shape::c_iterator m_shape_iter = shape_iter + 1;
+		NN_Shape::ConstIterator m_shape_iter = shape_iter + 1;
 
 		for (; m_shape_iter != shape.end(); ++m_shape_iter) *step_iter *= (uint)(*m_shape_iter);
 	}
@@ -195,6 +197,19 @@ Vect2D Tensor<_T>::generate_dims_indice(const NN_Shape& shape) {
 }
 
 template <typename _T>
+NN_Shape Tensor<_T>::calculate_shape(const Vect2D& dims_indice) {
+	NN_Shape shape((int)dims_indice.size());
+	NN_Shape::Iterator iter = shape.begin();
+
+	for (const Vect1D& indice : dims_indice) {
+		*iter = (int)indice.size();
+		++iter;
+	}
+
+	return shape;
+}
+
+template <typename _T>
 void Tensor<_T>::check_shape(const NN_Shape& shape) {
 	for (const int& n : shape) {
 		if (n < 1) {
@@ -204,19 +219,6 @@ void Tensor<_T>::check_shape(const NN_Shape& shape) {
 			);
 		}
 	}
-}
-
-template <typename _T>
-NN_Shape Tensor<_T>::get_shape(const Vect2D& dims_indice) {
-	NN_Shape shape(dims_indice.size());
-	NN_Shape::iterator iter = shape.begin();
-
-	for (const Vect1D& indice : dims_indice) {
-		*iter = (int)indice.size();
-		++iter;
-	}
-
-	return shape;
 }
 
 template <typename _T>
@@ -233,26 +235,43 @@ void Tensor<_T>::change_dim_indice(Vect1D& dim_indice, int begin, int end, int s
 template <typename _T>
 void Tensor<_T>::put_tensor(std::ostream& os, const Tensor& tensor, size_t offset, int rank) {
 	cuint step = tensor._steps[rank];
-
-	if ((int)tensor._dims_indice.size() - 1 > rank) {
-		for (cuint& index : tensor._dims_indice[rank]) {
-			os << '[';
-			put_tensor(os, tensor, offset + (index * step), rank + 1);
-			os << ']' << std::endl;
+	
+	if (tensor._indice != NULL) {
+		if (rank < tensor._shape.ranks() - 1) {
+			for (int i = 0; i < tensor._shape[rank]; ++i) {
+				os << '[';
+				put_tensor(os, tensor, offset + (step * i), rank + 1);
+				os << ']' << std::endl;
+			}
+		}
+		else {
+			for (int i = 0; i < tensor._shape[rank]; ++i) {
+				size_t index = tensor._indice[offset + (step * i)];
+				os << tensor._data[index] << ", ";
+			}
 		}
 	}
 	else {
-		for (cuint& index : tensor._dims_indice[rank]) {
-			os << tensor._data[offset + (index * step)] << ", ";
+		if (rank < tensor._shape.ranks() - 1) {
+			for (int i = 0; i < tensor._shape[rank]; ++i) {
+				os << '[';
+				put_tensor(os, tensor, offset + (step * i), rank + 1);
+				os << ']' << std::endl;
+			}
+		}
+		else {
+			for (int i = 0; i < tensor._shape[rank]; ++i) {
+				os << tensor._data[offset + (step * i)] << ", ";
+			}
 		}
 	}
 }
 
 template <typename _T>
-std::shared_ptr<uint[]> Tensor<_T>::generate_indice(const Vect1D& steps, const Vect2D& dims_indice) {
+uint_sptr Tensor<_T>::generate_indice(const uint_sptr& prev_indice, const Vect1D& steps, const Vect2D& dims_indice) {
 	cuint ranks = (uint)dims_indice.size();
 
-	if (ranks == 0) return std::shared_ptr<uint[]>();
+	if (ranks == 0) return NULL;
 
 	uint* shape = new uint[ranks];
 	uint size = 1;
@@ -267,26 +286,48 @@ std::shared_ptr<uint[]> Tensor<_T>::generate_indice(const Vect1D& steps, const V
 
 	uint* p_indice = new uint[size];
 
-	tbb::parallel_for(tbb::blocked_range<uint>(0, size), [&](const tbb::blocked_range<uint>& q) {
-		for (uint i = q.begin(); i < q.end(); ++i) {
-			uint n = ranks;
-			uint index = 0;
-			uint j = i;
+	if (prev_indice == NULL) {
+		tbb::parallel_for(tbb::blocked_range<uint>(0, size), [&](const tbb::blocked_range<uint>& q) {
+			for (uint i = q.begin(); i < q.end(); ++i) {
+				uint n = ranks;
+				uint index = 0;
+				uint j = i;
 
-			while (n-- > 0) {
-				cuint k = shape[n];
+				while (n-- > 0) {
+					cuint k = shape[n];
 
-				index += steps[n] * dims_indice[n][j % k];
-				j /= k;
+					index += steps[n] * dims_indice[n][j % k];
+					j /= k;
+				}
+
+				p_indice[i] = index;
 			}
+		}, tbb::auto_partitioner());
+	}
+	else {
+		cuint* p_prev_indice = prev_indice.get();
 
-			p_indice[i] = index;
-		}
-	}, tbb::auto_partitioner());
+		tbb::parallel_for(tbb::blocked_range<uint>(0, size), [&](const tbb::blocked_range<uint>& q) {
+			for (uint i = q.begin(); i < q.end(); ++i) {
+				uint n = ranks;
+				uint index = 0;
+				uint j = i;
+
+				while (n-- > 0) {
+					cuint k = shape[n];
+
+					index += steps[n] * dims_indice[n][j % k];
+					j /= k;
+				}
+
+				p_indice[i] = p_prev_indice[index];
+			}
+		}, tbb::auto_partitioner());
+	}
 
 	delete[] shape;
 
-	return std::shared_ptr<uint[]>(p_indice);
+	return uint_sptr(p_indice);
 }
 
 template <typename _T>
@@ -294,7 +335,7 @@ Tensor<_T>::Tensor(const Tensor& p, int cnt_rank) :
 	_cnt_rank(new int(cnt_rank)),
 	_data(p._data),
 	_steps(p._steps),
-	_dims_indice(p._dims_indice)
+	_shape(p._shape)
 {
 
 }
@@ -313,12 +354,13 @@ Tensor<_T>::Tensor(const NN_Shape& shape) :
 	try {
 		check_shape(shape);
 		_steps = generate_steps(shape);
-		_dims_indice = generate_dims_indice(shape);
+		_shape = shape;
 		_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
 	}
 	catch (const NN_Exception& e) {
 		e.put();
 		clear();
+		delete _cnt_rank;
 
 		throw e;
 	}
@@ -331,12 +373,13 @@ Tensor<_T>::Tensor(NN_Shape&& shape) :
 	try {
 		check_shape(shape);
 		_steps = generate_steps(shape);
-		_dims_indice = generate_dims_indice(shape);
+		_shape = shape;
 		_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
 	}
 	catch (const NN_Exception& e) {
 		e.put();
 		clear();
+		delete _cnt_rank;
 
 		throw e;
 	}
@@ -351,12 +394,13 @@ Tensor<_T>::Tensor(const int* p_dims, int n_dims) :
 
 		check_shape(shape);
 		_steps = generate_steps(shape);
-		_dims_indice = generate_dims_indice(shape);
+		_shape = shape;
 		_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
 	}
 	catch (const NN_Exception& e) {
 		e.put();
 		clear();
+		delete _cnt_rank;
 
 		throw e;
 	}
@@ -368,22 +412,22 @@ Tensor<_T>::Tensor(const Tensor& p) :
 {
 	try {
 		if (p._data != NULL) {
-			const NN_Shape shape = get_shape(p._dims_indice);
 
-			check_shape(shape);
-			_steps = generate_steps(shape);
-			_dims_indice = generate_dims_indice(shape);
-			_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
+			check_shape(p._shape);
+			_steps = generate_steps(p._shape);
+			_shape = p._shape;
+			_data = std::shared_ptr<_T[]>(new _T[_shape.total_size()]);
 
 			if (_indice != NULL)
-				copy_unsorted_data(p._data.get(), _data.get(), shape.total_size(), p._indice.get());
+				copy_unsorted_data(p._data.get(), _data.get(), _shape.total_size(), p._indice.get());
 			else
-				memcpy(_data.get(), p._data.get(), sizeof(_T) * shape.total_size());
+				memcpy(_data.get(), p._data.get(), sizeof(_T) * _shape.total_size());
 		}
 	}
 	catch (const NN_Exception& e) {
 		e.put();
 		clear();
+		delete _cnt_rank;
 
 		throw e;
 	}
@@ -395,7 +439,7 @@ Tensor<_T>::Tensor(Tensor&& p) :
 	_data(p._data),
 	_indice(p._indice),
 	_steps(p._steps),
-	_dims_indice(p._dims_indice)
+	_shape(p._shape)
 {
 	p._data = NULL;
 	p._cnt_rank = NULL;
@@ -410,7 +454,7 @@ Tensor<_T>::Tensor(const GpuTensor<_T>& p) :
 
 		check_shape(shape);
 		_steps = generate_steps(shape);
-		_dims_indice = generate_dims_indice(shape);
+		_shape = shape;
 		_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
 
 		check_cuda(cudaMemcpy(_data.get(), p.get_ptr(), sizeof(_T) * shape.total_size(), cudaMemcpyDeviceToHost));
@@ -418,6 +462,7 @@ Tensor<_T>::Tensor(const GpuTensor<_T>& p) :
 	catch (const NN_Exception& e) {
 		e.put();
 		clear();
+		delete _cnt_rank;
 
 		throw e;
 	}
@@ -444,7 +489,7 @@ Tensor<_T>::Tensor(const cv::Mat& mat) :
 
 		check_shape(shape);
 		_steps = generate_steps(shape);
-		_dims_indice = generate_dims_indice(shape);
+		_shape = shape;
 		_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
 
 		memcpy(_data.get(), mat.ptr(), sizeof(_T) * shape.total_size());
@@ -452,6 +497,7 @@ Tensor<_T>::Tensor(const cv::Mat& mat) :
 	catch (const NN_Exception& e) {
 		e.put();
 		clear();
+		delete _cnt_rank;
 
 		throw e;
 	}
@@ -464,20 +510,17 @@ Tensor<_T>::~Tensor() {
 
 template <typename _T>
 void Tensor<_T>::clear() {
-	delete _cnt_rank;
+	*_cnt_rank = 0;
 	_data = NULL;
 	_indice = NULL;
 	_steps.clear();
-	_dims_indice.clear();
-
-	_cnt_rank = NULL;
+	_shape.clear();
 }
 
 template <typename _T>
 cv::Mat Tensor<_T>::get_mat() const {
-	NN_Shape shape = get_shape(_dims_indice);
-	const int flag = get_type(_T(), shape[-1]);
-	std::vector<int> dims = shape.get_dims();
+	const int flag = get_type(_T(), _shape[-1]);
+	std::vector<int> dims = _shape.get_dims();
 
 	dims.pop_back();
 
@@ -485,12 +528,12 @@ cv::Mat Tensor<_T>::get_mat() const {
 
 	cv::Mat mat(dims, flag);
 
-	if (_indice == NULL) memcpy(mat.ptr(), _data.get(), sizeof(_T) * shape.total_size());
+	if (_indice == NULL) memcpy(mat.ptr(), _data.get(), sizeof(_T) * _shape.total_size());
 	else {
 		copy_unsorted_data(
 			_data.get(),
 			(_T*)mat.ptr(),
-			shape.total_size(),
+			_shape.total_size(),
 			_indice.get()
 		);
 	}
@@ -500,25 +543,28 @@ cv::Mat Tensor<_T>::get_mat() const {
 
 template <typename _T>
 NN_Shape Tensor<_T>::get_shape() const {
-	return get_shape(_dims_indice);
+	*_cnt_rank = 0;
+
+	return _shape;
 }
 
 template <typename _T>
 _T* Tensor<_T>::get_ptr() const {
+	*_cnt_rank = 0;
+
 	return _data.get();
 }
 
 template <typename _T>
 Tensor<_T> Tensor<_T>::reshape(const NN_Shape& shape) {
-	const NN_Shape old_shape = get_shape(_dims_indice);
-	const size_t old_size = old_shape.total_size();
+	const size_t old_size = _shape.total_size();
 	const size_t new_size = shape.total_size();
 
 	if (old_size != new_size) {
 		ErrorExcept(
 			"Different shapes. %s != %s",
 			shape_to_str(shape),
-			shape_to_str(old_shape)
+			shape_to_str(_shape)
 		);
 	}
 
@@ -526,24 +572,24 @@ Tensor<_T> Tensor<_T>::reshape(const NN_Shape& shape) {
 
 	tensor._data = _data;
 	tensor._indice = _indice;
-	tensor._cnt_rank = new int(0);
 	tensor._steps = generate_steps(shape);
-	tensor._dims_indice = generate_dims_indice(shape);
+	tensor._shape = shape;
+
+	*_cnt_rank = 0;
 
 	return tensor;
 }
 
 template <typename _T>
 Tensor<_T> Tensor<_T>::reshape(NN_Shape&& shape) {
-	const NN_Shape old_shape = get_shape(_dims_indice);
-	const size_t old_size = old_shape.total_size();
+	const size_t old_size = _shape.total_size();
 	const size_t new_size = shape.total_size();
 
 	if (old_size != new_size) {
 		ErrorExcept(
 			"Different shapes. %s != %s",
 			shape_to_str(shape),
-			shape_to_str(old_shape)
+			shape_to_str(_shape)
 		);
 	}
 
@@ -551,9 +597,10 @@ Tensor<_T> Tensor<_T>::reshape(NN_Shape&& shape) {
 
 	tensor._data = _data;
 	tensor._indice = _indice;
-	tensor._cnt_rank = new int(0);
 	tensor._steps = generate_steps(shape);
-	tensor._dims_indice = generate_dims_indice(shape);
+	tensor._shape = shape;
+
+	*_cnt_rank = 0;
 
 	return tensor;
 }
@@ -561,23 +608,29 @@ Tensor<_T> Tensor<_T>::reshape(NN_Shape&& shape) {
 template <typename _T>
 Tensor<_T> Tensor<_T>::transpose(const Vect1D& orders) const {
 	Tensor tensor;
+	Vect1D m_steps;
+	NN_Shape m_shape;
+
+	for (const int& i : orders) {
+		m_steps.push_back(_steps[i]);
+		m_shape.push_back(_shape[i]);
+	}
+	
+	Vect2D m_dims_indice = generate_dims_indice(m_shape);
 
 	tensor._data = _data;
-	
-	for (const int& i : orders) {
-		tensor._steps.push_back(_steps[i]);
-		tensor._dims_indice.push_back(_dims_indice[i]);
-	}
+	tensor._shape = m_shape;
+	tensor._steps = generate_steps(m_shape);
+	tensor._indice = generate_indice(tensor._indice, m_steps, m_dims_indice);
 
-	tensor._indice = generate_indice(tensor._steps, tensor._dims_indice);
+	*_cnt_rank = 0;
 
 	return tensor;
 }
 
 template <typename _T>
-Tensor<_T> Tensor<_T>::expand_dims(const Tensor& tensor, int axis) {
-	const NN_Shape shape = tensor.get_shape();
-	const int ranks = shape.ranks();
+Tensor<_T> Tensor<_T>::expand_dims(int axis) {
+	const int ranks = _shape.ranks();
 	
 	axis = axis < 0 ? ranks + axis : axis;
 
@@ -593,19 +646,19 @@ Tensor<_T> Tensor<_T>::expand_dims(const Tensor& tensor, int axis) {
 		);
 	}
 
-	Tensor m_tensor = tensor;
+	Tensor tensor(*this, *_cnt_rank);
 
-	m_tensor._steps.insert(m_tensor._steps.begin() + axis, m_tensor._steps[axis] * shape[axis]);
-	m_tensor._dims_indice.insert(m_tensor._dims_indice.begin() + axis, { 0 });
-	*m_tensor._cnt_rank = 0;
+	tensor._steps.insert(tensor._steps.begin() + axis, 0);
+	tensor._shape.insert(tensor._shape.begin() + axis, 1);
 
-	return m_tensor;
+	*_cnt_rank = 0;
+
+	return tensor;
 }
 
 template <typename _T>
-Tensor<_T> Tensor<_T>::squeeze(const Tensor& tensor, int axis) {
-	const NN_Shape shape = tensor.get_shape();
-	const int ranks = shape.ranks();
+Tensor<_T> Tensor<_T>::squeeze(int axis) {
+	const int ranks = _shape.ranks();
 
 	axis = axis < 0 ? ranks + axis : axis;
 
@@ -620,14 +673,23 @@ Tensor<_T> Tensor<_T>::squeeze(const Tensor& tensor, int axis) {
 			axis
 		);
 	}
+	else if(_shape[axis] != 1){
+		ErrorExcept(
+			"This axis dimension is %d",
+			_shape[axis]
+		);
+	}
 
-	Tensor m_tensor = tensor;
+	Tensor tensor(*this, *_cnt_rank);
 
-	m_tensor._steps.erase(m_tensor._steps.begin() + axis);
-	m_tensor._dims_indice.erase(m_tensor._dims_indice.begin() + axis);
-	*m_tensor._cnt_rank = 0;
+	if (ranks > 1) {
+		tensor._steps.erase(tensor._steps.begin() + axis);
+		tensor._shape.pop(axis);
+	}
 
-	return m_tensor;
+	*_cnt_rank = 0;
+
+	return tensor;
 }
 
 template <typename _T>
@@ -657,19 +719,18 @@ Tensor<_cT> Tensor<_T>::cast() const {
 		);
 	}
 
-	const NN_Shape shape = get_shape(_dims_indice);
-	Tensor<_cT> tensor(shape);
+	Tensor<_cT> tensor(_shape);
 	const _T* p_src = _data.get();
 	_cT* p_dst = tensor.get_ptr();
 	uint* indice = _indice.get();
 
 	if (_indice == NULL) {
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, shape.total_size()), [&](const tbb::blocked_range<size_t>& q) {
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, _shape.total_size()), [&](const tbb::blocked_range<size_t>& q) {
 			for (size_t i = q.begin(); i < q.end(); ++i) p_dst[i] = (_cT)(p_src[i]);
 		}, tbb::auto_partitioner());
 	}
 	else {
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, shape.total_size()), [&](const tbb::blocked_range<size_t>& q) {
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, _shape.total_size()), [&](const tbb::blocked_range<size_t>& q) {
 			for (size_t i = q.begin(); i < q.end(); ++i) p_dst[i] = (_cT)(p_src[indice[i]]);
 		}, tbb::auto_partitioner());
 	}
@@ -683,12 +744,10 @@ const Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 
 	if (_data == NULL) {
 		if (p._data != NULL) {
-			const NN_Shape shape = get_shape(p._dims_indice);
+			_steps = generate_steps(p._shape);
+			_shape = p._shape;
 
-			_steps = generate_steps(shape);
-			_dims_indice = generate_dims_indice(shape);
-
-			const size_t size = shape.total_size();
+			const size_t size = _shape.total_size();
 
 			_data = std::shared_ptr<_T[]>(new _T[size]);
 
@@ -698,18 +757,15 @@ const Tensor<_T>& Tensor<_T>::operator=(const Tensor& p) {
 	}
 	else {
 		if (p._data != NULL) {
-			const NN_Shape src_shape = get_shape(p._dims_indice);
-			const NN_Shape dst_shape = get_shape(_dims_indice);
-
-			if (src_shape != dst_shape) {
+			if (p._shape != _shape) {
 				ErrorExcept(
 					"%s != %s",
-					shape_to_str(src_shape),
-					shape_to_str(dst_shape)
+					shape_to_str(p._shape),
+					shape_to_str(_shape)
 				);
 			}
 
-			const size_t size = src_shape.total_size();
+			const size_t size = p._shape.total_size();
 
 			if (_indice != NULL) {
 				if (p._indice != NULL) {
@@ -756,25 +812,22 @@ const Tensor<_T>& Tensor<_T>::operator=(Tensor&& p) {
 	if (_data == NULL) {
 		_data = p._data;
 		_steps = p._steps;
-		_dims_indice = p._dims_indice;
+		_shape = p._shape;
 		_indice = p._indice;
 
 		p.clear();
 	}
 	else {
 		if (p._data != NULL) {
-			const NN_Shape src_shape = get_shape(p._dims_indice);
-			const NN_Shape dst_shape = get_shape(_dims_indice);
-
-			if (src_shape != dst_shape) {
+			if (p._shape != _shape) {
 				ErrorExcept(
 					"%s != %s",
-					shape_to_str(src_shape),
-					shape_to_str(dst_shape)
+					shape_to_str(p._shape),
+					shape_to_str(_shape)
 				);
 			}
 
-			const size_t size = src_shape.total_size();
+			const size_t size = _shape.total_size();
 
 			if (_indice != NULL) {
 				if (p._indice != NULL) {
@@ -829,19 +882,17 @@ const Tensor<_T>& Tensor<_T>::operator=(const GpuTensor<_T>& p) {
 
 	if (_data == NULL) {
 		_steps = generate_steps(src_shape);
-		_dims_indice = generate_dims_indice(src_shape);
+		_shape = src_shape;
 		_data = std::shared_ptr<_T[]>(new _T[src_size]);
 
 		check_cuda(cudaMemcpy(_data.get(), p.get_ptr(), sizeof(_T) * src_size, cudaMemcpyDeviceToHost));
 	}
 	else {
-		const NN_Shape dst_shape = get_shape();
-
-		if (src_shape != dst_shape) {
+		if (src_shape != _shape) {
 			ErrorExcept(
 				"%s != %s",
 				shape_to_str(src_shape),
-				shape_to_str(dst_shape)
+				shape_to_str(_shape)
 			);
 		}
 
@@ -864,8 +915,7 @@ const Tensor<_T>& Tensor<_T>::operator=(const GpuTensor<_T>& p) {
 
 template <typename _T>
 const Tensor<_T>& Tensor<_T>::operator=(const _T& scalar) {
-	const NN_Shape shape = get_shape(_dims_indice);
-	const size_t size = shape.total_size();
+	const size_t size = _shape.total_size();
 
 	if (_data == NULL) {
 		ErrorExcept(
@@ -894,8 +944,7 @@ const Tensor<_T>& Tensor<_T>::operator=(const _T& scalar) {
 
 template <typename _T>
 const Tensor<_T>& Tensor<_T>::operator=(_T&& scalar) {
-	const NN_Shape shape = get_shape(_dims_indice);
-	const size_t size = shape.total_size();
+	const size_t size = _shape.total_size();
 
 	if (_data == NULL) {
 		ErrorExcept(
@@ -940,19 +989,17 @@ const Tensor<_T>& Tensor<_T>::operator=(const cv::Mat& mat) {
 
 	if (_data == NULL) {
 		_steps = generate_steps(shape);
-		_dims_indice = generate_dims_indice(shape);
+		_shape = shape;
 		_data = std::shared_ptr<_T[]>(new _T[shape.total_size()]);
 
 		memcpy(_data.get(), mat.ptr(), sizeof(_T) * shape.total_size());
 	}
 	else {
-		const NN_Shape this_shape = get_shape(_dims_indice);
-
-		if (this_shape != shape) {
+		if (_shape != shape) {
 			ErrorExcept(
 				"%s != %s",
 				shape_to_str(shape),
-				shape_to_str(this_shape)
+				shape_to_str(_shape)
 			);
 		}
 
@@ -974,14 +1021,14 @@ const Tensor<_T>& Tensor<_T>::operator=(const cv::Mat& mat) {
 
 template <typename _T>
 Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) const {
-	if (*_cnt_rank >= _dims_indice.size()) {
+	if (*_cnt_rank >= _shape.ranks()) {
 		ErrorExcept(
 			"%d rank is empty.",
 			*_cnt_rank
 		);
 	}
 
-	const int n = (int)_dims_indice[*_cnt_rank].size();
+	const int n = _shape[*_cnt_rank];
 
 	begin = begin < 0 ? n + begin : begin;
 	end = end < 0 ? n + end : end;
@@ -994,9 +1041,12 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) const {
 	}
 
 	Tensor tensor(*this, *_cnt_rank + 1);
+	Vect2D dims_indice = generate_dims_indice(_shape);
 
-	change_dim_indice(tensor._dims_indice[*_cnt_rank], begin, end, step);
-	tensor._indice = generate_indice(tensor._steps, tensor._dims_indice);
+	change_dim_indice(dims_indice[*_cnt_rank], begin, end, step);
+	tensor._indice = generate_indice(_indice, _steps, dims_indice);
+	tensor._shape[*_cnt_rank] = (int)dims_indice[*_cnt_rank].size();
+	tensor._steps = generate_steps(tensor._shape);
 	*_cnt_rank = 0;
 
 	return tensor;
@@ -1004,14 +1054,14 @@ Tensor<_T> Tensor<_T>::operator()(int begin, int end, int step) const {
 
 template <typename _T>
 Tensor<_T> Tensor<_T>::operator()(int index) const {
-	if (*_cnt_rank >= _dims_indice.size()) {
+	if (*_cnt_rank >= _shape.ranks()) {
 		ErrorExcept(
 			"%d rank is empty.",
 			*_cnt_rank
 		);
 	}
 
-	const int n = (int)_dims_indice[*_cnt_rank].size();
+	const int n = _shape[*_cnt_rank];
 
 	index = index < 0 ? n + index : index;
 
@@ -1023,16 +1073,21 @@ Tensor<_T> Tensor<_T>::operator()(int index) const {
 	}
 
 	Tensor tensor(*this, *_cnt_rank);
-	Vect2D m_dims_indice = _dims_indice;
-	Vect1D m_steps = _steps;
+	Vect2D m_dims_indice = generate_dims_indice(_shape);
 	cuint m_index = m_dims_indice[*_cnt_rank][index];
 
 	m_dims_indice[*_cnt_rank].clear();
 	m_dims_indice[*_cnt_rank].push_back(m_index);
 
-	tensor._indice = generate_indice(m_steps, m_dims_indice);
-	tensor._dims_indice.erase(tensor._dims_indice.begin() + *_cnt_rank);
-	tensor._steps.erase(tensor._steps.begin() + *_cnt_rank);
+	tensor._indice = generate_indice(_indice, _steps, m_dims_indice);
+
+	if (tensor._shape.ranks() > 1) {
+		tensor._shape.pop(*_cnt_rank);
+		tensor._steps = generate_steps(tensor._shape);
+	}
+	else {
+		tensor._shape[*_cnt_rank] = 1;
+	}
 	*_cnt_rank = 0;
 
 	return tensor;
@@ -1040,16 +1095,18 @@ Tensor<_T> Tensor<_T>::operator()(int index) const {
 
 template <typename _T>
 Tensor<_T> Tensor<_T>::operator()(const std::vector<int>& indice) const {
-	if (*_cnt_rank >= _dims_indice.size()) {
+	if (*_cnt_rank >= _shape.ranks()) {
 		ErrorExcept(
 			"%d rank is empty.",
 			*_cnt_rank
 		);
 	}
 
-	const Vect1D& curr_indice = _dims_indice[*_cnt_rank];
-	const int n = (int)curr_indice.size();
-	Vect1D m_indice(indice.size(), 0);
+	Tensor tensor(*this, *_cnt_rank);
+
+	const int n = _shape[*_cnt_rank];
+	Vect1D m_dim_indice(indice.size(), 0);
+	Vect2D m_dims_indice = generate_dims_indice(_shape);
 
 	int i = 0;
 	for (const int& m : indice) {
@@ -1061,13 +1118,14 @@ Tensor<_T> Tensor<_T>::operator()(const std::vector<int>& indice) const {
 			);
 		}
 
-		m_indice[i++] = curr_indice[index];
+		m_dim_indice[i++] = (uint)m_dims_indice[*_cnt_rank][index];
 	}
 
-	Tensor tensor(*this, *_cnt_rank);
-
-	tensor._dims_indice[*_cnt_rank] = m_indice;
-	tensor._indice = generate_indice(tensor._steps, tensor._dims_indice);
+	m_dims_indice[*_cnt_rank] = m_dim_indice;
+	
+	tensor._shape = calculate_shape(m_dims_indice);
+	tensor._steps = generate_steps(tensor._shape);
+	tensor._indice = generate_indice(_indice, tensor._steps, m_dims_indice);
 	*_cnt_rank = 0;
 
 	return tensor;
@@ -1075,35 +1133,42 @@ Tensor<_T> Tensor<_T>::operator()(const std::vector<int>& indice) const {
 
 template <typename _T>
 Tensor<_T> Tensor<_T>::operator[](int index) const {
-	if (*_cnt_rank >= _dims_indice.size()) {
+	if (*_cnt_rank >= _shape.ranks()) {
 		ErrorExcept(
 			"%d rank is empty.",
 			*_cnt_rank
 		);
 	}
 
-	const int n = (int)_dims_indice[*_cnt_rank].size();
+	const int n = _shape[*_cnt_rank];
 
 	index = index < 0 ? n + index : index;
 
 	if (index < 0 || index >= n) {
 		ErrorExcept(
-			"index is out of range. 0 ~ %d",
-			n
+			"index is out of range. 0 ~ %d. %d",
+			n, index
 		);
 	}
 
 	Tensor tensor(*this, *_cnt_rank);
-	std::vector<std::vector<uint>> m_dims_indice = _dims_indice;
-	std::vector<uint> m_steps = _steps;
+
+	Vect2D m_dims_indice = generate_dims_indice(_shape);
 	cuint m_index = m_dims_indice[*_cnt_rank][index];
 
 	m_dims_indice[*_cnt_rank].clear();
 	m_dims_indice[*_cnt_rank].push_back(m_index);
 
-	tensor._indice = generate_indice(m_steps, m_dims_indice);
-	tensor._dims_indice.erase(tensor._dims_indice.begin() + *_cnt_rank);
-	tensor._steps.erase(tensor._steps.begin() + *_cnt_rank);
+	tensor._indice = generate_indice(_indice, _steps, m_dims_indice);
+	
+	if (tensor._shape.ranks() > 1) {
+		tensor._shape.pop(*_cnt_rank);
+		tensor._steps = generate_steps(tensor._shape);
+	}
+	else {
+		tensor._shape[0] = 1;
+	}
+
 	*_cnt_rank = 0;
 
 	return tensor;
@@ -1111,9 +1176,11 @@ Tensor<_T> Tensor<_T>::operator[](int index) const {
 
 template <typename _T>
 std::ostream& Tensor<_T>::put(std::ostream& os) const {
-	if (_dims_indice.size() > 0) {
+	if (_shape.ranks() > 0) {
+		os << '[';
 		put_tensor(os, *this, 0, 0);
-		os << "shape: " << shape_to_str(get_shape(_dims_indice)) << std::endl;
+		os << ']' << std::endl;
+		os << "shape: " << shape_to_str(_shape) << std::endl;
 	}
 	else os << "[]" << std::endl;
 

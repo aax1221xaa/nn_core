@@ -1,16 +1,13 @@
-#define CUDA_API_PER_THREAD_DEFAULT_STEAM 
 #include "cuda_misc.cuh"
 
-/*
+
 #ifndef __CUDACC__
 #define __CUDACC__
 #endif
 
 #include <device_functions.h>
 #include <device_launch_parameters.h>
-*/
-#include <cuda_runtime_api.h>
-#include <device_launch_parameters.h>
+
 
 __constant__ uint __cmem[CONST_ELEM_SIZE];
 
@@ -351,7 +348,7 @@ cuint* set_const_mem(cuint* h_mem, size_t len, size_t offset) {
 	check_cuda(cudaGetSymbolAddress(&ptr, __cmem));
 #else
 	cudaMemcpyToSymbol(__cmem, h_mem, sizeof(uint) * len, sizeof(uint) * offset);
-	cudaGetSymbolAddress(&ptr, __cmem)
+	cudaGetSymbolAddress(&ptr, __cmem);
 #endif
 
 	return (cuint*)ptr + offset;

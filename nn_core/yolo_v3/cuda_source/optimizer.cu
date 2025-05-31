@@ -1,17 +1,13 @@
-#define CUDA_API_PER_THREAD_DEFAULT_STEAM 
 #include "optimizer.cuh"
 
-/*
+
 #ifndef __CUDACC__
 #define __CUDACC__
 #endif
 
 #include <device_functions.h>
 #include <device_launch_parameters.h>
-*/
 
-#include <cuda_runtime_api.h>
-#include <device_launch_parameters.h>
 
 
 /**********************************************/
@@ -21,35 +17,35 @@
 /**********************************************/
 
 __global__ void __sgd(
-	const float* gradient,
-	float* weight,
-	float* w_momentum,
+	const nn_type* gradient,
+	nn_type* weight,
+	nn_type* w_momentum,
 	cuint w_len,
-	float learn_rate,
-	float momentum_rate
+	nn_type learn_rate,
+	nn_type momentum_rate
 ) {
 	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < w_len) {
-		float m = momentum_rate * w_momentum[idx] + learn_rate * gradient[idx];
+		nn_type m = momentum_rate * w_momentum[idx] + learn_rate * gradient[idx];
 		weight[idx] -= m;
 		w_momentum[idx] = m;
 	}
 }
 
 __global__ void __rms_prop(
-	const float* gradient,
-	float* weight,
-	float* g,
+	const nn_type* gradient,
+	nn_type* weight,
+	nn_type* g,
 	cuint w_len,
-	float learn_rate,
-	float decay_rate
+	nn_type learn_rate,
+	nn_type decay_rate
 ) {
 	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < w_len) {
-		float grad = gradient[idx];
-		float _g = decay_rate * g[idx] + (1 - decay_rate) * __powf(grad, 2.f);
+		nn_type grad = gradient[idx];
+		nn_type _g = decay_rate * g[idx] + (1 - decay_rate) * __powf(grad, 2.f);
 		
 		weight[idx] -= learn_rate / __powf(_g + EPSILON, 0.5f) * grad;
 		g[idx] = _g;
@@ -57,24 +53,24 @@ __global__ void __rms_prop(
 }
 
 __global__ void __adam(
-	const float* gradient,
-	float* weight,
-	float* square_g,
-	float* decay_g,
+	const nn_type* gradient,
+	nn_type* weight,
+	nn_type* square_g,
+	nn_type* decay_g,
 	cuint w_len,
-	float learn_rate,
-	float beta_1,
-	float beta_2
+	nn_type learn_rate,
+	nn_type beta_1,
+	nn_type beta_2
 ) {
 	cuint idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < w_len) {
-		float grad = gradient[idx];
-		float m = beta_1 * decay_g[idx] + (1 - beta_1) * grad;
-		float v = beta_2 * square_g[idx] + (1 - beta_2) * __powf(grad, 2.f);
+		nn_type grad = gradient[idx];
+		nn_type m = beta_1 * decay_g[idx] + (1 - beta_1) * grad;
+		nn_type v = beta_2 * square_g[idx] + (1 - beta_2) * __powf(grad, 2.f);
 		
-		float _m = m / (1 - beta_1);
-		float _v = v / (1 - beta_2);
+		nn_type _m = m / (1 - beta_1);
+		nn_type _v = v / (1 - beta_2);
 
 		weight[idx] -= learn_rate / (_v + EPSILON) * _m;
 		decay_g[idx] = m;
@@ -130,7 +126,7 @@ SGD::SGD(const std::vector<GpuTensor<nn_type>> weights) :
 	}
 }
 
-SGD::SGD(float l_rate, float m_rate) :
+SGD::SGD(nn_type l_rate, nn_type m_rate) :
 	_l_rate(l_rate),
 	_m_rate(m_rate)
 {
@@ -182,7 +178,7 @@ RmsProp::RmsProp(const std::vector<GpuTensor<nn_type>> weights) :
 	}
 }
 
-RmsProp::RmsProp(float d_rate, float l_rate) :
+RmsProp::RmsProp(nn_type d_rate, nn_type l_rate) :
 	_d_rate(d_rate),
 	_l_rate(l_rate)
 {
@@ -236,7 +232,7 @@ Adam::Adam(const std::vector<GpuTensor<nn_type>> weights) :
 	}
 }
 
-Adam::Adam(float l_rate, float beta1, float beta2) :
+Adam::Adam(nn_type l_rate, nn_type beta1, nn_type beta2) :
 	_l_rate(l_rate),
 	_beta1(beta1),
 	_beta2(beta2)

@@ -35,19 +35,10 @@
     <ClInclude Include="CppSource\nn_shape.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="CppSource\nn_tensor.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="CppSource\nn_tensor_plus.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="CppSource\nn_sample.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="CppSource\voc2012.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="CudaSource\convolution.cuh">
+    <ClInclude Include="CudaSource\nn_concat.cuh">
       <Filter>cuda헤더</Filter>
     </ClInclude>
     <ClInclude Include="CudaSource\cuda_misc.cuh">
@@ -73,12 +64,9 @@
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="CppSource\voc2012.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="CudaSource\convolution.cu">
+    <CudaCompile Include="CudaSource\nn_concat.cu">
       <Filter>cuda소스</Filter>
     </CudaCompile>
     <CudaCompile Include="CudaSource\cuda_misc.cu">

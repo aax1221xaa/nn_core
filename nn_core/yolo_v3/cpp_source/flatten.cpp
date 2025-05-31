@@ -17,7 +17,7 @@ void NN_Flatten::get_output_shape(const NN_List<NN_Shape>& input_shape, NN_List<
 	const NN_Shape& in = input_shape[0].val();
 	int n_nodes = 1;
 
-	for (NN_Shape::c_iterator iter = in.begin() + 1; iter != in.end(); ++iter) n_nodes *= *iter;
+	for (NN_Shape::ConstIterator iter = in.begin() + 1; iter != in.end(); ++iter) n_nodes *= *iter;
 
 	output_shape.append(NN_Shape({ in[0], n_nodes }));
 }

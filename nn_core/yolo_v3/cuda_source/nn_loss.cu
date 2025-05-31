@@ -1,15 +1,13 @@
 #include "nn_loss.cuh"
 
-/*
+
 #ifndef __CUDACC__
 #define __CUDACC__
 #endif
 
 #include <device_functions.h>
 #include <device_launch_parameters.h>
-*/
-#include <cuda_runtime_api.h>
-#include <device_launch_parameters.h>
+
 
 /**********************************************/
 /*											  */

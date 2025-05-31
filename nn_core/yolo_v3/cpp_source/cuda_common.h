@@ -10,10 +10,14 @@
 #define BLOCK_1024				1024
 #define CONST_ELEM_SIZE			(65536 / sizeof(uint))
 
-#define EPSILON					1e-8
+#define EPSILON					1e-3
 
 #define STREAMS					16
 
+typedef unsigned char uchar;
+typedef const uchar cuchar;
+typedef unsigned short ushort;
+typedef const ushort cushort;
 typedef const int cint;
 typedef unsigned int uint;
 typedef const unsigned int cuint;

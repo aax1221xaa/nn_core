@@ -252,6 +252,7 @@ void Model::set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask
 		std::vector<NN_Link*> tmp;
 
 		tmp.push_back(p_input);
+		m_mask[p_input->get_index()] = 1;
 
 		while (!tmp.empty()) {
 			NN_Link* p_current = tmp.front();
@@ -279,15 +280,21 @@ void Model::set_childs(Layer_t& inputs, Layer_t& outputs, std::vector<int>& mask
 
 	for (NN_Link* p_node : parant_nodes) {
 		NN_Link* p_child = nodes[child_index[p_node->get_index()]];
-		
-		for (NN_Link* p_next : p_node->get_next_nodes()) {
-			if (m_mask[p_next->get_index()] > 0) {
-				NN_Link* p_next_child = nodes[child_index[p_next->get_index()]];
 
-				p_child->set_next_node(p_next_child);
-				p_next_child->set_prev_node(p_child);
+		//std::cout << "1: " << p_child->get_layer()._layer_name << ", 2: ";
+		
+		for (NN_Link* p_prev : p_node->get_prev_nodes()) {
+			if (m_mask[p_prev->get_index()] > 0) {
+				NN_Link* p_prev_child = nodes[child_index[p_prev->get_index()]];
+
+				//std::cout << p_prev_child->get_layer()._layer_name << ", ";
+
+				p_child->set_prev_node(p_prev_child);
+				p_prev_child->set_next_node(p_child);
 			}
 		}
+
+		//std::cout << std::endl;
 	}
 
 	for (Layer_t& p_input : inputs) {

@@ -1,5 +1,6 @@
 #include "mat_dtype.h"
 #include <iostream>
+#include <opencv2\opencv.hpp>
 #include "Exception.h"
 
 

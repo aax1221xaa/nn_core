@@ -1,4 +1,6 @@
-#pragma once
+#ifndef OPTIMIZER_CUH
+#define OPTIMIZER_CUH
+
 #include "../cpp_source/nn_list.h"
 #include "../cpp_source/nn_tensor_plus.h"
 
@@ -36,7 +38,7 @@ class SGD : public NN_Optimizer {
 	SGD(const std::vector<GpuTensor<nn_type>> weights);
 
 public:
-	SGD(float l_rate, float m_rate);
+	SGD(nn_type l_rate, nn_type m_rate);
 	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights) const;
 	void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
 };
@@ -58,7 +60,7 @@ class RmsProp : public NN_Optimizer {
 	RmsProp(const std::vector<GpuTensor<nn_type>> weights);
 
 public:
-	RmsProp(float d_rate, float l_rate);
+	RmsProp(nn_type d_rate, nn_type l_rate);
 	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights) const;
 	void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
 };
@@ -75,14 +77,16 @@ class Adam : public NN_Optimizer {
 	std::vector<GpuTensor<nn_type>> _square_g;
 	std::vector<GpuTensor<nn_type>> _decay_g;
 
-	float _l_rate;
-	float _beta1;
-	float _beta2;
+	nn_type _l_rate;
+	nn_type _beta1;
+	nn_type _beta2;
 
 	Adam(const std::vector<GpuTensor<nn_type>> weights);
 
 public:
-	Adam(float l_rate, float beta1, float beta2);
+	Adam(nn_type l_rate, nn_type beta1, nn_type beta2);
 	NN_Optimizer* create(const std::vector<GpuTensor<nn_type>>& weights) const;
 	void run(NN_Stream& st, const std::vector<GpuTensor<nn_type>>& gradient);
 };
+
+#endif

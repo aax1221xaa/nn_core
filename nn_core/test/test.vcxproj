@@ -16,13 +16,10 @@
     <ClInclude Include="CppSource\Exception.h" />
     <ClInclude Include="CppSource\mat_dtype.h" />
     <ClInclude Include="CppSource\nn_list.h" />
-    <ClInclude Include="CppSource\nn_sample.h" />
     <ClInclude Include="CppSource\nn_shape.h" />
-    <ClInclude Include="CppSource\nn_tensor.h" />
     <ClInclude Include="CppSource\nn_tensor_plus.h" />
-    <ClInclude Include="CppSource\voc2012.h" />
-    <ClInclude Include="CudaSource\convolution.cuh" />
     <ClInclude Include="CudaSource\cuda_misc.cuh" />
+    <ClInclude Include="CudaSource\nn_concat.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CppSource\CudaCheck.cpp" />
@@ -30,12 +27,11 @@
     <ClCompile Include="CppSource\Exception.cpp" />
     <ClCompile Include="CppSource\mat_type.cpp" />
     <ClCompile Include="CppSource\nn_shape.cpp" />
-    <ClCompile Include="CppSource\voc2012.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="CudaSource\convolution.cu" />
     <CudaCompile Include="CudaSource\cuda_misc.cu" />
+    <CudaCompile Include="CudaSource\nn_concat.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -83,11 +79,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <PreprocessorDefinitions>CUDNN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link />
     <Link>

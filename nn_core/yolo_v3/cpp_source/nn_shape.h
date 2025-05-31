@@ -42,8 +42,8 @@ protected:
 	std::vector<int> _dims;
 
 public:
-	typedef std::vector<int>::const_iterator c_iterator;
-	typedef std::vector<int>::iterator iterator;
+	typedef std::vector<int>::const_iterator ConstIterator;
+	typedef std::vector<int>::iterator Iterator;
 
 	NN_Shape();
 	NN_Shape(size_t len);
@@ -60,21 +60,17 @@ public:
 	const int& operator[](int index) const;
 	bool operator!=(const NN_Shape& shape) const;
 
-	int ranks();
 	int ranks() const;
-	size_t total_size();
 	size_t total_size() const;
-	std::ostream& put_shape(std::ostream& os);
 	std::ostream& put_shape(std::ostream& os) const;
-	bool is_empty();
 	bool is_empty() const;
 	void clear();
 
-	std::vector<int>::iterator begin();
-	std::vector<int>::iterator end();
+	Iterator begin();
+	Iterator end();
 
-	std::vector<int>::const_iterator begin() const;
-	std::vector<int>::const_iterator end() const;
+	ConstIterator begin() const;
+	ConstIterator end() const;
 
 	void push_front(int n);
 	void push_front(const NN_Shape& p);
@@ -85,13 +81,13 @@ public:
 	void push_back(const std::initializer_list<int>& list);
 
 	int pop(int index);
-	int pop(c_iterator iter);
+	int pop(ConstIterator iter);
 
 	void insert(int index, int n);
-	void insert(c_iterator iter, int n);
+	void insert(ConstIterator iter, int n);
 
-	std::vector<int>& get_dims();
 	const std::vector<int>& get_dims() const;
+	const std::vector<uint> get_udims() const;
 
 	NN_Tensor4dShape get_4d_shape();
 	NN_Tensor4dShape get_4d_shape() const;

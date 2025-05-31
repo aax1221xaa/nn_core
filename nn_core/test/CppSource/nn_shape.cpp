@@ -36,15 +36,16 @@ NN_Shape::NN_Shape(size_t len, int val) :
 
 }
 
-NN_Shape::NN_Shape(const int* p_dims, int dims) {
-	for (int i = 0; i < dims; ++i) _dims.push_back(p_dims[i]);
+NN_Shape::NN_Shape(const int* p_dims, int n_dims) {
+	for (int i = 0; i < n_dims; ++i) _dims.push_back(p_dims[i]);
 }
 
-NN_Shape::NN_Shape(const std::initializer_list<int>& list) :
-	_dims(list.size())
-{	
-	int i = 0;
-	for (const int& n : list) _dims[i++] = n;
+NN_Shape::NN_Shape(const hsize_t* p_dims, int n_dims) {
+	for (int i = 0; i < n_dims; ++i) _dims.push_back((int)p_dims[i]);
+}
+
+NN_Shape::NN_Shape(const std::initializer_list<int>& list) {	
+	for (const int& n : list) _dims.push_back(n);
 }
 
 NN_Shape::NN_Shape(const NN_Shape& p) :
@@ -53,7 +54,7 @@ NN_Shape::NN_Shape(const NN_Shape& p) :
 }
 
 NN_Shape::NN_Shape(NN_Shape&& p) :
-	_dims(std::move(p._dims))
+	_dims(p._dims)
 {
 }
 
@@ -68,19 +69,21 @@ NN_Shape& NN_Shape::operator=(const NN_Shape& p) {
 NN_Shape& NN_Shape::operator=(NN_Shape&& p) {
 	if (this == &p) return *this;
 
-	_dims = std::move(p._dims);
+	_dims = p._dims;
 
 	return *this;
 }
 
 int& NN_Shape::operator[](int index) {
-	const int size = (int)_dims.size();
+	const int dim_size = (int)_dims.size();
 
-	index = index < 0 ? size + index : index;
+	index = index < 0 ? dim_size + index : index;
 
-	if (index >= size || index < 0) {
+	if (index >= dim_size || index < 0) {
 		ErrorExcept(
-			"[NN_Shape::operator[]] Index is out of range."
+			"[NN_Shape::operator[]] Index is out of range. dim size = %ld, index = %d",
+			dim_size,
+			index
 		);
 	}
 
@@ -104,33 +107,21 @@ bool NN_Shape::operator!=(const NN_Shape& shape) const {
 }
 
 const int& NN_Shape::operator[](int index) const {
-	const int size = (int)_dims.size();
+	index = index < 0 ? (int)_dims.size() + index : index;
 
-	index = index < 0 ? size + index : index;
-
-	if (index >= size || index < 0) {
+	if (index >= (int)_dims.size() || index < 0) {
 		ErrorExcept(
-			"[NN_Shape::operator[]] Index is out of range."
+			"[NN_Shape::operator[]] Index is out of range. dim size = %ld, index = %d",
+			_dims.size(),
+			index
 		);
 	}
 
 	return _dims[index];
 }
 
-int NN_Shape::ranks() {
-	return (int)_dims.size();
-}
-
 int NN_Shape::ranks() const {
 	return (int)_dims.size();
-}
-
-size_t NN_Shape::total_size() {
-	size_t size = 1;
-
-	for (int& n : _dims) size *= n;
-
-	return size;
 }
 
 size_t NN_Shape::total_size() const {
@@ -139,16 +130,6 @@ size_t NN_Shape::total_size() const {
 	for (const uint& n : _dims) size *= n;
 
 	return size;
-}
-
-std::ostream& NN_Shape::put_shape(std::ostream& os) {
-	os << '[';
-
-	for (const int& n : _dims) os << std::to_string(n) << ", ";
-
-	os << ']';
-
-	return os;
 }
 
 std::ostream& NN_Shape::put_shape(std::ostream& os) const {
@@ -161,10 +142,6 @@ std::ostream& NN_Shape::put_shape(std::ostream& os) const {
 	return os;
 }
 
-bool NN_Shape::is_empty() {
-	return _dims.empty();
-}
-
 bool NN_Shape::is_empty() const {
 	return _dims.empty();
 }
@@ -173,19 +150,19 @@ void NN_Shape::clear() {
 	_dims.clear();
 }
 
-std::vector<int>::iterator NN_Shape::begin() {
+NN_Shape::Iterator NN_Shape::begin() {
 	return _dims.begin();
 }
 
-std::vector<int>::iterator NN_Shape::end() {
+NN_Shape::Iterator NN_Shape::end() {
 	return _dims.end();
 }
 
-std::vector<int>::const_iterator NN_Shape::begin() const {
+NN_Shape::ConstIterator NN_Shape::begin() const {
 	return _dims.cbegin();
 }
 
-std::vector<int>::const_iterator NN_Shape::end() const {
+NN_Shape::ConstIterator NN_Shape::end() const {
 	return _dims.cend();
 }
 
@@ -220,7 +197,7 @@ int NN_Shape::pop(int index) {
 	return n;
 }
 
-int NN_Shape::pop(c_iterator iter) {
+int NN_Shape::pop(ConstIterator iter) {
 	int n = *iter;
 	_dims.erase(iter);
 
@@ -231,16 +208,20 @@ void NN_Shape::insert(int index, int n) {
 	_dims.insert(_dims.cbegin() + index, n);
 }
 
-void NN_Shape::insert(c_iterator iter, int n) {
+void NN_Shape::insert(ConstIterator iter, int n) {
 	_dims.insert(iter, n);
-}
-
-std::vector<int>& NN_Shape::get_dims() {
-	return _dims;
 }
 
 const std::vector<int>& NN_Shape::get_dims() const {
 	return _dims;
+}
+
+const std::vector<uint> NN_Shape::get_udims() const {
+	std::vector<uint> udims;
+
+	for (const int& n : _dims) udims.push_back((cuint)n);
+
+	return udims;
 }
 
 NN_Tensor4dShape NN_Shape::get_4d_shape() {

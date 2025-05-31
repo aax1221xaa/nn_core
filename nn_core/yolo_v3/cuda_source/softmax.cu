@@ -1,16 +1,12 @@
-#define CUDA_API_PER_THREAD_DEFAULT_STEAM 
 #include "softmax.cuh"
-/*
+
 #ifndef __CUDACC__
 #define __CUDACC__
 #endif
 
 #include <device_functions.h>
 #include <device_launch_parameters.h>
-*/
 
-#include <cuda_runtime_api.h>
-#include <device_launch_parameters.h>
 
 __global__ void __softmax(
 	const nn_type* input,

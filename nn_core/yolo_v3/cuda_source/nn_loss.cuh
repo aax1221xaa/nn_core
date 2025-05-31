@@ -1,4 +1,6 @@
-#pragma once
+#ifndef NN_LOSS_CUH
+#define NN_LOSS_CUH
+
 #include "../cpp_source/nn_list.h"
 #include "../cpp_source/nn_tensor_plus.h"
 
@@ -24,3 +26,5 @@ public:
 		NN_List<GpuTensor<nn_type>>& doutput
 	);
 };
+
+#endif

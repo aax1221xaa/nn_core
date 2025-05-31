@@ -592,7 +592,7 @@ void set_random_uniform(GpuTensor<nn_type>& tensor, nn_type a, nn_type b) {
 	std::random_device rd;
 	cv::RNG rng(rd());
 
-	cv::Mat tmp(tensor.get_shape().get_dims(), CV_32FC1);
+	cv::Mat tmp(tensor.get_shape().get_dims(), get_type(nn_type(0), 1));
 
 	rng.fill(tmp, cv::RNG::UNIFORM, a, b, true);
 

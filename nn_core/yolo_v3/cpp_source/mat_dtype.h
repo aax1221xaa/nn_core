@@ -1,5 +1,5 @@
 #pragma once
-#include <opencv2\opencv.hpp>
+#include "cuda_common.h"
 #include <string>
 
 

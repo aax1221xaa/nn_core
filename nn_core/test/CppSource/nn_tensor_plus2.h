@@ -1078,6 +1078,9 @@ Tensor<_T> Tensor<_T>::operator()(int index) const {
 	if (tensor._shape.ranks() > 1) {
 		tensor._shape.pop(*_cnt_rank);
 		tensor._steps = generate_steps(tensor._shape);
+
+		const size_t size = tensor._shape.total_size();
+		for (size_t i = 0; i < size; ++i) std::cout << tensor._indice[i] << ", ";
 	}
 	else {
 		tensor._shape[*_cnt_rank] = 1;

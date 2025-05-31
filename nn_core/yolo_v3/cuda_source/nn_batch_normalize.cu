@@ -8,14 +8,11 @@
 #include <device_launch_parameters.h>
 
 
-#include <cuda_runtime_api.h>
-#include <device_launch_parameters.h>
-
 __global__ void __batch_normalization(
 	const nn_type* input,
 	const nn_type* mean,
 	const nn_type* var,
-	const nn_type* alpha,
+	const nn_type* beta,
 	const nn_type* gamma,
 	nn_type* output,
 	cuint n,
@@ -31,14 +28,14 @@ __global__ void __batch_normalization(
 	if (threadIdx.x == 0) {
 		sm[0] = mean[yidx];
 		sm[1] = var[yidx];
-		sm[2] = alpha[yidx];
+		sm[2] = beta[yidx];
 		sm[3] = gamma[yidx];
 	}
 
 	__syncthreads();
 
 	if (xidx < n) {
-		output[idx] = sm[2] * ((input[idx] - sm[0]) / __frsqrt_rn(sm[1] + EPSILON)) + sm[3];
+		output[idx] = sm[3] * ((input[idx] - sm[0]) / __powf(sm[1] + EPSILON, 0.5f)) + sm[2];
 	}
 }
 
@@ -67,13 +64,57 @@ void NN_BatchNormalize::build(const NN_List<NN_Shape>& input_shape, NN_List<GpuT
 	_beta = GpuTensor<nn_type>::zeros({ shape[-1], });
 	_gamma = GpuTensor<nn_type>::zeros({ shape[-1], });
 
-	weights.append({ _beta, _gamma, _means, _var });
+	weights.append({ _gamma, _beta, _means, _var });
 }
 
 void NN_BatchNormalize::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {
 	const GpuTensor<nn_type>& m_input = input[0].val();
 	GpuTensor<nn_type>& m_output = output[0].val();
+#if 0
+	const Tensor<nn_type> h_input = m_input;
+	const Tensor<nn_type> h_gamma = _gamma;
+	const Tensor<nn_type> h_beta = _beta;
+	const Tensor<nn_type> h_means = _means;
+	const Tensor<nn_type> h_var = _var;
+	Tensor<nn_type> h_output(m_output.get_shape());
+	
+	const NN_Tensor4dShape in_shape = h_input.get_shape().get_4d_shape();
+	const nn_type* in_data = h_input.get_ptr();
+	const nn_type* gamma_data = h_gamma.get_ptr();
+	const nn_type* beta_data = h_beta.get_ptr();
+	const nn_type* mean_data = h_means.get_ptr();
+	const nn_type* var_data = h_var.get_ptr();
+	nn_type* out_data = h_output.get_ptr();
 
+	for (int i = 0; i < in_shape._n; ++i) {
+		const nn_type* in_ptr = in_data + (in_shape._c * in_shape._h * in_shape._w * i);
+		nn_type* out_ptr = out_data + (in_shape._c * in_shape._h * in_shape._w * i);
+
+		for (int j = 0; j < in_shape._c; ++j) {
+			const nn_type gamma = gamma_data[j];
+			const nn_type beta = beta_data[j];
+			const nn_type mean = mean_data[j];
+			const nn_type var = var_data[j];
+			const nn_type* in_c = in_ptr + j;
+			nn_type* out_c = out_ptr + j;
+
+			for (int h = 0; h < in_shape._h; ++h) {
+				const nn_type* in_h = in_c + (in_shape._w * in_shape._c * h);
+				nn_type* out_h = out_c + (in_shape._w * in_shape._c * h);
+
+				for (int w = 0; w < in_shape._w; ++w) {
+					const nn_type& in = in_h[in_shape._c * w];
+					nn_type& out = out_h[in_shape._c * w];
+
+					out = gamma * ((in - mean) / sqrtf(var + EPSILON)) + beta;
+				}
+			}
+		}
+	}
+
+	m_output = h_output;
+
+#else
 	const NN_Shape in_shape = m_input.get_shape();
 	const nn_type* in_data = m_input.get_ptr();
 	nn_type* out_data = m_output.get_ptr();
@@ -110,10 +151,11 @@ void NN_BatchNormalize::run(NN_Stream& st, const NN_List<GpuTensor<nn_type>>& in
 	check_cuda(cudaDeviceSynchronize());
 	check_cuda(cudaGetLastError());
 #endif
+#endif
 }
 
 NN_List<GpuTensor<nn_type>> NN_BatchNormalize::get_weight() {
-	return { _beta, _gamma, _means, _var };
+	return { _gamma, _beta, _means, _var };
 }
 
 void NN_BatchNormalize::set_output(const NN_List<NN_Shape>& output_shape, NN_List<GpuTensor<nn_type>>& input, NN_List<GpuTensor<nn_type>>& output) {

@@ -1,10 +1,6 @@
 #include "voc2012.h"
-#include <filesystem>
 #include <fstream>
 
-
-
-typedef std::filesystem::path fs;
 
 
 void _str_split_lines(const std::string& src, std::vector<std::string>& dst) {
@@ -18,7 +14,7 @@ void _str_split_lines(const std::string& src, std::vector<std::string>& dst) {
 	}
 }
 
-void _read_text_lines(const fs& path, std::vector<std::string>& lines) {
+void _read_text_lines(const std::string& path, std::vector<std::string>& lines) {
 	std::ifstream ifs(path);
 
 	if (!ifs.is_open()) {
@@ -44,17 +40,17 @@ Voc2012::Generator::Generator() {
 }
 
 void Voc2012::Generator::generate_sample(const std::vector<int>& indices, Sample<xt, yt>& dst) const {
-	std::vector<fs> current_path;
+	std::vector<std::string> current_path;
 	Tensor<uchar> images({ _batch, _fr_height, _fr_width, 3 });
 
 	dst._x.clear();
 
 	for (const int& index : indices) 
-		current_path.push_back(fs(_image_dir) / (_image_names[index] + ".jpg"));
+		current_path.push_back(_image_dir + "\\" + _image_names[index] + ".jpg");
 
 	int i = 0;
-	for (const fs& path : current_path) {
-		cv::Mat image = cv::imread(path.string());
+	for (const std::string& path : current_path) {
+		cv::Mat image = cv::imread(path);
 		cv::Mat out_img = cv::Mat::zeros(_fr_width, _fr_height, image.type());
 
 		const int img_h = image.rows;
@@ -91,17 +87,17 @@ void Voc2012::Generator::generate_sample(const std::vector<int>& indices, Sample
 }
 
 Voc2012::Voc2012(const std::string& path, const NN_Shape& img_shape, int batch, const std::string& mode) {
-	fs m_path = path;
-	fs image_set_path = m_path / "ImageSets" / "Main";
-	fs image_path = m_path / "JPEGImages";
+	std::string m_path = path;
+	std::string image_set_path = m_path + "\\ImageSets\\Main\\";
+	std::string image_path = m_path + "\\JPEGImages\\";
 
-	_read_text_lines(image_set_path / "labels.txt", _labels);
-	_read_text_lines(image_set_path / (mode + ".txt"), _gen._image_names);
+	_read_text_lines(image_set_path + "labels.txt", _labels);
+	_read_text_lines(image_set_path + mode + ".txt", _gen._image_names);
 
 	const int img_size = (int)_gen._image_names.size();
 	const int max_index = img_size / batch;
 
-	_gen._image_dir = image_path.string();
+	_gen._image_dir = image_path;
 	_gen.set_params(false, img_size, batch, max_index);
 	_gen._fr_width = img_shape[0];
 	_gen._fr_height = img_shape[1];
